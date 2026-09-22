@@ -51,13 +51,8 @@ async function openStudio(theme: string, catalog = fixtureCatalog()) {
       expect(response.status).toBe(200)
       return response.json()
     },
-    async setBrand(brand: unknown) {
-      const response = await fetch(new URL('api/brand', url), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(brand),
-      })
-      return { status: response.status, body: await response.json() }
+    setBrand(brand: unknown) {
+      return send('PUT', 'api/brand', brand)
     },
     async uploadLogo(file: Uint8Array<ArrayBuffer>, type: string) {
       const response = await fetch(new URL('api/brand/logo', url), {
@@ -67,13 +62,13 @@ async function openStudio(theme: string, catalog = fixtureCatalog()) {
       })
       return { status: response.status, body: await response.json() }
     },
-    async removeLogo() {
-      const response = await fetch(new URL('api/brand/logo', url), { method: 'DELETE' })
-      return { status: response.status, body: await response.json() }
+    removeLogo() {
+      return send('DELETE', 'api/brand/logo')
     },
     fetchLogo() {
       return fetch(new URL('api/brand/logo', url))
     },
+    send,
     addSection(type: unknown) {
       return send('POST', 'api/home/sections', { type })
     },
@@ -88,8 +83,8 @@ async function openStudio(theme: string, catalog = fixtureCatalog()) {
     },
   }
 
-  async function send(method: string, path: string, body?: unknown) {
-    const response = await fetch(new URL(path, url), {
+  async function send(method: string, route: string, body?: unknown) {
+    const response = await fetch(new URL(route, url), {
       method,
       headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -490,6 +485,21 @@ describe('Studio API: compose the home page', () => {
     expect(template.sections).not.toHaveProperty('top')
     expect(existsSync(path.join(theme, 'sections/hero.liquid'))).toBe(true)
     expect(body.home.map((section: { id: string }) => section.id)).toEqual(['middle', 'bottom'])
+  })
+
+  it('refuses to remove the last section, since Shopify needs one in a JSON template', async () => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    const { status, body } = await (await openStudio(theme)).removeSection('main')
+    expect(status).toBe(400)
+    expect(body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'templates/index.json'), 'utf8')).toBe(before)
+  })
+
+  it('answers a malformed section id with a JSON error', async () => {
+    const { status, body } = await (await openStudio(fixtureTheme())).send('DELETE', 'api/home/sections/%E0%A4%A')
+    expect(status).toBe(400)
+    expect(body.error).toEqual(expect.any(String))
   })
 
   it('refuses to remove a section the home page does not have', async () => {

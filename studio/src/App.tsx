@@ -24,6 +24,7 @@ type Load = { status: 'loading' } | { status: 'error'; message: string } | { sta
 
 export function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
+  const showState = (state: ThemeState) => setLoad({ status: 'ready', state })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -55,9 +56,9 @@ export function App() {
           <BrandPanel
             key={JSON.stringify(load.state.brand)}
             brand={load.state.brand}
-            onSaved={(state) => setLoad({ status: 'ready', state })}
+            onSaved={showState}
           />
-          <HomePage state={load.state} onSaved={(state) => setLoad({ status: 'ready', state })} />
+          <HomePage state={load.state} onSaved={showState} />
           <ThemeCheck offenses={load.state.validation} />
         </div>
       )}
@@ -65,7 +66,7 @@ export function App() {
   )
 }
 
-/** Sends writes to the Studio API one at a time and hands the Theme state each returns to onSaved. */
+/** Sends writes to the Studio API and hands the Theme state each returns to onSaved. */
 function useWrite(onSaved: (state: ThemeState) => void) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -334,7 +335,7 @@ function FontPicker({
 /** The home page's sections: add from the Section Catalog, remove, reorder and pick each one's color scheme. */
 function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: ThemeState) => void }) {
   const { saving, error, write } = useWrite(onSaved)
-  const [type, setType] = useState<string | null>(state.catalog[0] ?? null)
+  const [sectionType, setSectionType] = useState<string | null>(state.catalog[0] ?? null)
   const sections = state.home
   const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
   const catalog = state.catalog.map((name) => ({ value: name, label: name }))
@@ -412,7 +413,8 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
                   variant="ghost"
                   size="icon"
                   aria-label={`Remove ${section.id}`}
-                  disabled={saving}
+                  // Shopify needs at least one section in a JSON template.
+                  disabled={saving || sections.length === 1}
                   onClick={() => remove(section)}
                 >
                   <Trash2Icon />
@@ -437,7 +439,7 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
               <FieldLabel htmlFor="add-section" className="sr-only">
                 Section to add
               </FieldLabel>
-              <Select items={catalog} value={type} onValueChange={setType}>
+              <Select items={catalog} value={sectionType} disabled={saving} onValueChange={setSectionType}>
                 <SelectTrigger id="add-section" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -453,8 +455,8 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
               </Select>
             </Field>
             <Button
-              disabled={saving || !type}
-              onClick={() => write('/api/home/sections', jsonRequest('POST', { type }))}
+              disabled={saving || !sectionType}
+              onClick={() => write('/api/home/sections', jsonRequest('POST', { type: sectionType }))}
             >
               Add section
             </Button>
