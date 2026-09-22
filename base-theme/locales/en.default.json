@@ -30,12 +30,24 @@
   "collections": {
     "title": "Collections"
   },
+  "footer": {
+    "newsletter_email": "Email",
+    "newsletter_success": "Thanks for subscribing",
+    "social": "Social media"
+  },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",
     "card": "Gift card",
     "expired": "This gift card has expired",
     "expires_on": "Expires on {{ expires_on }}",
     "use_at_checkout": "Use this gift card at checkout"
+  },
+  "header": {
+    "cart": {
+      "one": "Cart, {{ count }} item",
+      "other": "Cart, {{ count }} items"
+    },
+    "main_menu": "Main menu"
   },
   "password": {
     "title": "This shop is private",

@@ -1,0 +1,196 @@
+<header class="header full-width color-{{ section.settings.color_scheme }}">
+  <div class="header__inner">
+    <a class="header__logo" href="{{ routes.root_url }}">
+      {% if settings.logo %}
+        {{
+          settings.logo
+          | image_url: width: 400
+          | image_tag: alt: shop.name, class: 'header__logo-image', widths: '200, 400', sizes: '200px'
+        }}
+      {% elsif settings.logo_asset != blank %}
+        {% # theme-check-disable ImgWidthAndHeight %}
+        <img
+          src="{{ settings.logo_asset | asset_url }}"
+          alt="{{ shop.name | escape }}"
+          class="header__logo-image header__logo-image--asset"
+        >
+        {% # theme-check-enable ImgWidthAndHeight %}
+      {% else %}
+        <span class="header__shop-name">{{ shop.name | escape }}</span>
+      {% endif %}
+    </a>
+
+    {% if section.settings.menu.links.size > 0 %}
+      <nav class="header__menu" aria-label="{{ 'header.main_menu' | t }}">
+        <ul class="header__menu-list" role="list">
+          {% for link in section.settings.menu.links %}
+            <li>
+              <a
+                class="header__menu-link"
+                href="{{ link.url }}"
+                {% if link.current %}
+                  aria-current="page"
+                {% endif %}
+              >
+                {{- link.title | escape -}}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    {% endif %}
+
+    <div class="header__icons">
+      {% if shop.customer_accounts_enabled %}
+        <shopify-account menu="{{ section.settings.customer_account_menu }}">
+          {{ 'icon-account.svg' | inline_asset_content }}
+        </shopify-account>
+      {% endif %}
+
+      <a class="header__cart" href="{{ routes.cart_url }}" aria-label="{{ 'header.cart' | t: count: cart.item_count }}">
+        {{ 'icon-cart.svg' | inline_asset_content }}
+        {% if cart.item_count > 0 %}
+          <span class="header__cart-count" aria-hidden="true">{{ cart.item_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </div>
+</header>
+
+{% stylesheet %}
+  .header {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .header__inner {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    min-height: 5rem;
+    padding-block: 1rem;
+  }
+
+  .header a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .header a:focus-visible {
+    outline: 2px solid currentcolor;
+    outline-offset: 2px;
+  }
+
+  .header__logo-image {
+    max-height: 3rem;
+    width: auto;
+  }
+
+  .header__logo-image--asset {
+    height: 3rem;
+  }
+
+  .header__shop-name {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    font-size: 1.5rem;
+  }
+
+  .header__menu {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .header__menu-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .header__menu-link[aria-current='page'],
+  .header__menu-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+  }
+
+  .header__icons {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header__icons svg {
+    width: 2rem;
+  }
+
+  .header__cart {
+    position: relative;
+    display: flex;
+  }
+
+  .header__cart-count {
+    position: absolute;
+    inset-block-start: -0.25rem;
+    inset-inline-end: -0.5rem;
+    min-width: 1.25rem;
+    padding-inline: 0.25rem;
+    border-radius: 1rem;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    text-align: center;
+  }
+
+  @media (min-width: 750px) {
+    .header__menu {
+      order: 0;
+      flex-basis: auto;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Header",
+  "tag": "section",
+  "enabled_on": {
+    "groups": ["header"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "paragraph",
+      "content": "The logo comes from the theme settings, under Logo."
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "default": "main-menu"
+    },
+    {
+      "type": "link_list",
+      "id": "customer_account_menu",
+      "label": "Customer account menu",
+      "default": "customer-account-main-menu"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Header"
+    }
+  ]
+}
+{% endschema %}

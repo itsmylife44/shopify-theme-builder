@@ -1,0 +1,18 @@
+{
+  "type": "footer",
+  "name": "t:general.footer",
+  "sections": {
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "menu": {
+          "type": "menu",
+          "settings": {}
+        }
+      },
+      "block_order": ["menu"],
+      "settings": {}
+    }
+  },
+  "order": ["footer"]
+}
