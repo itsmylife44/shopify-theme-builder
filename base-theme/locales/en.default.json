@@ -30,6 +30,10 @@
   "collections": {
     "title": "Collections"
   },
+  "featured_collection": {
+    "product_title": "Example product",
+    "view_all": "View all {{ collection }}"
+  },
   "footer": {
     "newsletter_email": "Email",
     "newsletter_success": "Thanks for subscribing",
