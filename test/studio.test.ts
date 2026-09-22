@@ -469,6 +469,23 @@ describe('Studio API: compose the home page', () => {
     expect(body.home.map((section: { type: string }) => section.type)).toEqual(['hello-world', 'custom-section'])
   })
 
+  it('leaves out and refuses a catalog section that only goes in a section group, like an announcement bar', async () => {
+    const theme = fixtureTheme()
+    const catalog = fixtureCatalog()
+    writeFileSync(
+      path.join(catalog, 'sections/announcement-bar.liquid'),
+      '<div></div>\n{% schema %}{"name": "Announcement bar", "enabled_on": {"groups": ["header"]}}{% endschema %}\n',
+    )
+    const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    const studio = await openStudio(theme, { catalog })
+    expect((await studio.readTheme()).catalog).toEqual(['hero'])
+    const { status, body } = await studio.addSection('announcement-bar')
+    expect(status).toBe(400)
+    expect(body.error).toContain('announcement-bar')
+    expect(readFileSync(path.join(theme, 'templates/index.json'), 'utf8')).toBe(before)
+    expect(existsSync(path.join(theme, 'sections/announcement-bar.liquid'))).toBe(false)
+  })
+
   it.each([
     ['a section neither the Theme nor the catalog has', 'slideshow', 404],
     ['a type that is not a section name', '../layout/theme', 400],

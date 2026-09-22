@@ -486,7 +486,9 @@ function addSection(theme, catalog, body) {
   if (typeof type !== 'string' || !sectionName.test(type)) throw new BadRequest('type must be a section name, like hero.')
   const file = path.join(theme, 'sections', `${type}.liquid`)
   const source = path.join(catalog, 'sections', `${type}.liquid`)
-  if (!existsSync(file) && !existsSync(source)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
+  const placed = existsSync(file) ? file : source
+  if (!existsSync(placed)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
+  if (!goesOnHome(placed)) throw new BadRequest(`The ${type} section can't go on the home page.`)
   updateJSON(theme, home, (template) => {
     if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
     let id
@@ -575,16 +577,35 @@ function findHomeSection(template, id) {
 function colorSchemeSetting(theme, type) {
   const file = path.join(theme, 'sections', `${type}.liquid`)
   if (!sectionName.test(type) || !existsSync(file)) return undefined
-  const schema = readFileSync(file, 'utf8').match(/{%-?\s*schema\s*-?%}([\s\S]*?){%-?\s*endschema\s*-?%}/)?.[1]
-  const data = schema ? parseJSON(schema) : undefined
-  if (!data || data instanceof Error) return undefined
-  return data.settings?.find((/** @type {{ type: string }} */ setting) => setting.type === 'color_scheme')
+  return readSchema(file)?.settings?.find((/** @type {{ type: string }} */ setting) => setting.type === 'color_scheme')
 }
 
-/** @param {string} dir */
+/**
+ * The parsed `{% schema %}` of a section file, if it has a valid one.
+ * @param {string} file
+ */
+function readSchema(file) {
+  const schema = readFileSync(file, 'utf8').match(/{%-?\s*schema\s*-?%}([\s\S]*?){%-?\s*endschema\s*-?%}/)?.[1]
+  const data = schema ? parseJSON(schema) : undefined
+  return !data || data instanceof Error ? undefined : data
+}
+
+/**
+ * Whether a section may go on the home page: `enabled_on` limits a section like the header to its section group.
+ * @param {string} file
+ */
+function goesOnHome(file) {
+  const enabledOn = readSchema(file)?.enabled_on
+  return !enabledOn || (enabledOn.templates ?? []).some((/** @type {string} */ template) => template === '*' || template === 'index')
+}
+
+/**
+ * The catalog sections the home page can take.
+ * @param {string} dir
+ */
 function listSections(dir) {
   return readdirSync(path.join(dir, 'sections'))
-    .filter((file) => file.endsWith('.liquid'))
+    .filter((file) => file.endsWith('.liquid') && goesOnHome(path.join(dir, 'sections', file)))
     .map((file) => file.slice(0, -'.liquid'.length))
     .sort()
 }
