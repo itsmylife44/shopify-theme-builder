@@ -10,7 +10,9 @@
       2. Preload only the critical font variant (base weight)
       3. Additional variants load on-demand via @font-face
     {% endcomment %}
-    <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
+    {% unless settings.type_heading_font.system? and settings.type_body_font.system? %}
+      <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
+    {% endunless %}
 
     {% comment %} Preload the base font variants for initial page render {% endcomment %}
     {% unless settings.type_heading_font.system? %}

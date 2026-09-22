@@ -62,7 +62,9 @@ function readSettingsData(theme: string) {
   return parseJSON(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8'))
 }
 
-const errors = (offenses: { severity: string }[]) => offenses.filter((o) => o.severity === 'error')
+function errors(offenses: { severity: string }[]) {
+  return offenses.filter((offense) => offense.severity === 'error')
+}
 
 describe('Studio API: read Theme state', () => {
   it('returns the home sections in order, the catalog sections and a clean validation', async () => {

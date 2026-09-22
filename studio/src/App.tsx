@@ -78,6 +78,23 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
     })
   }
 
+  // Only what the Creator changed is sent, so values set elsewhere (the Theme Editor, the agent) stay as they are.
+  function brandChanges() {
+    const changes: Record<string, unknown> = {}
+    const changedSchemes = Object.fromEntries(
+      Object.entries(colorSchemes).flatMap(([scheme, colors]) => {
+        const changed = Object.entries(colors).filter(([field, value]) => value !== brand.colorSchemes[scheme]?.[field])
+        return changed.length > 0 ? [[scheme, Object.fromEntries(changed)]] : []
+      }),
+    )
+    if (Object.keys(changedSchemes).length > 0) changes.colorSchemes = changedSchemes
+    if (headingFont.trim() !== brand.headingFont) changes.headingFont = headingFont.trim()
+    if (bodyFont.trim() !== brand.bodyFont) changes.bodyFont = bodyFont.trim()
+    const logo = logoFile.trim() ? shopImagePrefix + logoFile.trim() : null
+    if (logo !== brand.logo) changes.logo = logo
+    return changes
+  }
+
   async function save(event: React.FormEvent) {
     event.preventDefault()
     setSaving(true)
@@ -86,12 +103,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
       const response = await fetch('/api/brand', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          colorSchemes,
-          headingFont: headingFont.trim(),
-          bodyFont: bodyFont.trim(),
-          logo: logoFile.trim() ? shopImagePrefix + logoFile.trim() : null,
-        }),
+        body: JSON.stringify(brandChanges()),
       })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error)
@@ -115,30 +127,31 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
             <FieldSet>
               <FieldLegend>Color schemes</FieldLegend>
               <FieldDescription>Sections pick one of these schemes for their colors.</FieldDescription>
-              <div className="flex flex-col gap-3">
+              <FieldGroup className="gap-3">
                 {Object.entries(colorSchemes).map(([scheme, colors]) => (
-                  <div key={scheme} className="flex flex-wrap items-end gap-4">
-                    <span className="w-20 font-medium">{scheme}</span>
-                    {brand.colorFields.map((field) => (
-                      <Field key={field} className="w-24">
-                        <FieldLabel htmlFor={`${scheme}-${field}`}>{field.replace('_', ' ')}</FieldLabel>
-                        <Input
-                          id={`${scheme}-${field}`}
-                          type="color"
-                          className="p-1"
-                          value={colors[field] ?? '#000000'}
-                          onChange={(event) => setColor(scheme, field, event.target.value)}
-                        />
-                      </Field>
-                    ))}
-                  </div>
+                  <FieldSet key={scheme}>
+                    <FieldLegend variant="label">{scheme}</FieldLegend>
+                    <FieldGroup className="flex-row flex-wrap gap-4">
+                      {brand.colorFields.map((field) => (
+                        <Field key={field} className="w-24">
+                          <FieldLabel htmlFor={`${scheme}-${field}`}>{field.replaceAll('_', ' ')}</FieldLabel>
+                          <Input
+                            id={`${scheme}-${field}`}
+                            type="color"
+                            value={colors[field] ?? '#000000'}
+                            onChange={(event) => setColor(scheme, field, event.target.value)}
+                          />
+                        </Field>
+                      ))}
+                    </FieldGroup>
+                  </FieldSet>
                 ))}
-              </div>
+              </FieldGroup>
               <Button type="button" variant="outline" className="self-start" onClick={addScheme}>
                 Add color scheme
               </Button>
             </FieldSet>
-            <div className="grid gap-5 md:grid-cols-2">
+            <FieldGroup className="grid md:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="heading-font">Heading font</FieldLabel>
                 <Input id="heading-font" value={headingFont} onChange={(event) => setHeadingFont(event.target.value)} />
@@ -160,7 +173,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                   .
                 </FieldDescription>
               </Field>
-            </div>
+            </FieldGroup>
             <Field>
               <FieldLabel htmlFor="logo">Logo</FieldLabel>
               <Input

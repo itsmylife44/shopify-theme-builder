@@ -19,6 +19,7 @@
   }
 
   {% # The first color scheme is the page default; sections opt into others with a color-<scheme id> class. %}
+  {% # Variables also go on :root, the background only on the class, so it paints the element that uses it. %}
   {% for scheme in settings.color_schemes %}
     {% if forloop.first %}:root,{% endif %}
     .color-{{ scheme.id }} {
