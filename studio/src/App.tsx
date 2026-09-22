@@ -27,7 +27,8 @@ export function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const showState = (state: ThemeState) => setLoad({ status: 'ready', state })
 
-  // Reads the Theme at start and again whenever its files change, from the Studio or elsewhere.
+  // Reads the Theme at start and again whenever its files change elsewhere. The Studio always runs on
+  // Vite's dev server, so the server's change events come over Vite's HMR connection.
   useEffect(() => {
     let controller = new AbortController()
     function read() {
@@ -265,9 +266,14 @@ function Preview() {
       setPreview(state)
     }
     fetch('/api/preview', { signal: controller.signal })
-      .then((response) => response.json())
-      .then(setPreview)
-      .catch(() => {})
+      .then(async (response) => {
+        const body = await response.json()
+        if (!response.ok) throw new Error(body.error)
+        setPreview(body)
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setPreview({ status: 'error', message: error.message })
+      })
     import.meta.hot?.on('studio:preview', update)
     return () => {
       controller.abort()
