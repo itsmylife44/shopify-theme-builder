@@ -6,9 +6,9 @@
 {%- capture social_links -%}
   {%- for id in social_ids -%}
     {%- assign key = 'social_' | append: id -%}
-    {%- if section.settings[key] != blank -%}
+    {%- if settings[key] != blank -%}
       <li>
-        <a href="{{ section.settings[key] }}" rel="noopener" target="_blank">{{ social_names[forloop.index0] }}</a>
+        <a href="{{ settings[key] }}" rel="noopener" target="_blank">{{ social_names[forloop.index0] }}</a>
       </li>
     {%- endif -%}
   {%- endfor -%}
@@ -246,38 +246,8 @@
       "default": "Subscribe"
     },
     {
-      "type": "header",
-      "content": "Social media"
-    },
-    {
-      "type": "url",
-      "id": "social_instagram",
-      "label": "Instagram"
-    },
-    {
-      "type": "url",
-      "id": "social_facebook",
-      "label": "Facebook"
-    },
-    {
-      "type": "url",
-      "id": "social_tiktok",
-      "label": "TikTok"
-    },
-    {
-      "type": "url",
-      "id": "social_x",
-      "label": "X"
-    },
-    {
-      "type": "url",
-      "id": "social_youtube",
-      "label": "YouTube"
-    },
-    {
-      "type": "url",
-      "id": "social_pinterest",
-      "label": "Pinterest"
+      "type": "paragraph",
+      "content": "Social links come from the theme settings, under Social media."
     },
     {
       "type": "header",

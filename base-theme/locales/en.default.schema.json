@@ -29,6 +29,7 @@
     "section": "Section",
     "settings": "Settings",
     "sidebar": "Sidebar",
+    "social_media": "Social media",
     "text": "Text",
     "theme": "Theme",
     "typography": "Typography"
@@ -52,6 +53,12 @@
     "page_margin": "Page margin",
     "page_width": "Page width",
     "show_payment_icons": "Show payment icons",
+    "social_facebook": "Facebook",
+    "social_instagram": "Instagram",
+    "social_pinterest": "Pinterest",
+    "social_tiktok": "TikTok",
+    "social_x": "X",
+    "social_youtube": "YouTube",
     "text_style": "Text style",
     "text": "Text"
   },

@@ -139,5 +139,40 @@
         "default": 4
       }
     ]
+  },
+  {
+    "name": "t:general.social_media",
+    "settings": [
+      {
+        "type": "url",
+        "id": "social_instagram",
+        "label": "t:labels.social_instagram"
+      },
+      {
+        "type": "url",
+        "id": "social_facebook",
+        "label": "t:labels.social_facebook"
+      },
+      {
+        "type": "url",
+        "id": "social_tiktok",
+        "label": "t:labels.social_tiktok"
+      },
+      {
+        "type": "url",
+        "id": "social_x",
+        "label": "t:labels.social_x"
+      },
+      {
+        "type": "url",
+        "id": "social_youtube",
+        "label": "t:labels.social_youtube"
+      },
+      {
+        "type": "url",
+        "id": "social_pinterest",
+        "label": "t:labels.social_pinterest"
+      }
+    ]
   }
 ]
