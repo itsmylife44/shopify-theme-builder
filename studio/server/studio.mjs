@@ -52,7 +52,8 @@ function studioApi(theme, catalog) {
           const rest = new URL(req.url ?? '/', 'http://studio').pathname
           const id = param ? rest.match(/^\/([^/]+)$/)?.[1] : rest === '/' ? '' : undefined
           if (req.method !== method || id === undefined) return next()
-          handle(req, decodeURIComponent(id))
+          Promise.resolve()
+            .then(() => handle(req, decodeId(id)))
             .then((body) => {
               if (body instanceof File) {
                 res.setHeader('Content-Type', body.type)
@@ -106,6 +107,15 @@ function studioApi(theme, catalog) {
   }
 }
 
+/** @param {string} id */
+function decodeId(id) {
+  try {
+    return decodeURIComponent(id)
+  } catch {
+    throw new BadRequest(`Malformed id in the URL: ${id}.`)
+  }
+}
+
 /** @param {import('node:http').IncomingMessage} req */
 function readBody(req) {
   return json(req).catch(() => {
@@ -145,7 +155,7 @@ class NotFound extends HttpError {
  */
 async function readThemeState(theme, catalog) {
   return {
-    home: readTemplate(theme, 'index'),
+    home: readTemplate(theme, home),
     catalog: listSections(catalog),
     brand: readBrand(theme),
     validation: await validate(theme),
@@ -395,11 +405,11 @@ function validateBrand(change, colorFields) {
 /**
  * The sections of a JSON template, in page order.
  * @param {string} theme
- * @param {string} name
+ * @param {string} file
  * @returns {TemplateSection[]}
  */
-function readTemplate(theme, name) {
-  const template = readJSON(theme, `templates/${name}.json`)
+function readTemplate(theme, file) {
+  const template = readJSON(theme, file)
   return template.order.map((/** @type {string} */ id) => {
     const { type, settings } = template.sections[id]
     const setting = colorSchemeSetting(theme, type)
@@ -444,7 +454,9 @@ function addSection(theme, catalog, body) {
  */
 function removeSection(theme, id) {
   updateJSON(theme, home, (template) => {
-    homeSection(template, id)
+    findHomeSection(template, id)
+    // Shopify rejects a JSON template without sections.
+    if (template.order.length === 1) throw new BadRequest('The home page needs at least one section.')
     delete template.sections[id]
     template.order = template.order.filter((/** @type {string} */ other) => other !== id)
   })
@@ -486,7 +498,7 @@ function setColorScheme(theme, id, body) {
     throw new BadRequest(`colorScheme must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
   }
   updateJSON(theme, home, (template) => {
-    const section = homeSection(template, id)
+    const section = findHomeSection(template, id)
     const setting = colorSchemeSetting(theme, section.type)
     if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
     section.settings = { ...section.settings, [setting.id]: colorScheme }
@@ -494,10 +506,11 @@ function setColorScheme(theme, id, body) {
 }
 
 /**
+ * The home section with this id; a 404 when the home page has none.
  * @param {Record<string, any>} template
  * @param {string} id
  */
-function homeSection(template, id) {
+function findHomeSection(template, id) {
   if (!Object.hasOwn(template.sections, id)) throw new NotFound(`The home page has no section ${id}.`)
   return template.sections[id]
 }
