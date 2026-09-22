@@ -105,6 +105,15 @@ All from the Claude Code hooks reference [S26] unless noted.
 - **Trust and scope.** In interactive sessions, settings-file hooks are held back until the workspace trust dialog is accepted. `-p`/SDK sessions treat the folder as trusted. Hooks from settings files also run inside subagents. Hooks are a Claude Code feature. The docs here are Claude Code's, and nothing in them says other agents read `.claude/settings.json`, so Codex, Cursor and others won't enforce them (inference).
 - **Native alternative to hooks.** Skills accept a `paths:` glob field: "Claude loads the skill automatically only when working with files matching the patterns" [S27]. `.claude/rules/*.md` with `paths:` works the same way for rules, and they trigger "when Claude reads files matching the pattern" [S28]. After compaction, skills are re-attached, capped at 5,000 tokens each and 25,000 in total. Docs point to hooks when a skill's influence fades [S27].
 
+## Verification (issue #2, 2026-09-22)
+
+What `.claude/hooks/skill-gate.mjs` relies on, checked against the current hooks reference [S26] and one live run.
+
+- **Docs.** PreToolUse exit 2 blocks the call and stderr becomes the reason Claude sees. `CLAUDE_PROJECT_DIR` is exported to hook processes. `UserPromptExpansion` fires when a typed `/skill` expands, with `expansion_type: "skill"` and `command_name`. The docs say skills invoked with slash commands bypass the `Skill` tool's PreToolUse/PostToolUse, so the gate listens to both events. The docs still don't list the `Skill` tool's input fields.
+- **Live run.** Claude Code 2.1.280, `claude -p --model haiku --permission-mode acceptEdits --allowedTools Skill` in this repo: Write `gate-check.liquid` was blocked with the gate's message. The `Skill` tool was then called with input `{"skill":"shopify-liquid"}`, and the retried Write succeeded. Without `--allowedTools Skill`, headless mode rejects the Skill call and the edit stays blocked.
+- **Still open.** Questions 2 and 3 below were not tested. The gate strips a `plugin:` prefix, so both name forms from question 3 unlock the edit.
+- **Install layout.** `npx skills add … -a claude-code` copied the skills straight into `.claude/skills/` without creating `.agents/skills/`. Upstream LICENSE files weren't copied, so they were added by hand. `skills-lock.json` records where each skill came from, but `experimental_install` would restore into `.agents/skills/`, not into the committed folder.
+
 ## Open questions
 
 1. Is Shopify's default telemetry acceptable for contributors? Its SKILL.md tells the agent to pass the verbatim prompt. Our options are the per-user opt-out file, or `env: {"OPT_OUT_INSTRUMENTATION":"true"}` in `.claude/settings.json`. The README warns that env vars don't reach every surface, and settings `env` applies only after trust [S2][S29].
