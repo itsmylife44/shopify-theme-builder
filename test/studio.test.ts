@@ -165,12 +165,13 @@ function errors<T extends { severity: string }>(offenses: T[]) {
 }
 
 describe('Studio API: read Theme state', () => {
-  it('returns the home and product sections in order, the catalog sections per page and a clean validation', async () => {
+  it('returns the home, product and collection sections in order, the catalog sections per page and a clean validation', async () => {
     const studio = await openStudio(fixtureTheme())
     const state = await studio.readTheme()
     expect(state.home).toEqual([{ id: 'main', type: 'hello-world' }])
     expect(state.product).toEqual([{ id: 'main', type: 'product' }])
-    expect(state.catalog).toEqual({ home: ['hero'], product: ['hero'] })
+    expect(state.collection).toEqual([{ id: 'main', type: 'collection' }])
+    expect(state.catalog).toEqual({ home: ['hero'], product: ['hero'], collection: ['hero'] })
     expect(state.validation.filter((o: { severity: string }) => o.severity === 'error')).toEqual([])
   })
 
@@ -437,6 +438,7 @@ describe('studio command', () => {
 const pages = [
   { page: 'home', file: 'templates/index.json', main: 'hello-world' },
   { page: 'product', file: 'templates/product.json', main: 'product' },
+  { page: 'collection', file: 'templates/collection.json', main: 'collection' },
 ]
 
 describe.each(pages)('Studio API: compose the $page page', ({ page, file, main }) => {
@@ -740,7 +742,7 @@ describe('Studio API: home page', () => {
     cpSync(path.join(projectDir, 'catalog'), theme, { recursive: true })
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
     const { catalog } = await studio.readTheme()
-    for (const page of ['home', 'product']) {
+    for (const page of ['home', 'product', 'collection']) {
       expect(catalog[page]).toContain('hero')
       expect(catalog[page]).not.toContain('header')
       expect(catalog[page]).not.toContain('footer')
@@ -758,7 +760,7 @@ describe('Studio API: product page', () => {
       '<div></div>\n{% schema %}{"name": "Gallery", "enabled_on": {"templates": ["product"]}}{% endschema %}\n',
     )
     const studio = await openStudio(theme, { catalog })
-    expect((await studio.readTheme()).catalog).toEqual({ home: ['hero'], product: ['gallery', 'hero'] })
+    expect((await studio.readTheme()).catalog).toEqual({ home: ['hero'], product: ['gallery', 'hero'], collection: ['hero'] })
     const before = readFileSync(path.join(theme, home), 'utf8')
     expect((await studio.addSection('gallery')).status).toBe(400)
     expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
@@ -780,6 +782,25 @@ describe('Studio API: product page', () => {
     expect(errors(body.validation)).toEqual([])
     // The main product shows once per page.
     expect((await studio.addSection('main-product', 'product')).status).toBe(400)
+  })
+})
+
+describe('Studio API: collection page', () => {
+  it('composes a collection page from the real catalog\'s main collection with a clean Theme Check', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    const { catalog } = await studio.readTheme()
+    expect(catalog.collection).toContain('main-collection')
+    expect(catalog.home).not.toContain('main-collection')
+    expect(catalog.product).not.toContain('main-collection')
+
+    expect((await studio.addSection('main-collection', 'collection')).status).toBe(200)
+    const { status, body } = await studio.removeSection('main', 'collection')
+    expect(status).toBe(200)
+    expect(body.collection).toEqual([expect.objectContaining({ type: 'main-collection', colorScheme: 'scheme-1' })])
+    expect(errors(body.validation)).toEqual([])
+    // The product grid shows once per page.
+    expect((await studio.addSection('main-collection', 'collection')).status).toBe(400)
   })
 })
 
