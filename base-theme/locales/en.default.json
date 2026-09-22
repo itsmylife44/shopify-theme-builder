@@ -27,6 +27,19 @@
       "title": "Login"
     }
   },
+  "collection": {
+    "active_filters": "Active filters",
+    "apply": "Apply",
+    "clear_all": "Clear all",
+    "empty": "This collection has no products yet.",
+    "no_results": "No products match these filters.",
+    "pagination": "Pagination",
+    "price_from": "From",
+    "price_to": "To",
+    "product_title": "Example product",
+    "remove_filter": "Remove filter: {{ filter }}",
+    "sort_by": "Sort by"
+  },
   "collections": {
     "title": "Collections"
   },

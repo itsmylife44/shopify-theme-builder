@@ -75,6 +75,13 @@ export function App() {
           />
           <PageSections page="home" title="Home page" file="templates/index.json" state={load.state} onSaved={showState} />
           <PageSections page="product" title="Product page" file="templates/product.json" state={load.state} onSaved={showState} />
+          <PageSections
+            page="collection"
+            title="Collection page"
+            file="templates/collection.json"
+            state={load.state}
+            onSaved={showState}
+          />
           <ThemeCheck offenses={load.state.validation} />
         </div>
       )}

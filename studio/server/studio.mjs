@@ -474,7 +474,11 @@ function readTemplate(theme, file) {
 }
 
 // The pages the Studio composes, and their JSON template.
-const pages = /** @type {const} */ ({ home: 'templates/index.json', product: 'templates/product.json' })
+const pages = /** @type {const} */ ({
+  home: 'templates/index.json',
+  product: 'templates/product.json',
+  collection: 'templates/collection.json',
+})
 
 /**
  * @template T
