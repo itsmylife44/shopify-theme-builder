@@ -14,9 +14,9 @@ const defaultCatalog = fileURLToPath(new URL('../../catalog', import.meta.url))
 
 /**
  * Starts the Studio for a Theme folder, with `shopify theme dev` for its preview. Nothing is written into the Theme.
- * @param {{ theme: string, catalog?: string, port?: number, cli?: string, store?: string }} options
+ * @param {{ theme: string, catalog?: string, port?: number, cli?: string, store?: string, storePassword?: string }} options
  */
-export async function startStudio({ theme, catalog = defaultCatalog, port, cli = 'shopify', store }) {
+export async function startStudio({ theme, catalog = defaultCatalog, port, cli = 'shopify', store, storePassword }) {
   theme = path.resolve(theme)
   for (const file of ['layout/theme.liquid', 'templates/index.json']) {
     if (!existsSync(path.join(theme, file))) throw new Error(`${theme} is not a Shopify theme: ${file} is missing.`)
@@ -25,7 +25,7 @@ export async function startStudio({ theme, catalog = defaultCatalog, port, cli =
     root: studioDir,
     configFile: path.join(studioDir, 'vite.config.ts'),
     server: { port },
-    plugins: [studioApi(theme, catalog, { cli, store })],
+    plugins: [studioApi(theme, catalog, { cli, store, storePassword })],
   })
   return server.listen()
 }
@@ -33,10 +33,10 @@ export async function startStudio({ theme, catalog = defaultCatalog, port, cli =
 /**
  * @param {string} theme
  * @param {string} catalog
- * @param {{ cli: string, store?: string }} preview
+ * @param {{ cli: string, store?: string, storePassword?: string }} preview
  * @returns {import('vite').Plugin}
  */
-function studioApi(theme, catalog, { cli, store }) {
+function studioApi(theme, catalog, { cli, store, storePassword }) {
   return {
     name: 'studio-api',
     configureServer(server) {
@@ -71,7 +71,13 @@ function studioApi(theme, catalog, { cli, store }) {
         notify = setTimeout(() => server.ws.send('studio:theme'), 100)
       })
 
-      const preview = startPreview({ cli, theme, store, onChange: (state) => server.ws.send('studio:preview', state) })
+      const preview = startPreview({
+        cli,
+        theme,
+        store,
+        storePassword,
+        onChange: (state) => server.ws.send('studio:preview', state),
+      })
       const stop = () => preview.stop()
       process.on('exit', stop)
       server.httpServer?.once('close', () => {
