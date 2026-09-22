@@ -11,6 +11,7 @@ import { startPreview } from './preview.mjs'
 
 const studioDir = fileURLToPath(new URL('..', import.meta.url))
 const defaultCatalog = fileURLToPath(new URL('../../catalog', import.meta.url))
+const baseTheme = fileURLToPath(new URL('../../base-theme', import.meta.url))
 
 /**
  * Starts the Studio for a Theme folder, with `shopify theme dev` for its preview. Nothing is written into the Theme.
@@ -326,13 +327,13 @@ function updateSettings(theme, change) {
  * Changes a Theme JSON file in place, keeping everything the change doesn't touch.
  * @param {string} theme
  * @param {string} name
- * @param {(data: Record<string, any>) => void} change
+ * @param {(data: any) => void | boolean} change Returning false leaves the file as it was.
  */
 function updateJSON(theme, name, change) {
   const file = path.join(theme, name)
   const raw = readFileSync(file, 'utf8')
   const data = parseThemeJSON(raw, name)
-  change(data)
+  if (change(data) === false) return
   // Keep the comment header Shopify writes at the top of the file.
   const header = raw.match(/^\s*\/\*[\s\S]*?\*\/\s*/)?.[0] ?? ''
   writeFileSync(file, header + JSON.stringify(data, null, 2) + '\n')
@@ -496,8 +497,74 @@ function addSection(theme, catalog, body) {
     while (id in template.sections)
     template.sections[id] = { type, settings: {} }
     template.order.push(id)
-    if (!existsSync(file)) copyFileSync(source, file)
+    if (!existsSync(file)) {
+      addMissingFromBaseTheme(theme)
+      copyFileSync(source, file)
+    }
   })
+}
+
+/**
+ * Adds the locale keys and theme settings of the Base Theme that a Theme made from an older one lacks,
+ * since catalog sections use them. Nothing the Theme already has changes.
+ * @param {string} theme
+ */
+function addMissingFromBaseTheme(theme) {
+  for (const name of readdirSync(path.join(baseTheme, 'locales'))) {
+    if (!existsSync(path.join(theme, 'locales', name))) continue
+    const base = readJSON(baseTheme, `locales/${name}`)
+    updateJSON(theme, `locales/${name}`, (locale) => addMissingKeys(locale, base))
+  }
+  const baseGroups = readJSON(baseTheme, 'config/settings_schema.json')
+  updateJSON(theme, 'config/settings_schema.json', (groups) => addMissingSettings(groups, baseGroups))
+}
+
+/**
+ * Adds the settings of `baseGroups` whose id no group in `groups` has, into the group of the same name
+ * or, when there is none, as a new group. Returns whether it added any.
+ * @param {{ name: string, settings?: { id?: string }[] }[]} groups
+ * @param {{ name: string, settings?: { id?: string }[] }[]} baseGroups
+ */
+function addMissingSettings(groups, baseGroups) {
+  // Matched by id across all groups, so a setting the Creator moved or a renamed group isn't added twice.
+  const ids = new Set(groups.flatMap((group) => (group.settings ?? []).map((setting) => setting.id)))
+  let added = false
+  for (const baseGroup of baseGroups) {
+    const missing = (baseGroup.settings ?? []).filter((setting) => setting.id && !ids.has(setting.id))
+    if (missing.length === 0) continue
+    const group = groups.find((other) => other.name === baseGroup.name)
+    if (group) {
+      group.settings = [...(group.settings ?? []), ...missing]
+    } else {
+      groups.push({ ...baseGroup, settings: (baseGroup.settings ?? []).filter((setting) => !setting.id || !ids.has(setting.id)) })
+    }
+    added = true
+  }
+  return added
+}
+
+/**
+ * Copies the keys of `base` that `target` lacks, at any depth. Returns whether it added any.
+ * @param {Record<string, any>} target
+ * @param {Record<string, any>} base
+ * @returns {boolean}
+ */
+function addMissingKeys(target, base) {
+  let added = false
+  for (const [key, value] of Object.entries(base)) {
+    if (!(key in target)) {
+      target[key] = value
+      added = true
+    } else if (isObject(value) && isObject(target[key])) {
+      added = addMissingKeys(target[key], value) || added
+    }
+  }
+  return added
+}
+
+/** @param {unknown} value */
+function isObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**

@@ -469,6 +469,52 @@ describe('Studio API: compose the home page', () => {
     expect(body.home.map((section: { type: string }) => section.type)).toEqual(['hello-world', 'custom-section'])
   })
 
+  it('adds the Base Theme locale keys and settings a copied section needs to an older Theme, keeping its own', async () => {
+    // A Theme made before the Base Theme had the header keys, the Layout group and the logo_asset setting,
+    // whose Creator renamed the Social media group.
+    const theme = fixtureTheme()
+    const localeFile = path.join(theme, 'locales/en.default.json')
+    const locale = parseJSON(readFileSync(localeFile, 'utf8'))
+    delete locale.header
+    locale.cart.title = 'Your bag'
+    writeFileSync(localeFile, JSON.stringify(locale, null, 2))
+    const schemaFile = path.join(theme, 'config/settings_schema.json')
+    type Group = { name: string; settings?: { id?: string }[] }
+    const groups: Group[] = parseJSON(readFileSync(schemaFile, 'utf8'))
+    const older = groups
+      .filter((group) => group.name !== 't:general.layout')
+      .map((group) => ({ ...group, settings: group.settings?.filter((setting) => setting.id !== 'logo_asset') }))
+      .map((group) => (group.name === 't:general.social_media' ? { ...group, name: 'Social' } : group))
+    writeFileSync(schemaFile, JSON.stringify(older, null, 2))
+    const catalog = fixtureCatalog()
+    writeFileSync(
+      path.join(catalog, 'sections/links.liquid'),
+      '<nav aria-label="{{ \'header.main_menu\' | t }}"><a href="{{ settings.social_instagram }}">Instagram</a></nav>\n' +
+        '{% schema %}{"name": "Links", "presets": [{"name": "Links"}]}{% endschema %}\n',
+    )
+
+    const { status, body } = await (await openStudio(theme, { catalog })).addSection('links')
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    const merged = parseJSON(readFileSync(localeFile, 'utf8'))
+    expect(merged.header.main_menu).toBe('Main menu')
+    expect(merged.cart.title).toBe('Your bag')
+    const mergedGroups: Group[] = parseJSON(readFileSync(schemaFile, 'utf8'))
+    expect(mergedGroups.map((group) => group.name)).toEqual([...older.map((group) => group.name), 't:general.layout'])
+    const ids = mergedGroups.flatMap((group) => (group.settings ?? []).flatMap((setting) => setting.id ?? []))
+    expect(ids).toContain('logo_asset')
+    expect(ids).toContain('max_page_width')
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('leaves the Theme\'s locale and settings files untouched when they have everything', async () => {
+    const theme = fixtureTheme()
+    const files = ['locales/en.default.json', 'locales/en.default.schema.json', 'config/settings_schema.json']
+    const before = files.map((file) => readFileSync(path.join(theme, file), 'utf8'))
+    expect((await (await openStudio(theme)).addSection('hero')).status).toBe(200)
+    expect(files.map((file) => readFileSync(path.join(theme, file), 'utf8'))).toEqual(before)
+  })
+
   it('leaves out and refuses a catalog section that only goes in a section group, like an announcement bar', async () => {
     const theme = fixtureTheme()
     const catalog = fixtureCatalog()
