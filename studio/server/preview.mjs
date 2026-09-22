@@ -7,7 +7,8 @@ import { promisify, stripVTControlCharacters } from 'node:util'
 // The oldest CLI whose output the Studio was checked against.
 const minimumCliVersion = '4.8.0'
 const install = 'Install it with `npm install -g @shopify/cli`, then restart the Studio.'
-const previewUrl = /Preview your theme[\s\S]*?(https?:\/\/[^\s│]+)/
+// The line after "Preview your theme" holds the link, or without a terminal a footnote like [1] listed after the box.
+const previewItem = /Preview your theme[^\n]*\n[^\n]*?(?:\[(\d+)\]|(https?:\/\/[^\s│]+))/
 // The CLI prints a login link and waits, then goes on to the preview. Only with CI set does it stop instead.
 const loginPrompt = /log in to Shopify/
 const loginWaiting = "Log in to Shopify with the link the Shopify CLI printed in the Studio's terminal; the preview starts after."
@@ -58,7 +59,7 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
         // ponytail: keeps the last 4 KB only, enough for the status lines and the final error box.
         output = (output + stripVTControlCharacters(chunk.toString())).slice(-4096)
         if (state.status === 'running') return
-        const url = output.match(previewUrl)?.[1]
+        const url = previewUrl(output)
         if (url) set({ status: 'running', url })
         else if (state.status === 'starting' && loginPrompt.test(output)) {
           set({ status: 'login-required', message: loginWaiting })
@@ -109,6 +110,15 @@ async function checkCli(cli) {
   if (index !== -1 && have[index] < need[index]) {
     throw new Error(`The Shopify CLI is ${version}; the Studio needs ${minimumCliVersion} or newer. ${install}`)
   }
+}
+
+/**
+ * The local preview link in theme dev's output, once it printed it.
+ * @param {string} output
+ */
+function previewUrl(output) {
+  const [, footnote, url] = output.match(previewItem) ?? []
+  return url ?? (footnote ? output.match(new RegExp(`^\\[${footnote}\\] (\\S+)`, 'm'))?.[1] : undefined)
 }
 
 /**
