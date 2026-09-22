@@ -1,7 +1,7 @@
 // The Studio server: Vite serves the React UI from studio/, and the studioApi
 // plugin adds the Node file API over the Theme folder on disk.
 import { randomBytes } from 'node:crypto'
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
@@ -42,8 +42,10 @@ function studioApi(theme, catalog, { cli, store }) {
     configureServer(server) {
       /** @type {Promise<Offense[]> | null} The latest Theme Check result, until a file changes. */
       let validation = null
+      let validatedAt = 0
       const readState = () => readThemeState(theme, catalog, (validation ??= validateOnce()))
       function validateOnce() {
+        validatedAt = Date.now()
         const result = validate(theme)
         result.catch(() => {
           if (validation === result) validation = null
@@ -51,7 +53,7 @@ function studioApi(theme, catalog, { cli, store }) {
         return result
       }
       /** The Theme state after a Studio write, validated again. */
-      function written() {
+      function readStateAfterWrite() {
         validation = null
         return readState()
       }
@@ -61,6 +63,9 @@ function studioApi(theme, catalog, { cli, store }) {
       let notify
       const watcher = watch(theme, { recursive: true }, (_, file) => {
         if (file?.split(path.sep)[0] === '.git') return
+        // A file written before the latest Theme Check started, like the Studio's own writes, is already in it.
+        const mtime = file ? statSync(path.join(theme, file), { throwIfNoEntry: false })?.mtimeMs : undefined
+        if (validation && mtime !== undefined && mtime < validatedAt) return
         validation = null
         clearTimeout(notify)
         notify = setTimeout(() => server.ws.send('studio:theme'), 100)
@@ -115,32 +120,32 @@ function studioApi(theme, catalog, { cli, store }) {
       route('/api/preview', 'GET', async () => preview.state)
       route('/api/brand', 'PUT', async (req) => {
         setBrand(theme, await readBody(req))
-        return written()
+        return readStateAfterWrite()
       })
       route('/api/brand/logo', 'GET', async () => readLogo(theme))
       route('/api/brand/logo', 'PUT', async (req) => {
         uploadLogo(theme, req.headers['content-type'] ?? '', await buffer(req))
-        return written()
+        return readStateAfterWrite()
       })
       route('/api/brand/logo', 'DELETE', async () => {
         removeLogo(theme)
-        return written()
+        return readStateAfterWrite()
       })
       route('/api/home/sections', 'POST', async (req) => {
         addSection(theme, catalog, await readBody(req))
-        return written()
+        return readStateAfterWrite()
       })
       route('/api/home/sections/:id', 'DELETE', async (_, id) => {
         removeSection(theme, id)
-        return written()
+        return readStateAfterWrite()
       })
       route('/api/home/sections/:id', 'PATCH', async (req, id) => {
         setColorScheme(theme, id, await readBody(req))
-        return written()
+        return readStateAfterWrite()
       })
       route('/api/home/order', 'PUT', async (req) => {
         reorderSections(theme, await readBody(req))
-        return written()
+        return readStateAfterWrite()
       })
     },
   }

@@ -15,7 +15,7 @@ Run `npm run check:theme` (Theme Check on the example Theme, one line per offens
 
 `shopify theme dev` needs the Shopify CLI (Node ≥ 22.12), a login, and a store (a free development store works). It serves the theme from a folder and hot-reloads files saved there by any process: CLI 4.8.0 watches the folder with chokidar, which reports OS file events whoever writes the file (read in the CLI's source, `startWatcher` in its theme file system; not yet watched live against a store). A write by the Studio or an agent reaches the preview the same way as a save in an editor.
 
-The Studio runs `theme dev` itself (`studio --theme <dir> --store <shop>.myshopify.com`) and shows its status and link; `studio/server/preview.mjs` reads both from the CLI's output. Without a terminal, the CLI can't log in: run `shopify auth login` once in a terminal, then start the Studio again.
+The Studio runs `theme dev` itself (`studio --theme <dir> --store <shop>.myshopify.com`) and shows its status and link; `studio/server/preview.mjs` reads both from the CLI's output, so it needs Shopify CLI 4.8.0 or newer (the version that output was checked against). On first run the CLI prints a login link in the Studio's terminal and waits; the Studio shows "Login required" until the preview starts. With `CI` set the CLI can't log in and stops: run `shopify auth login`, then start the Studio again.
 
 1. Assemble a Theme folder: `mkdir -p <dir> && cp -R base-theme/. catalog/. <dir>`
 2. Run `shopify theme dev --path <dir> --store <shop>.myshopify.com` and open the printed `http://127.0.0.1:9292` link.

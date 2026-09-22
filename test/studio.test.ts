@@ -42,9 +42,15 @@ function fixtureCatalog() {
 
 /**
  * A stand-in for the Shopify CLI: `version` prints the given version; `theme dev` records its
- * arguments and pid in run.json, prints the given output, then runs until killed or exits with exitCode.
+ * arguments and pid in run.json, prints the given output (and `later` half a second on), then runs until
+ * killed or exits with exitCode.
  */
-function fakeShopify({ version = '4.8.0', output = '', exitCode }: { version?: string; output?: string; exitCode?: number } = {}) {
+function fakeShopify({
+  version = '4.8.0',
+  output = '',
+  later = '',
+  exitCode,
+}: { version?: string; output?: string; later?: string; exitCode?: number } = {}) {
   const dir = tempDir('shopify-')
   const cli = path.join(dir, 'shopify')
   writeFileSync(
@@ -56,7 +62,8 @@ if (process.argv[2] === 'version') {
 }
 require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'run.json'))}, JSON.stringify({ args: process.argv.slice(2), pid: process.pid }))
 process.stdout.write(${JSON.stringify(output)})
-${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `process.exitCode = ${exitCode}`}
+setTimeout(() => process.stdout.write(${JSON.stringify(later)}), 500)
+${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `setTimeout(() => process.exit(${exitCode}), 600)`}
 `,
     { mode: 0o755 },
   )
@@ -660,7 +667,24 @@ describe('Studio: live preview', () => {
     await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
   })
 
-  it('shows that a login is required when the CLI asks for one', async () => {
+  const loginPrompt =
+    'To run this command, log in to Shopify.\n' +
+    'User verification code: ABCD-EFGH\n' +
+    '👉 Open this link to start the auth process: https://accounts.shopify.com/activate-with-code?device_code%5Buser_code%5D=ABCD-EFGH\n'
+
+  it('shows that a login is required while the CLI waits for one in the terminal', async () => {
+    const studio = await openStudio(fixtureTheme(), { cli: fakeShopify({ output: loginPrompt }) })
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'login-required', message: expect.stringContaining("Studio's terminal") })
+  })
+
+  it('shows the preview URL once the Creator logged in', async () => {
+    const studio = await openStudio(fixtureTheme(), { cli: fakeShopify({ output: loginPrompt, later: running }) })
+    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
+  })
+
+  it('asks for `shopify auth login` when the CLI stops for want of a login', async () => {
     const cli = fakeShopify({
       output:
         'To run this command, log in to Shopify.\n' +
@@ -695,11 +719,11 @@ describe('Studio: live preview', () => {
   })
 
   it('explains a Shopify CLI below the required version', async () => {
-    const cli = fakeShopify({ version: '3.61.2' })
+    const cli = fakeShopify({ version: '4.7.9' })
     const studio = await openStudio(fixtureTheme(), { cli })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'error', message: expect.stringMatching(/3\.61\.2.*4\.0\.0/) })
+      .toEqual({ status: 'error', message: expect.stringMatching(/4\.7\.9.*4\.8\.0/) })
     expect(existsSync(path.join(path.dirname(cli), 'run.json'))).toBe(false)
   })
 

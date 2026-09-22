@@ -3,12 +3,14 @@
 import { execFile, spawn } from 'node:child_process'
 import { promisify, stripVTControlCharacters } from 'node:util'
 
-export const minimumCliVersion = '4.0.0'
+// The oldest CLI whose output the Studio was checked against.
+const minimumCliVersion = '4.8.0'
 const install = 'Install it with `npm install -g @shopify/cli`, then restart the Studio.'
 const previewUrl = /Preview your theme[\s\S]*?(https?:\/\/[^\s│]+)/
+// The CLI prints a login link and waits, then goes on to the preview. Only with CI set does it stop instead.
 const loginPrompt = /log in to Shopify/
-// Without a terminal to prompt in, the CLI stops and asks for a login instead.
-const loginMessage = 'Run `shopify auth login` in a terminal, then restart the Studio.'
+const loginWaiting = "Log in to Shopify with the link the Shopify CLI printed in the Studio's terminal; the preview starts after."
+const loginStopped = 'Run `shopify auth login` in a terminal, then restart the Studio.'
 
 /**
  * @typedef {{ status: 'starting' | 'login-required' | 'error', message: string } | { status: 'running', url: string }} PreviewState
@@ -39,21 +41,26 @@ export function startPreview({ cli, theme, store, onChange }) {
       // No stdin: theme dev must not take over the Studio's terminal with its own prompts and keys.
       child = spawn(cli, args, { stdio: ['ignore', 'pipe', 'pipe'] })
       let output = ''
-      /** @param {NodeJS.WriteStream} terminal */
-      const read = (terminal) => (/** @type {Buffer} */ chunk) => {
+      /**
+       * Echoes the CLI's output to the Studio's terminal, where the Creator logs in, and reads the status from it.
+       * @param {NodeJS.WriteStream} terminal
+       */
+      const echoAndRead = (terminal) => (/** @type {Buffer} */ chunk) => {
         terminal.write(chunk)
         // ponytail: keeps the last 4 KB only, enough for the status lines and the final error box.
         output = (output + stripVTControlCharacters(chunk.toString())).slice(-4096)
-        if (state.status !== 'starting') return
+        if (state.status === 'running') return
         const url = output.match(previewUrl)?.[1]
         if (url) set({ status: 'running', url })
-        else if (loginPrompt.test(output)) set({ status: 'login-required', message: loginMessage })
+        else if (state.status === 'starting' && loginPrompt.test(output)) {
+          set({ status: 'login-required', message: loginWaiting })
+        }
       }
-      child.stdout?.on('data', read(process.stdout))
-      child.stderr?.on('data', read(process.stderr))
+      child.stdout?.on('data', echoAndRead(process.stdout))
+      child.stderr?.on('data', echoAndRead(process.stderr))
       child.on('error', (error) => set({ status: 'error', message: `Could not run the Shopify CLI: ${error.message}` }))
       child.on('exit', (code) => {
-        if (state.status === 'login-required') return
+        if (state.status === 'login-required') return set({ status: 'login-required', message: loginStopped })
         set({ status: 'error', message: `shopify theme dev stopped (exit code ${code}). ${lastLines(output)}`.trim() })
       })
     },
