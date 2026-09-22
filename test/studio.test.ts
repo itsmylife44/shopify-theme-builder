@@ -240,9 +240,9 @@ describe('Studio API: logo', () => {
     const studio = await openStudio(theme)
     const { status, body } = await studio.uploadLogo(png, 'image/png')
     expect(status).toBe(200)
-    expect(new Uint8Array(readFileSync(path.join(theme, 'assets/logo.png')))).toEqual(png)
-    expect(readSettingsData(theme).current.logo_asset).toBe('logo.png')
-    expect(body.brand.logoAsset).toBe('logo.png')
+    expect(new Uint8Array(readFileSync(path.join(theme, 'assets/studio-logo.png')))).toEqual(png)
+    expect(readSettingsData(theme).current.logo_asset).toBe('studio-logo.png')
+    expect(body.brand.logoAsset).toBe('studio-logo.png')
     expect(errors(body.validation)).toEqual([])
 
     const served = await studio.fetchLogo()
@@ -256,9 +256,38 @@ describe('Studio API: logo', () => {
     await studio.uploadLogo(png, 'image/png')
     const { status } = await studio.uploadLogo(svg, 'image/svg+xml')
     expect(status).toBe(200)
-    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(false)
-    expect(readFileSync(path.join(theme, 'assets/logo.svg'), 'utf8')).toContain('<svg')
-    expect(readSettingsData(theme).current.logo_asset).toBe('logo.svg')
+    expect(existsSync(path.join(theme, 'assets/studio-logo.png'))).toBe(false)
+    expect(readFileSync(path.join(theme, 'assets/studio-logo.svg'), 'utf8')).toContain('<svg')
+    expect(readSettingsData(theme).current.logo_asset).toBe('studio-logo.svg')
+  })
+
+  it('never deletes or overwrites a logo asset the Studio did not write', async () => {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'assets/logo.png'), png)
+    writeFileSync(
+      path.join(theme, 'config/settings_data.json'),
+      JSON.stringify({ current: { ...readSettingsData(theme).current, logo_asset: 'logo.png' } }),
+    )
+    const studio = await openStudio(theme)
+    await studio.uploadLogo(svg, 'image/svg+xml')
+    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(true)
+    await studio.removeLogo()
+    expect(existsSync(path.join(theme, 'assets/studio-logo.svg'))).toBe(false)
+
+    writeFileSync(
+      path.join(theme, 'config/settings_data.json'),
+      JSON.stringify({ current: { ...readSettingsData(theme).current, logo_asset: 'logo.png' } }),
+    )
+    await studio.removeLogo()
+    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(true)
+    expect(readSettingsData(theme).current).not.toHaveProperty('logo_asset')
+  })
+
+  it('serves the logo so an SVG cannot run scripts on the Studio', async () => {
+    const studio = await openStudio(fixtureTheme())
+    await studio.uploadLogo(svg, 'image/svg+xml')
+    const served = await studio.fetchLogo()
+    expect(served.headers.get('content-security-policy')).toContain('sandbox')
   })
 
   it('removes the logo file and the setting', async () => {
@@ -267,7 +296,7 @@ describe('Studio API: logo', () => {
     await studio.uploadLogo(png, 'image/png')
     const { status, body } = await studio.removeLogo()
     expect(status).toBe(200)
-    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(false)
+    expect(existsSync(path.join(theme, 'assets/studio-logo.png'))).toBe(false)
     expect(readSettingsData(theme).current).not.toHaveProperty('logo_asset')
     expect(body.brand.logoAsset).toBe(null)
     expect((await studio.fetchLogo()).status).toBe(404)
@@ -275,14 +304,15 @@ describe('Studio API: logo', () => {
 
   it.each([
     ['a file that is not an image', new TextEncoder().encode('hello'), 'text/plain'],
-    ['an image over 2 MB', new Uint8Array(2 * 1024 * 1024 + 1), 'image/png'],
+    ['a file whose bytes are not the declared type', new TextEncoder().encode('hello'), 'image/png'],
+    ['an image over 2 MB', Uint8Array.from({ length: 2 * 1024 * 1024 + 1 }, (_, i) => [0x89, 0x50, 0x4e, 0x47][i] ?? 0), 'image/png'],
   ])('refuses %s and writes nothing', async (_, file, type) => {
     const theme = fixtureTheme()
     const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
     const { status, body } = await (await openStudio(theme)).uploadLogo(file, type)
     expect(status).toBe(400)
     expect(body.error).toEqual(expect.any(String))
-    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(false)
+    expect(existsSync(path.join(theme, 'assets/studio-logo.png'))).toBe(false)
     expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
   })
 })

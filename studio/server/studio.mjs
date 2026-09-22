@@ -51,13 +51,16 @@ function studioApi(theme, catalog) {
               if (body instanceof File) {
                 res.setHeader('Content-Type', body.type)
                 res.setHeader('Cache-Control', 'no-store')
+                // An uploaded SVG opened directly must not run scripts on the Studio's origin.
+                res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+                res.setHeader('X-Content-Type-Options', 'nosniff')
                 return body.bytes().then((bytes) => res.end(bytes))
               }
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify(body))
             })
             .catch((/** @type {Error} */ error) => {
-              res.statusCode = error instanceof BadRequest ? 400 : error instanceof NotFound ? 404 : 500
+              res.statusCode = error instanceof HttpError ? error.status : 500
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({ error: error.message }))
             })
@@ -73,7 +76,7 @@ function studioApi(theme, catalog) {
       })
       route('/api/brand/logo', 'GET', async () => readLogo(theme))
       route('/api/brand/logo', 'PUT', async (req) => {
-        await uploadLogo(theme, req.headers['content-type'] ?? '', await buffer(req))
+        uploadLogo(theme, req.headers['content-type'] ?? '', await buffer(req))
         return readThemeState(theme, catalog)
       })
       route('/api/brand/logo', 'DELETE', async () => {
@@ -84,8 +87,15 @@ function studioApi(theme, catalog) {
   }
 }
 
-class BadRequest extends Error {}
-class NotFound extends Error {}
+class HttpError extends Error {
+  status = 500
+}
+class BadRequest extends HttpError {
+  status = 400
+}
+class NotFound extends HttpError {
+  status = 404
+}
 
 /**
  * @typedef {{ file: string, line: number, severity: 'error' | 'warning', check: string, message: string }} Offense
@@ -231,35 +241,53 @@ function updateSettings(theme, change) {
 
 // The Studio's logo lives in the Theme's assets, since only the Admin API can add images to the
 // shop's Files (ADR-0004). The logo_asset setting names it; a Theme Editor logo takes precedence.
-/** @type {Record<string, string>} */
-const logoTypes = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/svg+xml': 'svg' }
+// The studio-logo name keeps it apart from assets the Merchant adds, which the Studio never touches.
+/** @type {Record<string, { extension: string, matches: (file: Buffer) => boolean }>} */
+const logoTypes = {
+  'image/png': { extension: 'png', matches: (file) => file.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47])) },
+  'image/jpeg': { extension: 'jpg', matches: (file) => file.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff])) },
+  'image/webp': {
+    extension: 'webp',
+    matches: (file) => file.toString('latin1', 0, 4) === 'RIFF' && file.toString('latin1', 8, 12) === 'WEBP',
+  },
+  'image/svg+xml': { extension: 'svg', matches: (file) => file.toString('utf8', 0, 1024).includes('<svg') },
+}
 const maxLogoBytes = 2 * 1024 * 1024
-const studioLogo = /^logo\.(png|jpg|webp|svg)$/
+
+/**
+ * @param {string | null} name
+ * @returns {name is string}
+ */
+function isStudioLogo(name) {
+  return Object.values(logoTypes).some(({ extension }) => name === `studio-logo.${extension}`)
+}
 
 /**
  * @param {string} theme
  * @param {string} contentType
  * @param {Buffer} file
  */
-async function uploadLogo(theme, contentType, file) {
-  const extension = logoTypes[contentType.split(';')[0].trim()]
-  if (!extension) throw new BadRequest('The logo must be a PNG, JPEG, WebP or SVG image.')
+function uploadLogo(theme, contentType, file) {
+  const type = logoTypes[contentType.split(';')[0].trim()]
+  if (!type) throw new BadRequest('The logo must be a PNG, JPEG, WebP or SVG image.')
+  if (!type.matches(file)) throw new BadRequest(`The file is not a ${type.extension.toUpperCase()} image.`)
   if (file.length > maxLogoBytes) throw new BadRequest('The logo must be at most 2 MB.')
-  removeLogo(theme)
-  writeFileSync(path.join(theme, 'assets', `logo.${extension}`), file)
+  const name = `studio-logo.${type.extension}`
+  const previous = readLogoAsset(theme)
+  writeFileSync(path.join(theme, 'assets', name), file)
+  if (previous !== name && isStudioLogo(previous)) rmSync(path.join(theme, 'assets', previous), { force: true })
   updateSettings(theme, (current) => {
-    current.logo_asset = `logo.${extension}`
+    current.logo_asset = name
   })
 }
 
 /**
- * Removes the Studio's logo file and clears the setting. A logo_asset naming any other file (set by
- * hand in the Theme Editor) only has the setting cleared: the Studio never deletes assets it didn't write.
+ * Clears the logo_asset setting, and deletes the file only when the Studio wrote it.
  * @param {string} theme
  */
 function removeLogo(theme) {
-  const { logoAsset } = readBrand(theme)
-  if (logoAsset && studioLogo.test(logoAsset)) rmSync(path.join(theme, 'assets', logoAsset), { force: true })
+  const previous = readLogoAsset(theme)
+  if (isStudioLogo(previous)) rmSync(path.join(theme, 'assets', previous), { force: true })
   updateSettings(theme, (current) => {
     delete current.logo_asset
   })
@@ -270,12 +298,20 @@ function removeLogo(theme) {
  * @param {string} theme
  */
 function readLogo(theme) {
-  const { logoAsset } = readBrand(theme)
-  const type = Object.keys(logoTypes).find((type) => logoAsset?.endsWith(`.${logoTypes[type]}`))
+  const name = readLogoAsset(theme)
+  const type = Object.keys(logoTypes).find((type) => name?.endsWith(`.${logoTypes[type].extension}`))
   // logo_asset is a plain text setting: only serve a file name inside assets/.
-  const file = logoAsset && path.basename(logoAsset) === logoAsset ? path.join(theme, 'assets', logoAsset) : null
-  if (!file || !type || !existsSync(file)) throw new NotFound('The Theme has no logo file.')
-  return new File([readFileSync(file)], logoAsset ?? '', { type })
+  const file = name && path.basename(name) === name ? path.join(theme, 'assets', name) : null
+  if (!name || !file || !type || !existsSync(file)) throw new NotFound('The Theme has no logo file.')
+  return new File([readFileSync(file)], name, { type })
+}
+
+/**
+ * @param {string} theme
+ * @returns {string | null}
+ */
+function readLogoAsset(theme) {
+  return currentSettings(readJSON(theme, settingsData)).logo_asset || null
 }
 
 /**

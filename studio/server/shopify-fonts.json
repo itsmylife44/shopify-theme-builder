@@ -1,6 +1,7 @@
 {
   "source": "https://shopify.dev/docs/storefronts/themes/architecture/settings/fonts#available-fonts",
   "retrieved": "2026-09-22",
+  "note": "The Available fonts table only. Deprecated fonts are left out so the Studio never picks one.",
   "families": [
     {"family": "Mono", "handles": ["mono"]},
     {"family": "Sans-serif", "handles": ["sans_serif_n4", "sans_serif_i4", "sans_serif_n7", "sans_serif_i7"]},
