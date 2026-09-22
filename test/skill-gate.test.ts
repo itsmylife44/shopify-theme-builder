@@ -42,10 +42,20 @@ describe('skill gate hook', () => {
     expect(edit(randomUUID(), 'catalog/sections/hero.liquid', 'Write').code).toBe(2)
   })
 
-  it('allows a Liquid edit once the skill was loaded this session', () => {
+  it('allows a Liquid edit once both Liquid skills were loaded this session', () => {
     const session = randomUUID()
     expect(loadSkill(session, 'shopify-liquid').code).toBe(0)
+    expect(loadSkill(session, 'theme-tooling').code).toBe(0)
     expect(edit(session, 'catalog/sections/hero.liquid').code).toBe(0)
+  })
+
+  it('blocks a Liquid edit until theme-tooling is loaded too, naming it', () => {
+    const session = randomUUID()
+    loadSkill(session, 'shopify-liquid')
+    const blocked = edit(session, 'catalog/sections/hero.liquid')
+    expect(blocked.code).toBe(2)
+    expect(blocked.stderr).toContain('theme-tooling')
+    expect(blocked.stderr).not.toContain('`shopify-liquid`')
   })
 
   it('does not carry loaded skills over to another session', () => {
@@ -56,6 +66,7 @@ describe('skill gate hook', () => {
   it('accepts a plugin-namespaced skill name', () => {
     const session = randomUUID()
     loadSkill(session, 'shopify-ai-toolkit:shopify-liquid')
+    loadSkill(session, 'theme-tooling')
     expect(edit(session, 'catalog/sections/hero.liquid').code).toBe(0)
   })
 
@@ -67,6 +78,7 @@ describe('skill gate hook', () => {
       expansion_type: 'skill',
       command_name: 'shopify-liquid',
     })
+    loadSkill(session, 'theme-tooling')
     expect(edit(session, 'catalog/sections/hero.liquid').code).toBe(0)
   })
 

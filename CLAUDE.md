@@ -16,11 +16,11 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 ## Development skills
 
-The development skills live in `.claude/skills/` (installed with `npx skills add`, pinned in `skills-lock.json`). Load the matching skill before editing a file area:
+The development skills live in `.claude/skills/` (installed with `npx skills add`, pinned in `skills-lock.json`), next to the repo's own `theme-tooling` skill (Theme Check, `theme dev`, Section Catalog conventions). Load the matching skill before editing a file area:
 
 | File area | Skill to load |
 | --- | --- |
-| `**/*.liquid` | `shopify-liquid` |
+| `**/*.liquid` | `shopify-liquid`, `theme-tooling` |
 | `studio/src/**/*.tsx` | `vercel-react-best-practices` (ignore its `server-*` rules: the Studio is a Vite SPA) |
 | `studio/src/components/ui/**` | `shadcn` |
 | `studio/src/**/*.css` | `tailwind-design-system` |

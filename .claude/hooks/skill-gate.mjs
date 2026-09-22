@@ -10,7 +10,7 @@ import path from 'node:path'
 
 /** Paths are relative to the project root, with forward slashes. */
 const RULES = [
-  { area: 'a Liquid file', pattern: /\.liquid$/, skills: ['shopify-liquid'] },
+  { area: 'a Liquid file', pattern: /\.liquid$/, skills: ['shopify-liquid', 'theme-tooling'] },
   { area: 'Studio UI code', pattern: /^studio\/src\/.*\.tsx$/, skills: ['vercel-react-best-practices'] },
   { area: 'a shadcn UI component', pattern: /^studio\/src\/components\/ui\//, skills: ['shadcn'] },
   { area: 'a Studio stylesheet', pattern: /^studio\/src\/.*\.css$/, skills: ['tailwind-design-system'] },

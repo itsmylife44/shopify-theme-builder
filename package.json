@@ -14,9 +14,11 @@
   },
   "scripts": {
     "test": "vitest run",
+    "check:theme": "node scripts/check-theme.mjs",
     "typecheck": "tsc"
   },
   "devDependencies": {
+    "@shopify/theme-check-node": "3.29.0",
     "@types/node": "^22.20.4",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
