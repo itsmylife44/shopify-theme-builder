@@ -5,7 +5,7 @@ import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Severity, check } from '@shopify/theme-check-node'
+import { validate } from '../studio/server/studio.mjs'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
 const catalogDir = path.resolve(process.argv[2] ?? path.join(projectDir, 'catalog'))
@@ -15,15 +15,11 @@ try {
   cpSync(path.join(projectDir, 'base-theme'), theme, { recursive: true })
   if (existsSync(catalogDir)) cpSync(catalogDir, theme, { recursive: true })
 
-  const offenses = await check(theme)
-  let errors = 0
-  for (const offense of offenses) {
-    const file = path.relative(theme, fileURLToPath(offense.uri))
-    const isError = offense.severity === Severity.ERROR
-    if (isError) errors++
-    // Theme Check lines are 0-indexed.
-    console.log(`${file}:${offense.start.line + 1} ${isError ? 'error' : 'warning'} ${offense.check}: ${offense.message}`)
+  const offenses = await validate(theme)
+  for (const { file, line, severity, check, message } of offenses) {
+    console.log(`${file}:${line} ${severity} ${check}: ${message}`)
   }
+  const errors = offenses.filter((offense) => offense.severity === 'error').length
   console.log(`Theme Check: ${errors} errors, ${offenses.length - errors} warnings`)
   process.exitCode = errors > 0 ? 1 : 0
 } finally {

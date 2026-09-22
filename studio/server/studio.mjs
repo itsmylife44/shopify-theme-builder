@@ -15,8 +15,8 @@ const defaultCatalog = fileURLToPath(new URL('../../catalog', import.meta.url))
  */
 export async function startStudio({ theme, catalog = defaultCatalog, port }) {
   theme = path.resolve(theme)
-  if (!existsSync(path.join(theme, 'layout/theme.liquid'))) {
-    throw new Error(`${theme} is not a Shopify theme: layout/theme.liquid is missing.`)
+  for (const file of ['layout/theme.liquid', 'templates/index.json']) {
+    if (!existsSync(path.join(theme, file))) throw new Error(`${theme} is not a Shopify theme: ${file} is missing.`)
   }
   const server = await createServer({
     root: studioDir,
@@ -91,11 +91,11 @@ function listSections(dir) {
 }
 
 /**
- * Runs Theme Check on the Theme.
+ * Runs Theme Check on a Theme.
  * @param {string} theme
  * @returns {Promise<Offense[]>}
  */
-async function validate(theme) {
+export async function validate(theme) {
   // ponytail: full Theme Check on every read; cache the result once writes and file watching exist (#5, #7).
   const offenses = await check(theme)
   return offenses.map((offense) => ({
