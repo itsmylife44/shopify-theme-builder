@@ -1,0 +1,24 @@
+{
+  "name": "shopify-theme-builder",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agent skill that lets a Creator build their own Shopify Theme by talking to a coding agent.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsmylife44/shopify-theme-builder.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.1"
+  }
+}
