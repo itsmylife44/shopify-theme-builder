@@ -658,12 +658,17 @@ describe('Studio API: external changes', () => {
 })
 
 describe('Studio: live preview', () => {
-  // How Shopify CLI 4.8.0 prints a running theme dev, colors stripped.
+  // How Shopify CLI 4.8.0 prints a running theme dev without a terminal: links become footnotes.
   const running =
-    '╭─ success ─────────────────────────────────────╮\n' +
-    '│  Preview your theme (t)                       │\n' +
-    '│    • http://127.0.0.1:9292                    │\n' +
-    '╰───────────────────────────────────────────────╯\n'
+    '╭─ success ────────────────────────────────────────────────────────────────────╮\n' +
+    '│  Preview your theme (t)                                                      │\n' +
+    '│    • [1]                                                                     │\n' +
+    '│  Next steps                                                                  │\n' +
+    '│    • Share your theme preview (p) [2] https://theme-builder-dev-ou5grn62.my  │\n' +
+    '│      shopify.com/?preview_theme_id=207592816979                              │\n' +
+    '╰──────────────────────────────────────────────────────────────────────────────╯\n' +
+    '[1] http://127.0.0.1:9292\n' +
+    '[2] https://theme-builder-dev-ou5grn62.myshopify.com/?preview_theme_id=207592816979\n'
 
   it('starts theme dev for the Theme and shows its preview URL', async () => {
     const theme = fixtureTheme()
