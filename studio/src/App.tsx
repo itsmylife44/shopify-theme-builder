@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Offense, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -103,10 +103,11 @@ function ThemeCheck({ offenses }: { offenses: Offense[] }) {
     <Card className="md:col-span-2">
       <CardHeader>
         <CardTitle>Theme Check</CardTitle>
-        <CardDescription className="flex gap-2">
-          <Badge variant={errors > 0 ? 'destructive' : 'secondary'}>{count(errors, 'error')}</Badge>
-          <Badge variant="secondary">{count(warnings, 'warning')}</Badge>
-        </CardDescription>
+        <CardDescription>Errors and warnings in the Theme.</CardDescription>
+        <CardAction className="flex gap-2">
+          <Badge variant={errors > 0 ? 'destructive' : 'secondary'}>{plural(errors, 'error')}</Badge>
+          <Badge variant="secondary">{plural(warnings, 'warning')}</Badge>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {offenses.length > 0 ? (
@@ -132,7 +133,7 @@ function ThemeCheck({ offenses }: { offenses: Offense[] }) {
   )
 }
 
-function count(n: number, noun: string) {
+function plural(n: number, noun: string) {
   return `${n} ${noun}${n === 1 ? '' : 's'}`
 }
 

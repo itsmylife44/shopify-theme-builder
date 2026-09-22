@@ -90,7 +90,11 @@ describe('Studio API: read Theme state', () => {
 
 describe('studio command', () => {
   function studio(...args: string[]) {
-    const result = spawnSync('node', [path.join(projectDir, 'studio/bin/studio.mjs'), ...args], { encoding: 'utf8' })
+    const result = spawnSync('node', [path.join(projectDir, 'studio/bin/studio.mjs'), ...args], {
+      encoding: 'utf8',
+      // A refused folder exits at once; a started Studio would run forever.
+      timeout: 10_000,
+    })
     return { code: result.status, stderr: result.stderr }
   }
 
@@ -99,6 +103,15 @@ describe('studio command', () => {
     const result = studio('--theme', dir)
     expect(result.code).toBe(1)
     expect(result.stderr).toContain(`${dir} is not a Shopify theme`)
+  })
+
+  it('refuses a Theme without a home template', () => {
+    const dir = tempDir('no-home-')
+    mkdirSync(path.join(dir, 'layout'))
+    writeFileSync(path.join(dir, 'layout/theme.liquid'), '{{ content_for_layout }}')
+    const result = studio('--theme', dir)
+    expect(result.code).toBe(1)
+    expect(result.stderr).toContain(`${dir} is not a Shopify theme: templates/index.json is missing.`)
   })
 
   it('requires --theme', () => {
