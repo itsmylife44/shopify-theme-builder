@@ -5,56 +5,83 @@
   https://shopify.dev/docs/storefronts/themes/architecture/templates/search
 {% endcomment %}
 
-<h1>{{ 'search.title' | t }}</h1>
+<div class="basic-page full-width color-{{ section.settings.color_scheme }}">
+  <h1>{{ 'search.title' | t }}</h1>
 
-<form action="{{ routes.search_url }}" method="get" role="search">
-  <input
-    type="search"
-    size="50"
-    name="q"
-    value="{{ search.terms | escape }}"
-    placeholder="{{ 'search.placeholder' | t }}"
-  >
-  <button type="submit">{{ 'search.submit' | t }}</button>
-</form>
+  <form action="{{ routes.search_url }}" method="get" role="search" class="search__form">
+    <input
+      type="search"
+      name="q"
+      value="{{ search.terms | escape }}"
+      placeholder="{{ 'search.placeholder' | t }}"
+      aria-label="{{ 'search.title' | t }}"
+    >
+    <button type="submit">{{ 'search.submit' | t }}</button>
+  </form>
 
-{% if search.performed %}
-  {% if search.results_count == 0 %}
-    <p>{{ 'search.no_results_html' | t: terms: search.terms }}</p>
-  {% else %}
-    <p>{{ 'search.results_for_html' | t: terms: search.terms, count: search.results_count }}</p>
+  {% if search.performed %}
+    {% assign terms = search.terms | escape %}
+    {% if search.results_count == 0 %}
+      <p>{{ 'search.no_results_html' | t: terms: terms }}</p>
+    {% else %}
+      <p>{{ 'search.results_for_html' | t: terms: terms, count: search.results_count }}</p>
 
-    <div class="search-results">
-      {% paginate search.results by 20 %}
-        {% # Search result items may be an article, a page, or a product. %}
-        {% for result in search.results %}
-          <div class="search-result">
-            {% assign featured_image = result.featured_image | default: result.image %}
-            {% if featured_image %}
-              {% render 'image', class: 'search-result__image', image: featured_image, url: result.url, width: 400 %}
-            {% endif %}
-            <div class="search-result__content">
-              <p>
-                {{ result.title | link_to: result.url }}
+      <div class="search-results">
+        {% paginate search.results by 20 %}
+          {% # Search result items may be an article, a page, or a product. %}
+          {% for result in search.results %}
+            <div class="search-result">
+              {% assign featured_image = result.featured_image | default: result.image %}
+              {% if featured_image %}
+                {% render 'image',
+                  class: 'search-result__image',
+                  image: featured_image,
+                  url: result.url,
+                  width: 400,
+                  height: 400,
+                  crop: 'center'
+                %}
+              {% endif %}
+              <div class="search-result__content">
+                <p>{{ result.title | link_to: result.url }}</p>
                 {% if result.price %}
-                  {{ result.price | money_with_currency }}
+                  <p>{{ result.price | money }}</p>
                 {% endif %}
-              </p>
+              </div>
             </div>
-          </div>
-        {% endfor %}
+          {% endfor %}
 
-        {{ paginate | default_pagination }}
-      {% endpaginate %}
-    </div>
+          {{ paginate | default_pagination }}
+        {% endpaginate %}
+      </div>
+    {% endif %}
   {% endif %}
-{% endif %}
+</div>
 
 {% stylesheet %}
+  .search__form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 40rem;
+  }
+
+  .search__form input {
+    flex: 1 1 14rem;
+  }
+
   .search-results {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+    gap: 2rem 1rem;
   }
+
+  .search-result {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+  }
+
   .search-results .prev,
   .search-results .page,
   .search-results .next {
@@ -65,6 +92,13 @@
 {% schema %}
 {
   "name": "t:general.search",
-  "settings": []
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    }
+  ]
 }
 {% endschema %}

@@ -528,13 +528,16 @@ function addSection(theme, catalog, file, body) {
 
 /**
  * Adds the locale keys and theme settings of the Base Theme that a Theme made from an older one lacks,
- * since catalog sections use them. Nothing the Theme already has changes.
+ * since catalog sections use them. Nothing the Theme already has changes. The shop's language gets the
+ * English text, so Theme Check's MatchingTranslations still passes until it's translated.
  * @param {string} theme
  */
 function addMissingFromBaseTheme(theme) {
-  for (const name of readdirSync(path.join(baseTheme, 'locales'))) {
-    if (!existsSync(path.join(theme, 'locales', name))) continue
-    const base = readJSON(baseTheme, `locales/${name}`)
+  const storefront = readJSON(baseTheme, 'locales/en.default.json')
+  const schema = readJSON(baseTheme, 'locales/en.default.schema.json')
+  for (const name of readdirSync(path.join(theme, 'locales'))) {
+    if (!name.endsWith('.json')) continue
+    const base = name.endsWith('.schema.json') ? schema : storefront
     updateJSON(theme, `locales/${name}`, (locale) => addMissingKeys(locale, base))
   }
   const baseGroups = readJSON(baseTheme, 'config/settings_schema.json')
