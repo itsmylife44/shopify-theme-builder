@@ -1,0 +1,371 @@
+{% liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign featured_media = current_variant.featured_media | default: product.featured_media
+  assign media_first = product.media | where: 'id', featured_media.id
+  assign media_rest = product.media | reject: 'id', featured_media.id
+  assign ordered_media = media_first | concat: media_rest
+%}
+
+<div class="main-product full-width color-{{ section.settings.color_scheme }}">
+  <product-info
+    class="main-product__inner"
+    data-url="{{ product.url }}"
+    data-section="{{ section.id }}"
+  >
+    <ul class="main-product__media" role="list" tabindex="0" aria-label="{{ 'product.media' | t }}">
+      {% for media in ordered_media %}
+        <li class="main-product__media-item">
+          {% if media.media_type == 'image' %}
+            {% liquid
+              if forloop.first
+                assign loading = 'eager'
+              else
+                assign loading = 'lazy'
+              endif
+            %}
+            {{
+              media.preview_image
+              | image_url: width: 1500
+              | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: loading
+            }}
+          {% else %}
+            {{ media | media_tag: image_size: '1500x' }}
+          {% endif %}
+        </li>
+      {% else %}
+        <li class="main-product__media-item">
+          {{ 'product-1' | placeholder_svg_tag: 'main-product__placeholder' }}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <div class="main-product__details">
+      <h1 class="main-product__title">{{ product.title }}</h1>
+
+      <p class="main-product__price">
+        {% if current_variant.compare_at_price > current_variant.price %}
+          <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
+          {{ current_variant.price | money }}
+          <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
+          <s class="main-product__compare-at">{{ current_variant.compare_at_price | money }}</s>
+        {% else %}
+          {{ current_variant.price | money }}
+        {% endif %}
+      </p>
+
+      {% unless product.has_only_default_variant %}
+        <div class="main-product__options">
+          {% for option in product.options_with_values %}
+            <fieldset class="main-product__option">
+              <legend>{{ option.name | escape }}</legend>
+              {% for option_value in option.values %}
+                {% capture input_id %}{{ section.id }}-{{ option.position }}-{{ forloop.index0 }}{% endcapture %}
+                <input
+                  id="{{ input_id }}"
+                  class="main-product__option-input"
+                  type="radio"
+                  name="{{ section.id }}-option-{{ option.position }}"
+                  value="{{ option_value | escape }}"
+                  data-option-value-id="{{ option_value.id }}"
+                  {% if option_value.selected %}
+                    checked
+                  {% endif %}
+                >
+                <label
+                  for="{{ input_id }}"
+                  class="main-product__option-label{% unless option_value.available %} main-product__option-label--unavailable{% endunless %}"
+                >
+                  {{- option_value | escape -}}
+                  {% unless option_value.available %}
+                    <span class="visually-hidden">{{ 'product.unavailable' | t }}</span>
+                  {% endunless %}
+                </label>
+              {% endfor %}
+            </fieldset>
+          {% endfor %}
+        </div>
+      {% endunless %}
+
+      {% form 'product', product, class: 'main-product__form' %}
+        <input type="hidden" name="id" value="{{ current_variant.id }}">
+        <label class="main-product__quantity">
+          {{ 'product.quantity' | t }}
+          <input type="number" name="quantity" min="1" value="1">
+        </label>
+        <button
+          type="submit"
+          class="main-product__add"
+          {% unless current_variant.available %}
+            disabled
+          {% endunless %}
+        >
+          {% if current_variant.available %}
+            {{ 'product.add_to_cart' | t }}
+          {% else %}
+            {{ 'product.sold_out' | t }}
+          {% endif %}
+        </button>
+        {% if section.settings.show_dynamic_checkout %}
+          {{ form | payment_button }}
+        {% endif %}
+      {% endform %}
+
+      {% if product.description != blank %}
+        <div class="main-product__description">{{ product.description }}</div>
+      {% endif %}
+    </div>
+  </product-info>
+</div>
+
+{% javascript %}
+  class ProductInfo extends HTMLElement {
+    connectedCallback() {
+      this.addEventListener('change', this.onChange);
+    }
+
+    onChange = async (event) => {
+      if (!event.target.dataset.optionValueId) return;
+      const optionValues = [...this.querySelectorAll('[data-option-value-id]:checked')]
+        .map((input) => input.dataset.optionValueId)
+        .join(',');
+      this.request?.abort();
+      this.request = new AbortController();
+      const url = `${this.dataset.url}?option_values=${optionValues}&section_id=${this.dataset.section}`;
+      const text = await fetch(url, { signal: this.request.signal })
+        .then((response) => (response.ok ? response.text() : null))
+        .catch(() => null);
+      if (!text) return;
+      const fresh = new DOMParser().parseFromString(text, 'text/html').querySelector('product-info');
+      if (!fresh) return;
+      const variant = fresh.querySelector('input[name="id"]')?.value;
+      if (variant) history.replaceState(null, '', `${this.dataset.url}?variant=${variant}`);
+      const quantity = this.querySelector('input[name="quantity"]')?.value;
+      const focused = event.target.id;
+      this.replaceChildren(...fresh.childNodes);
+      const quantityInput = this.querySelector('input[name="quantity"]');
+      if (quantityInput && quantity) quantityInput.value = quantity;
+      document.getElementById(focused)?.focus();
+    };
+  }
+
+  if (!customElements.get('product-info')) customElements.define('product-info', ProductInfo);
+{% endjavascript %}
+
+{% stylesheet %}
+  .main-product {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .main-product__inner {
+    grid-column: 2;
+    display: grid;
+    gap: 2rem;
+    padding-block: 2rem 3rem;
+  }
+
+  @media (min-width: 750px) {
+    .main-product__inner {
+      grid-template-columns: 3fr 2fr;
+      align-items: start;
+      gap: 3rem;
+    }
+  }
+
+  .main-product__media {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  @media (min-width: 750px) {
+    .main-product__media {
+      grid-auto-flow: row;
+      grid-template-columns: 1fr 1fr;
+      overflow: visible;
+    }
+
+    .main-product__media-item:first-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .main-product__media-item {
+    scroll-snap-align: start;
+  }
+
+  .main-product__media-item img,
+  .main-product__media-item video,
+  .main-product__media-item iframe,
+  .main-product__placeholder {
+    width: 100%;
+    height: auto;
+  }
+
+  .main-product__media-item iframe {
+    aspect-ratio: 16 / 9;
+  }
+
+  .main-product__placeholder {
+    aspect-ratio: 1;
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .main-product__details {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 750px) {
+    .main-product__details {
+      position: sticky;
+      top: 2rem;
+    }
+  }
+
+  .main-product__title {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+  }
+
+  .main-product__price {
+    font-size: 1.25rem;
+  }
+
+  .main-product__compare-at {
+    margin-inline-start: 0.5rem;
+    opacity: 0.6;
+  }
+
+  .main-product__options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .main-product__option {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .main-product__option legend {
+    margin-block-end: 0.5rem;
+  }
+
+  .main-product__option-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .main-product__option-label {
+    padding: 0.5rem 1rem;
+    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
+    cursor: pointer;
+  }
+
+  .main-product__option-label--unavailable {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .main-product__option-input:checked + .main-product__option-label {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    border-color: var(--color-foreground);
+  }
+
+  .main-product__option-input:focus-visible + .main-product__option-label {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+
+  .main-product__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .main-product__quantity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .main-product__quantity input {
+    width: 6rem;
+    padding: 0.5rem;
+    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
+    background-color: transparent;
+    color: inherit;
+  }
+
+  .main-product__add {
+    padding: 0.875rem 1.5rem;
+    border: 0;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .main-product__add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .main-product :is(a, button, input, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+
+  .main-product .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Main product",
+  "tag": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dynamic_checkout",
+      "label": "Show dynamic checkout buttons",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Main product"
+    }
+  ]
+}
+{% endschema %}

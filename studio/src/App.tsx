@@ -2,7 +2,7 @@ import { ArrowDownIcon, ArrowUpIcon, ExternalLinkIcon, Trash2Icon } from 'lucide
 import { useEffect, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
-import type { Brand, Offense, TemplateSection, ThemeState } from '../server/studio.mjs'
+import type { Brand, Offense, Page, TemplateSection, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -73,7 +73,8 @@ export function App() {
             brand={load.state.brand}
             onSaved={showState}
           />
-          <HomePage state={load.state} onSaved={showState} />
+          <PageSections page="home" title="Home page" file="templates/index.json" state={load.state} onSaved={showState} />
+          <PageSections page="product" title="Product page" file="templates/product.json" state={load.state} onSaved={showState} />
           <ThemeCheck offenses={load.state.validation} />
         </div>
       )}
@@ -413,30 +414,42 @@ function FontPicker({
   )
 }
 
-/** The home page's sections: add from the Section Catalog, remove, reorder and pick each one's color scheme. */
-function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: ThemeState) => void }) {
+/** A page's sections: add from the Section Catalog, remove, reorder and pick each one's color scheme. */
+function PageSections({
+  page,
+  title,
+  file,
+  state,
+  onSaved,
+}: {
+  page: Page
+  title: string
+  file: string
+  state: ThemeState
+  onSaved: (state: ThemeState) => void
+}) {
   const { saving, error, write } = useWrite(onSaved)
-  const [sectionType, setSectionType] = useState<string | null>(state.catalog[0] ?? null)
-  const sections = state.home
+  const [sectionType, setSectionType] = useState<string | null>(state.catalog[page][0] ?? null)
+  const sections = state[page]
   const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
-  const catalog = state.catalog.map((name) => ({ value: name, label: name }))
+  const catalog = state.catalog[page].map((name) => ({ value: name, label: name }))
 
   function move(index: number, offset: number) {
     const order = sections.map((section) => section.id)
     ;[order[index], order[index + offset]] = [order[index + offset], order[index]]
-    write('/api/home/order', jsonRequest('PUT', { order }))
+    write(`/api/${page}/order`, jsonRequest('PUT', { order }))
   }
 
   function remove(section: TemplateSection) {
-    if (!confirm(`Remove ${section.type} (${section.id}) from the home page? Its settings and blocks are deleted too.`)) return
-    write(`/api/home/sections/${encodeURIComponent(section.id)}`, { method: 'DELETE' })
+    if (!confirm(`Remove ${section.type} (${section.id}) from the ${title.toLowerCase()}? Its settings and blocks are deleted too.`)) return
+    write(`/api/${page}/sections/${encodeURIComponent(section.id)}`, { method: 'DELETE' })
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Home page</CardTitle>
-        <CardDescription>Sections in page order, saved to templates/index.json.</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>Sections in page order, saved to {file}.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {sections.length > 0 ? (
@@ -455,7 +468,7 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
                     disabled={saving}
                     onValueChange={(colorScheme) =>
                       colorScheme &&
-                      write(`/api/home/sections/${encodeURIComponent(section.id)}`, jsonRequest('PATCH', { colorScheme }))
+                      write(`/api/${page}/sections/${encodeURIComponent(section.id)}`, jsonRequest('PATCH', { colorScheme }))
                     }
                   >
                     <SelectTrigger aria-label={`Color scheme of ${section.id}`} className="w-36">
@@ -504,11 +517,11 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
             ))}
           </ol>
         ) : (
-          <EmptyState title="No sections" description="The home page has no sections yet." />
+          <EmptyState title="No sections" description={`The ${title.toLowerCase()} has no sections yet.`} />
         )}
         {error ? (
           <Alert variant="destructive">
-            <AlertTitle>The home page was not saved</AlertTitle>
+            <AlertTitle>The {title.toLowerCase()} was not saved</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
@@ -517,11 +530,11 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
         {catalog.length > 0 ? (
           <>
             <Field className="w-44">
-              <FieldLabel htmlFor="add-section" className="sr-only">
+              <FieldLabel htmlFor={`add-section-${page}`} className="sr-only">
                 Section to add
               </FieldLabel>
               <Select items={catalog} value={sectionType} disabled={saving} onValueChange={setSectionType}>
-                <SelectTrigger id="add-section" className="w-full">
+                <SelectTrigger id={`add-section-${page}`} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -537,7 +550,7 @@ function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: Them
             </Field>
             <Button
               disabled={saving || !sectionType}
-              onClick={() => write('/api/home/sections', jsonRequest('POST', { type: sectionType }))}
+              onClick={() => write(`/api/${page}/sections`, jsonRequest('POST', { type: sectionType }))}
             >
               Add section
             </Button>
