@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -28,7 +28,8 @@ describe('Section Catalog theme check', () => {
       '{% if section.settings.heading %}<h2>{{ section.settings.heading }}</h2>\n{% schema %}{"name": "Broken"}{% endschema %}\n',
     )
     const result = checkTheme(catalog)
+    rmSync(catalog, { recursive: true })
     expect(result.code).not.toBe(0)
-    expect(result.output).toContain('sections/broken.liquid')
+    expect(result.output).toContain('sections/broken.liquid:1 error')
   })
 })
