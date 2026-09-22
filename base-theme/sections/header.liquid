@@ -1,6 +1,12 @@
 <header>
   <h2 class="header__title">
-    {{ shop.name | link_to: routes.root_url }}
+    <a href="{{ routes.root_url }}">
+      {% if settings.logo %}
+        {{ settings.logo | image_url: width: 400 | image_tag: alt: shop.name, class: 'header__logo', widths: '200, 400' }}
+      {% else %}
+        {{ shop.name }}
+      {% endif %}
+    </a>
   </h2>
 
   <div class="header__menu">
@@ -49,6 +55,10 @@
   }
   header svg {
     width: 2rem;
+  }
+  header .header__logo {
+    max-height: 3rem;
+    width: auto;
   }
   header .header__menu,
   header .header__icons {

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import type { Offense, ThemeState } from '../server/studio.mjs'
+import type { Brand, Offense, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
@@ -37,12 +40,155 @@ export function App() {
         </Alert>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Keyed by the saved Brand, so the form restarts from what was written. */}
+          <BrandPanel
+            key={JSON.stringify(load.state.brand)}
+            brand={load.state.brand}
+            onSaved={(state) => setLoad({ status: 'ready', state })}
+          />
           <HomePage sections={load.state.home} />
           <SectionCatalog sections={load.state.catalog} />
           <ThemeCheck offenses={load.state.validation} />
         </div>
       )}
     </main>
+  )
+}
+
+const shopImagePrefix = 'shopify://shop_images/'
+
+function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
+  const [colorSchemes, setColorSchemes] = useState(brand.colorSchemes)
+  const [headingFont, setHeadingFont] = useState(brand.headingFont)
+  const [bodyFont, setBodyFont] = useState(brand.bodyFont)
+  const [logoFile, setLogoFile] = useState(brand.logo?.slice(shopImagePrefix.length) ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function setColor(scheme: string, field: string, value: string) {
+    setColorSchemes((schemes) => ({ ...schemes, [scheme]: { ...schemes[scheme], [field]: value } }))
+  }
+
+  function addScheme() {
+    setColorSchemes((schemes) => {
+      let n = Object.keys(schemes).length + 1
+      while (`scheme-${n}` in schemes) n++
+      // A new scheme starts as a copy of the first one.
+      return { ...schemes, [`scheme-${n}`]: { ...Object.values(schemes)[0] } }
+    })
+  }
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/brand', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          colorSchemes,
+          headingFont: headingFont.trim(),
+          bodyFont: bodyFont.trim(),
+          logo: logoFile.trim() ? shopImagePrefix + logoFile.trim() : null,
+        }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error)
+      onSaved(body)
+    } catch (error) {
+      setError((error as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card className="md:col-span-2">
+      <CardHeader>
+        <CardTitle>Brand</CardTitle>
+        <CardDescription>Colors, fonts and logo, saved to config/settings_data.json.</CardDescription>
+      </CardHeader>
+      <form onSubmit={save} className="contents">
+        <CardContent>
+          <FieldGroup>
+            <FieldSet>
+              <FieldLegend>Color schemes</FieldLegend>
+              <FieldDescription>Sections pick one of these schemes for their colors.</FieldDescription>
+              <div className="flex flex-col gap-3">
+                {Object.entries(colorSchemes).map(([scheme, colors]) => (
+                  <div key={scheme} className="flex flex-wrap items-end gap-4">
+                    <span className="w-20 font-medium">{scheme}</span>
+                    {brand.colorFields.map((field) => (
+                      <Field key={field} className="w-24">
+                        <FieldLabel htmlFor={`${scheme}-${field}`}>{field.replace('_', ' ')}</FieldLabel>
+                        <Input
+                          id={`${scheme}-${field}`}
+                          type="color"
+                          className="p-1"
+                          value={colors[field] ?? '#000000'}
+                          onChange={(event) => setColor(scheme, field, event.target.value)}
+                        />
+                      </Field>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <Button type="button" variant="outline" className="self-start" onClick={addScheme}>
+                Add color scheme
+              </Button>
+            </FieldSet>
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="heading-font">Heading font</FieldLabel>
+                <Input id="heading-font" value={headingFont} onChange={(event) => setHeadingFont(event.target.value)} />
+                <FieldDescription>A Shopify font library handle, like playfair_display_n7.</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="body-font">Body font</FieldLabel>
+                <Input id="body-font" value={bodyFont} onChange={(event) => setBodyFont(event.target.value)} />
+                <FieldDescription>
+                  Handles are listed in{' '}
+                  <a
+                    className="underline"
+                    href="https://shopify.dev/docs/storefronts/themes/architecture/settings/fonts#available-fonts"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Shopify's font library
+                  </a>
+                  .
+                </FieldDescription>
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel htmlFor="logo">Logo</FieldLabel>
+              <Input
+                id="logo"
+                placeholder="logo.png"
+                value={logoFile}
+                onChange={(event) => setLogoFile(event.target.value)}
+              />
+              <FieldDescription>
+                The file name of an image uploaded in the Shopify admin under Content &gt; Files. Leave empty for the
+                shop name.
+              </FieldDescription>
+            </Field>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>The Brand was not saved</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+          </FieldGroup>
+        </CardContent>
+        <CardFooter>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save Brand'}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
   )
 }
 
