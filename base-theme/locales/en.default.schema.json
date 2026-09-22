@@ -32,7 +32,8 @@
     "social_media": "Social media",
     "text": "Text",
     "theme": "Theme",
-    "typography": "Typography"
+    "typography": "Typography",
+    "welcome": "Welcome"
   },
   "labels": {
     "alignment": "Alignment",
@@ -41,6 +42,7 @@
     "body_font": "Body font",
     "button": "Button",
     "button_label": "Button label",
+    "color_scheme": "Color scheme",
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
     "heading_font": "Heading font",

@@ -7,6 +7,8 @@ description: Theme Check, `theme dev` and Section Catalog conventions for this r
 
 Two folders form every Theme: `base-theme/` (Shopify's Skeleton, vendored under its own `LICENSE.md`; provenance in `base-theme/PROVENANCE.md`) and `catalog/` (the Section Catalog, laid out like a theme: `catalog/sections/<name>.liquid`). An example Theme is `base-theme/` with `catalog/` copied on top.
 
+The Studio composes only the home, product and collection pages. Every other JSON template (cart, page, blog, article, search, 404, password, collections list) uses the Base Theme's own section, a basic layout built from the `.basic-page` classes in `base-theme/assets/critical.css` with a color scheme setting, so it follows the Brand. There are no `customers/*` templates: the header links to Shopify's new customer accounts, which need none, so a shop still on classic customer accounts gets no account pages.
+
 ## Validate
 
 Run `npm run check:theme` (Theme Check on the example Theme, one line per offense as `file:line severity check: message`). Done means it exits 0: **zero errors**, the same gate CI applies. To check a scratch section, pass a folder laid out like `catalog/`: `node scripts/check-theme.mjs <dir>`.
@@ -21,6 +23,18 @@ The Studio runs `theme dev` itself (`studio --theme <dir> --store <shop>.myshopi
 2. Run `shopify theme dev --path <dir> --store <shop>.myshopify.com` and open the printed `http://127.0.0.1:9292` link.
 3. Edit the section in `catalog/`, then copy that file into `<dir>` again: the folder is a copy, and edits made there stay there.
 
+## Shop language
+
+A Theme ships English as its default locale: `locales/en.default.json` (storefront text) and `locales/en.default.schema.json` (Theme Editor labels). When the shop's language isn't English, the product skill adds it; this is the convention:
+
+1. Name the files after the language's ISO code, as Shopify admin › Settings › Languages lists it: `it`, `de`, `pt-BR`.
+2. Copy `locales/en.default.json` to `locales/<code>.json` and translate every value. Keep every key, and keep `{{ variables }}` and the HTML of `_html` keys as they are. Plural keys (`one`, `other`) get the forms the language needs (`zero`, `two`, `few`, `many`).
+3. Copy `locales/en.default.schema.json` to `locales/<code>.schema.json` and translate it the same way. It covers the Base Theme's theme settings and sections; catalog section schemas use literal English labels, so the Theme Editor shows those in English.
+4. Keep `en` as the default: don't rename `en.default.json`. The storefront shows `<code>.json` for a language the shop publishes.
+5. Run Theme Check. `MatchingTranslations` fails on a key missing from, or added to, the shop's language file.
+
+When the Studio copies a catalog section into a Theme that lacks some Base Theme keys, it adds them in English to every locale file, so Theme Check keeps passing; translate them afterwards. In this repo, add new keys only to `base-theme/locales/en.default.json`.
+
 ## Section Catalog conventions
 
 Every catalog section follows all of these:
@@ -32,5 +46,5 @@ Every catalog section follows all of these:
 - **Presets.** Give the schema a `presets` entry, so the Creator can add the section in the Theme Editor.
 - **Group sections.** A section that belongs in a section group, like `header` and `footer`, sets `"enabled_on": {"groups": ["header"]}` (or `["footer"]`), so the Studio leaves it out of the sections it adds to pages. A section a page shows once, like the header, also sets `"limit": 1`: its preset lets the Merchant add it back after removing it, and the limit stops a second copy in the group. The group file places it (`sections/header-group.json`, `sections/footer-group.json`); when the Base Theme's group file sets settings or blocks the catalog section doesn't have, ship a replacement group file next to it in `catalog/sections/` (the footer does).
 - **Page sections.** A section that needs a page's object, like `product` for the main product and related products or `collection` for the collection product grid, sets `"enabled_on": {"templates": ["product"]}` (or `["collection"]`), so the Studio offers it only for that page. A section a page shows once, like the main product or the collection product grid, sets `"limit": 1`; the Studio refuses to add more than the limit.
-- **Storefront text.** Text the Creator writes is a section setting with a default (headings, button labels). Fixed text like accessible labels and form messages uses `{{ 'key' | t }}` with its key added to `base-theme/locales/en.default.json`. When the Studio copies a catalog section into a Theme, it also adds any Base Theme locale keys and theme settings the Theme lacks, so a Theme made from an older Base Theme still passes Theme Check.
+- **Storefront text.** Text the Creator writes is a section setting with a default (headings, button labels). Fixed text like accessible labels and form messages uses `{{ 'key' | t }}` with its key added to `base-theme/locales/en.default.json`. When the Studio copies a catalog section into a Theme, it also adds any Base Theme locale keys (in English, to every locale file) and theme settings the Theme lacks, so a Theme made from an older Base Theme still passes Theme Check.
 - **Shopify limits.** A template holds at most 25 sections; a section at most 50 blocks (keep `max_blocks` ≤ 50); a Liquid file at most 256 KB.

@@ -11,13 +11,23 @@
     "comment_form_email": "Email",
     "comment_form_name": "Name",
     "comment_form_submit": "Post",
-    "comment_form_title": "Add a comment"
+    "comment_form_title": "Add a comment",
+    "empty": "This blog has no articles yet."
   },
   "cart": {
     "checkout": "Checkout",
+    "continue_shopping": "Continue shopping",
+    "empty": "Your cart is empty.",
+    "product": "Product",
+    "quantity": "Quantity",
+    "quantity_for": "Quantity for {{ product }}",
+    "remove": "Remove",
+    "remove_item": "Remove {{ product }}",
+    "subtotal": "Subtotal",
+    "taxes_and_shipping": "Taxes and shipping calculated at checkout.",
     "title": "Cart",
-    "update": "Update",
-    "remove": "Remove"
+    "total": "Total",
+    "update": "Update"
   },
   "customers": {
     "login": {
@@ -51,6 +61,13 @@
     "newsletter_email": "Email",
     "newsletter_success": "Thanks for subscribing",
     "social": "Social media"
+  },
+  "general": {
+    "meta": {
+      "page": "Page {{ page }}",
+      "tagged": "tagged \"{{ tags }}\""
+    },
+    "shop_all": "Shop all"
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",

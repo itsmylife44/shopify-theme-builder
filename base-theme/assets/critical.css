@@ -128,3 +128,90 @@ h6 {
 .shopify-section > .full-width {
   grid-column: 1 / -1;
 }
+
+/**
+ * Basic pages: the Brand-styled layout of the sections on the cart, page, blog, article,
+ * search, 404, password and collections list templates. The section's color scheme class
+ * sets the colors; everything else comes from the Brand's fonts and input corner radius.
+ */
+.basic-page {
+  display: grid;
+  grid-template-columns: var(--content-grid);
+  align-content: start;
+  row-gap: 1.5rem;
+  padding-block: 3rem;
+}
+
+.basic-page > * {
+  grid-column: 2;
+}
+
+.basic-page--center {
+  text-align: center;
+}
+
+.basic-page--center > * {
+  justify-self: center;
+}
+
+.basic-page--center .basic-page__form {
+  width: 100%;
+  justify-items: center;
+}
+
+.basic-page--center .basic-page__field {
+  width: 100%;
+}
+
+.basic-page a {
+  color: inherit;
+}
+
+.basic-page :is(button, input[type='submit'], .basic-page__button) {
+  width: fit-content;
+  padding: 0.75rem 1.5rem;
+  border: 0;
+  border-radius: var(--style-border-radius-inputs);
+  background-color: var(--color-button);
+  color: var(--color-button-label);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.basic-page :is(input:not([type='submit'], [type='hidden']), textarea) {
+  padding: 0.75rem;
+  border: 1px solid currentcolor;
+  background: transparent;
+  color: inherit;
+}
+
+.basic-page :is(a, button, input, textarea):focus-visible {
+  outline: 2px solid var(--color-foreground);
+  outline-offset: 2px;
+}
+
+.basic-page__text {
+  max-width: 45rem;
+  line-height: 1.6;
+}
+
+.basic-page__text > * + * {
+  margin-top: 1rem;
+}
+
+.basic-page__form {
+  display: grid;
+  gap: 1rem;
+  max-width: 30rem;
+}
+
+.basic-page__field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.basic-page .placeholder {
+  background-color: rgb(from var(--color-foreground) r g b / 0.08);
+  fill: rgb(from var(--color-foreground) r g b / 0.4);
+}

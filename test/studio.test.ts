@@ -701,6 +701,29 @@ describe('Studio API: home page', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
+  it('adds the Base Theme locale keys a copied section needs to the shop\'s language too, in English, keeping its translations', async () => {
+    // A Theme made before the Base Theme had the header keys, carrying Italian as the shop's language.
+    const theme = fixtureTheme()
+    const localeFile = path.join(theme, 'locales/en.default.json')
+    const locale = parseJSON(readFileSync(localeFile, 'utf8'))
+    delete locale.header
+    writeFileSync(localeFile, JSON.stringify(locale, null, 2))
+    const shopLanguage = path.join(theme, 'locales/it.json')
+    writeFileSync(shopLanguage, JSON.stringify({ ...locale, cart: { ...locale.cart, title: 'Carrello' } }, null, 2))
+    const catalog = fixtureCatalog()
+    writeFileSync(
+      path.join(catalog, 'sections/links.liquid'),
+      '<nav aria-label="{{ \'header.main_menu\' | t }}"></nav>\n{% schema %}{"name": "Links", "presets": [{"name": "Links"}]}{% endschema %}\n',
+    )
+
+    const { status, body } = await (await openStudio(theme, { catalog })).addSection('links')
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    const italian = parseJSON(readFileSync(shopLanguage, 'utf8'))
+    expect(italian.header.main_menu).toBe('Main menu')
+    expect(italian.cart.title).toBe('Carrello')
+  })
+
   it('leaves the Theme\'s locale and settings files untouched when they have everything', async () => {
     const theme = fixtureTheme()
     const files = ['locales/en.default.json', 'locales/en.default.schema.json', 'config/settings_schema.json']

@@ -1,9 +1,10 @@
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parseJSON } from '@shopify/theme-check-node'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
 const script = path.join(projectDir, 'scripts/check-theme.mjs')
@@ -31,5 +32,39 @@ describe('Section Catalog theme check', () => {
     rmSync(catalog, { recursive: true })
     expect(result.code).not.toBe(0)
     expect(result.output).toContain('sections/broken.liquid:1 error')
+  })
+})
+
+describe('Base Theme templates', () => {
+  const baseTheme = path.join(projectDir, 'base-theme')
+  // The pages the Studio doesn't compose: each ships a basic layout that takes a Brand color scheme.
+  const basicPages = ['404', 'article', 'blog', 'cart', 'list-collections', 'page', 'password', 'search']
+
+  it('has every template a complete theme needs', () => {
+    for (const template of [...basicPages, 'index', 'product', 'collection']) {
+      expect(existsSync(path.join(baseTheme, `templates/${template}.json`)), template).toBe(true)
+    }
+    expect(existsSync(path.join(baseTheme, 'templates/gift_card.liquid'))).toBe(true)
+  })
+
+  it('styles every basic page with a Brand color scheme', () => {
+    for (const template of basicPages) {
+      const { sections } = parseJSON(readFileSync(path.join(baseTheme, `templates/${template}.json`), 'utf8'))
+      for (const { type } of Object.values(sections) as { type: string }[]) {
+        const liquid = readFileSync(path.join(baseTheme, `sections/${type}.liquid`), 'utf8')
+        expect(liquid, type).toContain('"type": "color_scheme"')
+        expect(liquid, type).toContain('color-{{ section.settings.color_scheme }}')
+      }
+    }
+  })
+
+  it('passes with the shop\'s language added as a copy of the English locale', () => {
+    const extra = mkdtempSync(path.join(tmpdir(), 'catalog-'))
+    mkdirSync(path.join(extra, 'locales'))
+    copyFileSync(path.join(baseTheme, 'locales/en.default.json'), path.join(extra, 'locales/it.json'))
+    copyFileSync(path.join(baseTheme, 'locales/en.default.schema.json'), path.join(extra, 'locales/it.schema.json'))
+    const result = checkTheme(extra)
+    rmSync(extra, { recursive: true })
+    expect(result.output).toContain('0 errors')
   })
 })
