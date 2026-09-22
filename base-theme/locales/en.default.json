@@ -58,6 +58,18 @@
     "password": "Password",
     "enter": "Enter"
   },
+  "product": {
+    "add_to_cart": "Add to cart",
+    "media": "Product media",
+    "quantity": "Quantity",
+    "regular_price": "Regular price",
+    "sale_price": "Sale price",
+    "sold_out": "Sold out",
+    "unavailable": "Unavailable"
+  },
+  "related_products": {
+    "product_title": "Example product"
+  },
   "search": {
     "title": "Search",
     "placeholder": "Search articles, pages, or products",

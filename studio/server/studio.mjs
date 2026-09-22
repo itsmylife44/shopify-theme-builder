@@ -19,7 +19,7 @@ const baseTheme = fileURLToPath(new URL('../../base-theme', import.meta.url))
  */
 export async function startStudio({ theme, catalog = defaultCatalog, port, cli = 'shopify', store, storePassword }) {
   theme = path.resolve(theme)
-  for (const file of ['layout/theme.liquid', 'templates/index.json']) {
+  for (const file of ['layout/theme.liquid', ...Object.values(pages)]) {
     if (!existsSync(path.join(theme, file))) throw new Error(`${theme} is not a Shopify theme: ${file} is missing.`)
   }
   const server = await createServer({
@@ -138,22 +138,24 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         removeLogo(theme)
         return readStateAfterWrite()
       })
-      route('/api/home/sections', 'POST', async (req) => {
-        addSection(theme, catalog, await readBody(req))
-        return readStateAfterWrite()
-      })
-      route('/api/home/sections/:id', 'DELETE', async (_, id) => {
-        removeSection(theme, id)
-        return readStateAfterWrite()
-      })
-      route('/api/home/sections/:id', 'PATCH', async (req, id) => {
-        setColorScheme(theme, id, await readBody(req))
-        return readStateAfterWrite()
-      })
-      route('/api/home/order', 'PUT', async (req) => {
-        reorderSections(theme, await readBody(req))
-        return readStateAfterWrite()
-      })
+      for (const [page, template] of Object.entries(pages)) {
+        route(`/api/${page}/sections`, 'POST', async (req) => {
+          addSection(theme, catalog, template, await readBody(req))
+          return readStateAfterWrite()
+        })
+        route(`/api/${page}/sections/:id`, 'DELETE', async (_, id) => {
+          removeSection(theme, template, id)
+          return readStateAfterWrite()
+        })
+        route(`/api/${page}/sections/:id`, 'PATCH', async (req, id) => {
+          setColorScheme(theme, template, id, await readBody(req))
+          return readStateAfterWrite()
+        })
+        route(`/api/${page}/order`, 'PUT', async (req) => {
+          reorderSections(theme, template, await readBody(req))
+          return readStateAfterWrite()
+        })
+      }
     },
   }
 }
@@ -195,7 +197,8 @@ class NotFound extends HttpError {
  *   logo: string | null,
  *   logoAsset: string | null,
  * }} Brand
- * @typedef {{ home: TemplateSection[], catalog: string[], brand: Brand, validation: Offense[] }} ThemeState
+ * @typedef {keyof typeof pages} Page
+ * @typedef {Record<Page, TemplateSection[]> & { catalog: Record<Page, string[]>, brand: Brand, validation: Offense[] }} ThemeState
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
  */
 
@@ -207,8 +210,8 @@ class NotFound extends HttpError {
  */
 async function readThemeState(theme, catalog, validation) {
   return {
-    home: readTemplate(theme, home),
-    catalog: listSections(catalog),
+    ...perPage((file) => readTemplate(theme, file)),
+    catalog: perPage((file) => listSections(catalog, file)),
     brand: readBrand(theme),
     validation: await validation,
   }
@@ -470,36 +473,51 @@ function readTemplate(theme, file) {
   })
 }
 
-const home = 'templates/index.json'
+// The pages the Studio composes, and their JSON template.
+const pages = /** @type {const} */ ({ home: 'templates/index.json', product: 'templates/product.json' })
+
+/**
+ * @template T
+ * @param {(file: string) => T} read Reads one page from its JSON template.
+ * @returns {Record<Page, T>}
+ */
+function perPage(read) {
+  return /** @type {Record<Page, T>} */ (Object.fromEntries(Object.entries(pages).map(([page, file]) => [page, read(file)])))
+}
+
 const sectionName = /^[a-z0-9_-]+$/i
 // Shopify's limit per JSON template.
 const maxSections = 25
 
 /**
- * Adds a section at the end of the home page. A catalog section the Theme doesn't have yet is copied
+ * Adds a section at the end of a page. A catalog section the Theme doesn't have yet is copied
  * into it first; a section file already in the Theme is never overwritten (copy-once).
  * @param {string} theme
  * @param {string} catalog
+ * @param {string} file The page's JSON template.
  * @param {unknown} body
  */
-function addSection(theme, catalog, body) {
+function addSection(theme, catalog, file, body) {
   const { type } = /** @type {{ type?: unknown }} */ (body ?? {})
   if (typeof type !== 'string' || !sectionName.test(type)) throw new BadRequest('type must be a section name, like hero.')
-  const file = path.join(theme, 'sections', `${type}.liquid`)
+  const own = path.join(theme, 'sections', `${type}.liquid`)
   const source = path.join(catalog, 'sections', `${type}.liquid`)
-  const placed = existsSync(file) ? file : source
+  const placed = existsSync(own) ? own : source
   if (!existsSync(placed)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
-  if (!goesOnHome(placed)) throw new BadRequest(`The ${type} section can't go on the home page.`)
-  updateJSON(theme, home, (template) => {
+  if (!goesOn(placed, file)) throw new BadRequest(`The ${type} section can't go on ${file}.`)
+  const { limit } = readSchema(placed) ?? {}
+  updateJSON(theme, file, (template) => {
     if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
+    const count = Object.values(template.sections).filter((/** @type {{ type: string }} */ section) => section.type === type).length
+    if (typeof limit === 'number' && count >= limit) throw new BadRequest(`A page holds at most ${limit} ${type} section${limit === 1 ? '' : 's'}.`)
     let id
     do id = `${type}_${randomBytes(3).toString('hex')}`
     while (id in template.sections)
     template.sections[id] = { type, settings: {} }
     template.order.push(id)
-    if (!existsSync(file)) {
+    if (!existsSync(own)) {
       addMissingFromBaseTheme(theme)
-      copyFileSync(source, file)
+      copyFileSync(source, own)
     }
   })
 }
@@ -568,28 +586,30 @@ function isObject(value) {
 }
 
 /**
- * Removes a section from the home page. Its file stays in the Theme.
+ * Removes a section from a page. Its file stays in the Theme.
  * @param {string} theme
+ * @param {string} file The page's JSON template.
  * @param {string} id
  */
-function removeSection(theme, id) {
-  updateJSON(theme, home, (template) => {
-    findHomeSection(template, id)
+function removeSection(theme, file, id) {
+  updateJSON(theme, file, (template) => {
+    findSection(template, file, id)
     // Shopify rejects a JSON template without sections.
-    if (template.order.length === 1) throw new BadRequest('The home page needs at least one section.')
+    if (template.order.length === 1) throw new BadRequest(`${file} needs at least one section.`)
     delete template.sections[id]
     template.order = template.order.filter((/** @type {string} */ other) => other !== id)
   })
 }
 
 /**
- * Puts the home sections in a new order, which must list each of them exactly once.
+ * Puts a page's sections in a new order, which must list each of them exactly once.
  * @param {string} theme
+ * @param {string} file The page's JSON template.
  * @param {unknown} body
  */
-function reorderSections(theme, body) {
+function reorderSections(theme, file, body) {
   const { order } = /** @type {{ order?: unknown }} */ (body ?? {})
-  updateJSON(theme, home, (template) => {
+  updateJSON(theme, file, (template) => {
     const current = new Set(template.order)
     if (
       !Array.isArray(order) ||
@@ -597,19 +617,20 @@ function reorderSections(theme, body) {
       new Set(order).size !== order.length ||
       !order.every((id) => current.has(id))
     ) {
-      throw new BadRequest('order must list each home section id exactly once.')
+      throw new BadRequest(`order must list each section id of ${file} exactly once.`)
     }
     template.order = order
   })
 }
 
 /**
- * Sets the color scheme of a home section whose schema has a color scheme setting.
+ * Sets the color scheme of a page's section whose schema has a color scheme setting.
  * @param {string} theme
+ * @param {string} file The page's JSON template.
  * @param {string} id
  * @param {unknown} body
  */
-function setColorScheme(theme, id, body) {
+function setColorScheme(theme, file, id, body) {
   const { colorScheme, ...unknown } = /** @type {Record<string, unknown>} */ (body ?? {})
   const extra = Object.keys(unknown)
   if (extra.length > 0) throw new BadRequest(`Unknown section field: ${extra.join(', ')}.`)
@@ -617,8 +638,8 @@ function setColorScheme(theme, id, body) {
   if (typeof colorScheme !== 'string' || !schemes.includes(colorScheme)) {
     throw new BadRequest(`colorScheme must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
   }
-  updateJSON(theme, home, (template) => {
-    const section = findHomeSection(template, id)
+  updateJSON(theme, file, (template) => {
+    const section = findSection(template, file, id)
     const setting = colorSchemeSetting(theme, section.type)
     if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
     section.settings = { ...section.settings, [setting.id]: colorScheme }
@@ -626,12 +647,13 @@ function setColorScheme(theme, id, body) {
 }
 
 /**
- * The home section with this id; a 404 when the home page has none.
+ * The section with this id; a 404 when the page has none.
  * @param {Record<string, any>} template
+ * @param {string} file The page's JSON template.
  * @param {string} id
  */
-function findHomeSection(template, id) {
-  if (!Object.hasOwn(template.sections, id)) throw new NotFound(`The home page has no section ${id}.`)
+function findSection(template, file, id) {
+  if (!Object.hasOwn(template.sections, id)) throw new NotFound(`${file} has no section ${id}.`)
   return template.sections[id]
 }
 
@@ -658,21 +680,25 @@ function readSchema(file) {
 }
 
 /**
- * Whether a section may go on the home page: `enabled_on` limits a section like the header to its section group.
- * @param {string} file
+ * Whether a section may go on a page: `enabled_on` limits a section like the header to its section group,
+ * or the main product to product templates.
+ * @param {string} sectionFile
+ * @param {string} template The page's JSON template.
  */
-function goesOnHome(file) {
-  const enabledOn = readSchema(file)?.enabled_on
-  return !enabledOn || (enabledOn.templates ?? []).some((/** @type {string} */ template) => template === '*' || template === 'index')
+function goesOn(sectionFile, template) {
+  const enabledOn = readSchema(sectionFile)?.enabled_on
+  const type = path.basename(template, '.json')
+  return !enabledOn || (enabledOn.templates ?? []).some((/** @type {string} */ other) => other === '*' || other === type)
 }
 
 /**
- * The catalog sections the home page can take.
+ * The catalog sections a page can take.
  * @param {string} dir
+ * @param {string} template The page's JSON template.
  */
-function listSections(dir) {
+function listSections(dir, template) {
   return readdirSync(path.join(dir, 'sections'))
-    .filter((file) => file.endsWith('.liquid') && goesOnHome(path.join(dir, 'sections', file)))
+    .filter((file) => file.endsWith('.liquid') && goesOn(path.join(dir, 'sections', file), template))
     .map((file) => file.slice(0, -'.liquid'.length))
     .sort()
 }
