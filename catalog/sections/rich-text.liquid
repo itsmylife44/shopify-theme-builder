@@ -1,0 +1,109 @@
+<div
+  class="rich-text full-width color-{{ section.settings.color_scheme }}"
+  style="--text-align: {{ section.settings.alignment }};"
+>
+  <div class="rich-text__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="rich-text__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+    {% if section.settings.text != blank %}
+      <div class="rich-text__text">{{ section.settings.text }}</div>
+    {% endif %}
+    {% if section.settings.button_label != blank %}
+      <a
+        class="rich-text__button"
+        href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
+      >
+        {{- section.settings.button_label | escape -}}
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .rich-text {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .rich-text__inner {
+    grid-column: 2;
+    display: grid;
+    justify-items: var(--text-align);
+    gap: 1rem;
+    padding-block: 3rem;
+    text-align: var(--text-align);
+  }
+
+  .rich-text__inner > * {
+    max-width: 45rem;
+  }
+
+  .rich-text__heading {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+  }
+
+  .rich-text__text {
+    line-height: 1.5;
+  }
+
+  .rich-text__button {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    text-decoration: none;
+  }
+
+  .rich-text__button:focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Rich text",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "text_alignment",
+      "id": "alignment",
+      "label": "Alignment",
+      "default": "center"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Talk about your brand"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Text",
+      "default": "<p>Share information about your brand with your customers. Describe a product, make announcements, or welcome customers to your store.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Rich text"
+    }
+  ]
+}
+{% endschema %}

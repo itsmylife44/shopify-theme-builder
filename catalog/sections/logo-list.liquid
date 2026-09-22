@@ -1,0 +1,111 @@
+<div class="logo-list full-width color-{{ section.settings.color_scheme }}">
+  <div class="logo-list__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="logo-list__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ul class="logo-list__items" role="list">
+      {% for block in section.blocks %}
+        <li class="logo-list__item" {{ block.shopify_attributes }}>
+          {% if block.settings.image != blank %}
+            {{ block.settings.image | image_url: width: 320 | image_tag: widths: '160, 320', sizes: '160px', loading: 'lazy' }}
+          {% else %}
+            {{ 'image' | placeholder_svg_tag: 'logo-list__placeholder' }}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% stylesheet %}
+  .logo-list {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .logo-list__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .logo-list__heading {
+    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+    text-align: center;
+  }
+
+  .logo-list__items {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem 3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .logo-list__item img,
+  .logo-list__placeholder {
+    display: block;
+    width: 8rem;
+    height: 4rem;
+    object-fit: contain;
+  }
+
+  .logo-list__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Logo list",
+  "tag": "section",
+  "max_blocks": 24,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "As featured in"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "logo",
+      "name": "Logo",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Logo",
+          "info": "The image's alt text names the logo for screen readers."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Logo list",
+      "blocks": [
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" }
+      ]
+    }
+  ]
+}
+{% endschema %}

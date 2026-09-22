@@ -690,10 +690,14 @@ describe('Studio API: compose the home page', () => {
     })
   })
 
-  it('adds the real catalog hero with a clean Theme Check', async () => {
+  it('offers and adds every real catalog home section with a color scheme and a clean Theme Check', async () => {
     const theme = fixtureTheme()
-    const { body } = await (await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })).addSection('hero')
-    expect(body.home[1]).toEqual(expect.objectContaining({ type: 'hero', colorScheme: 'scheme-1' }))
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    const types = ['hero', 'featured-collection', 'image-with-text', 'rich-text', 'logo-list', 'testimonials', 'faq', 'newsletter']
+    expect((await studio.readTheme()).catalog).toEqual(types.toSorted())
+    let body
+    for (const type of types) ({ body } = await studio.addSection(type))
+    expect(body.home.slice(1)).toEqual(types.map((type) => expect.objectContaining({ type, colorScheme: 'scheme-1' })))
     expect(errors(body.validation)).toEqual([])
   })
 

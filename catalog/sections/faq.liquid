@@ -1,0 +1,114 @@
+<div class="faq full-width color-{{ section.settings.color_scheme }}">
+  <div class="faq__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="faq__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <div class="faq__list">
+      {% for block in section.blocks %}
+        <details class="faq__item" {{ block.shopify_attributes }}>
+          <summary class="faq__question">{{ block.settings.question | escape }}</summary>
+          <div class="faq__answer">{{ block.settings.answer }}</div>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .faq {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .faq__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .faq__heading {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    text-align: center;
+  }
+
+  .faq__list {
+    width: 100%;
+    max-width: 45rem;
+  }
+
+  .faq__item {
+    border-bottom: 1px solid rgb(from var(--color-foreground) r g b / 0.15);
+  }
+
+  .faq__question {
+    padding-block: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .faq__question:focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+
+  .faq__answer {
+    padding-block-end: 1rem;
+    line-height: 1.5;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "FAQ",
+  "tag": "section",
+  "max_blocks": 50,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Frequently asked questions"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "question",
+      "name": "Question",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "Ask a question customers often have"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer",
+          "default": "<p>Answer it clearly, so customers don't need to contact you.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ",
+      "blocks": [
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" }
+      ]
+    }
+  ]
+}
+{% endschema %}

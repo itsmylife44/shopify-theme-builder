@@ -1,0 +1,200 @@
+{% liquid
+  assign featured = section.settings.collection
+  assign show_products = false
+  if featured != blank and featured.products_count > 0
+    assign show_products = true
+  endif
+%}
+
+<div class="featured-collection full-width color-{{ section.settings.color_scheme }}">
+  <div class="featured-collection__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="featured-collection__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ul
+      class="featured-collection__grid"
+      role="list"
+      style="--columns: {{ section.settings.columns }};"
+    >
+      {% if show_products %}
+        {% for product in featured.products limit: section.settings.products_to_show %}
+          <li class="featured-collection__card">
+            <a class="featured-collection__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+              {% if product.featured_image %}
+                {{
+                  product.featured_image
+                  | image_url: width: 1200
+                  | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
+                }}
+              {% else %}
+                {{ 'product-1' | placeholder_svg_tag: 'featured-collection__placeholder' }}
+              {% endif %}
+            </a>
+            <a class="featured-collection__title" href="{{ product.url }}">{{ product.title | escape }}</a>
+            <p class="featured-collection__price">{{ product.price | money }}</p>
+          </li>
+        {% endfor %}
+      {% else %}
+        {% for i in (1..section.settings.products_to_show) %}
+          {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
+          <li class="featured-collection__card">
+            <div class="featured-collection__image">
+              {{ 'product-' | append: placeholder | placeholder_svg_tag: 'featured-collection__placeholder' }}
+            </div>
+            <p class="featured-collection__title">{{ 'featured_collection.product_title' | t }}</p>
+            <p class="featured-collection__price">{{ 1999 | money }}</p>
+          </li>
+        {% endfor %}
+      {% endif %}
+    </ul>
+
+    {% if section.settings.show_view_all and show_products %}
+      <a class="featured-collection__view-all" href="{{ featured.url }}">
+        {{- 'featured_collection.view_all' | t: collection: featured.title -}}
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .featured-collection {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .featured-collection__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .featured-collection__heading {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+  }
+
+  .featured-collection__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 1rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .featured-collection__grid {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+  }
+
+  .featured-collection__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .featured-collection__image {
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+
+  .featured-collection__image img,
+  .featured-collection__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .featured-collection__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .featured-collection__title {
+    margin: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a.featured-collection__title:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+  }
+
+  .featured-collection__price {
+    margin: 0;
+  }
+
+  .featured-collection__view-all {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    text-decoration: none;
+  }
+
+  .featured-collection a:focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Featured collection",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Featured products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "Products to show",
+      "min": 2,
+      "max": 12,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "Columns on desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "show_view_all",
+      "label": "Show link to the collection",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured collection"
+    }
+  ]
+}
+{% endschema %}
