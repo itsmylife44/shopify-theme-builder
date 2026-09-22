@@ -1,21 +1,22 @@
 // The Studio server: Vite serves the React UI from studio/, and the studioApi
 // plugin adds the Node file API over the Theme folder on disk.
 import { randomBytes } from 'node:crypto'
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
+import { startPreview } from './preview.mjs'
 
 const studioDir = fileURLToPath(new URL('..', import.meta.url))
 const defaultCatalog = fileURLToPath(new URL('../../catalog', import.meta.url))
 
 /**
- * Starts the Studio for a Theme folder. Nothing is written into the Theme.
- * @param {{ theme: string, catalog?: string, port?: number }} options
+ * Starts the Studio for a Theme folder, with `shopify theme dev` for its preview. Nothing is written into the Theme.
+ * @param {{ theme: string, catalog?: string, port?: number, cli?: string, store?: string }} options
  */
-export async function startStudio({ theme, catalog = defaultCatalog, port }) {
+export async function startStudio({ theme, catalog = defaultCatalog, port, cli = 'shopify', store }) {
   theme = path.resolve(theme)
   for (const file of ['layout/theme.liquid', 'templates/index.json']) {
     if (!existsSync(path.join(theme, file))) throw new Error(`${theme} is not a Shopify theme: ${file} is missing.`)
@@ -24,7 +25,7 @@ export async function startStudio({ theme, catalog = defaultCatalog, port }) {
     root: studioDir,
     configFile: path.join(studioDir, 'vite.config.ts'),
     server: { port },
-    plugins: [studioApi(theme, catalog)],
+    plugins: [studioApi(theme, catalog, { cli, store })],
   })
   return server.listen()
 }
@@ -32,12 +33,49 @@ export async function startStudio({ theme, catalog = defaultCatalog, port }) {
 /**
  * @param {string} theme
  * @param {string} catalog
+ * @param {{ cli: string, store?: string }} preview
  * @returns {import('vite').Plugin}
  */
-function studioApi(theme, catalog) {
+function studioApi(theme, catalog, { cli, store }) {
   return {
     name: 'studio-api',
     configureServer(server) {
+      /** @type {Promise<Offense[]> | null} The latest Theme Check result, until a file changes. */
+      let validation = null
+      const readState = () => readThemeState(theme, catalog, (validation ??= validateOnce()))
+      function validateOnce() {
+        const result = validate(theme)
+        result.catch(() => {
+          if (validation === result) validation = null
+        })
+        return result
+      }
+      /** The Theme state after a Studio write, validated again. */
+      function written() {
+        validation = null
+        return readState()
+      }
+
+      // The agent, the Theme Editor (pulled) or anything else may change the Theme: re-validate and tell the UI.
+      /** @type {NodeJS.Timeout | undefined} */
+      let notify
+      const watcher = watch(theme, { recursive: true }, (_, file) => {
+        if (file?.split(path.sep)[0] === '.git') return
+        validation = null
+        clearTimeout(notify)
+        notify = setTimeout(() => server.ws.send('studio:theme'), 100)
+      })
+
+      const preview = startPreview({ cli, theme, store, onChange: (state) => server.ws.send('studio:preview', state) })
+      const stop = () => preview.stop()
+      process.on('exit', stop)
+      server.httpServer?.once('close', () => {
+        watcher.close()
+        clearTimeout(notify)
+        stop()
+        process.off('exit', stop)
+      })
+
       /**
        * A route answers its exact path; one ending in /:id also answers a single path segment after
        * that prefix, and hands it to the handler.
@@ -73,35 +111,36 @@ function studioApi(theme, catalog) {
             })
         })
       }
-      route('/api/theme', 'GET', () => readThemeState(theme, catalog))
+      route('/api/theme', 'GET', readState)
+      route('/api/preview', 'GET', async () => preview.state)
       route('/api/brand', 'PUT', async (req) => {
         setBrand(theme, await readBody(req))
-        return readThemeState(theme, catalog)
+        return written()
       })
       route('/api/brand/logo', 'GET', async () => readLogo(theme))
       route('/api/brand/logo', 'PUT', async (req) => {
         uploadLogo(theme, req.headers['content-type'] ?? '', await buffer(req))
-        return readThemeState(theme, catalog)
+        return written()
       })
       route('/api/brand/logo', 'DELETE', async () => {
         removeLogo(theme)
-        return readThemeState(theme, catalog)
+        return written()
       })
       route('/api/home/sections', 'POST', async (req) => {
         addSection(theme, catalog, await readBody(req))
-        return readThemeState(theme, catalog)
+        return written()
       })
       route('/api/home/sections/:id', 'DELETE', async (_, id) => {
         removeSection(theme, id)
-        return readThemeState(theme, catalog)
+        return written()
       })
       route('/api/home/sections/:id', 'PATCH', async (req, id) => {
         setColorScheme(theme, id, await readBody(req))
-        return readThemeState(theme, catalog)
+        return written()
       })
       route('/api/home/order', 'PUT', async (req) => {
         reorderSections(theme, await readBody(req))
-        return readThemeState(theme, catalog)
+        return written()
       })
     },
   }
@@ -151,14 +190,15 @@ class NotFound extends HttpError {
 /**
  * @param {string} theme
  * @param {string} catalog
+ * @param {Promise<Offense[]>} validation
  * @returns {Promise<ThemeState>}
  */
-async function readThemeState(theme, catalog) {
+async function readThemeState(theme, catalog, validation) {
   return {
     home: readTemplate(theme, home),
     catalog: listSections(catalog),
     brand: readBrand(theme),
-    validation: await validate(theme),
+    validation: await validation,
   }
 }
 
@@ -544,7 +584,6 @@ function listSections(dir) {
  * @returns {Promise<Offense[]>}
  */
 export async function validate(theme) {
-  // ponytail: full Theme Check on every read and write; cache the result once file watching exists (#7).
   const offenses = await check(theme)
   return offenses.map((offense) => ({
     file: path.relative(theme, fileURLToPath(offense.uri)),

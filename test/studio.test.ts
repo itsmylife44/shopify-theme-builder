@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { ViteDevServer } from 'vite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parseJSON } from '@shopify/theme-check-node'
-import { startStudio } from '../studio/server/studio.mjs'
+import { startStudio, type Offense } from '../studio/server/studio.mjs'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
 const cleanup: (() => Promise<void> | void)[] = []
@@ -40,12 +40,51 @@ function fixtureCatalog() {
   return catalog
 }
 
-async function openStudio(theme: string, catalog = fixtureCatalog()) {
-  const server: ViteDevServer = await startStudio({ theme, catalog, port: 0 })
+/**
+ * A stand-in for the Shopify CLI: `version` prints the given version; `theme dev` records its
+ * arguments and pid in run.json, prints the given output, then runs until killed or exits with exitCode.
+ */
+function fakeShopify({ version = '4.8.0', output = '', exitCode }: { version?: string; output?: string; exitCode?: number } = {}) {
+  const dir = tempDir('shopify-')
+  const cli = path.join(dir, 'shopify')
+  writeFileSync(
+    cli,
+    `#!/usr/bin/env node
+if (process.argv[2] === 'version') {
+  console.log(${JSON.stringify(version)})
+  process.exit(0)
+}
+require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'run.json'))}, JSON.stringify({ args: process.argv.slice(2), pid: process.pid }))
+process.stdout.write(${JSON.stringify(output)})
+${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `process.exitCode = ${exitCode}`}
+`,
+    { mode: 0o755 },
+  )
+  return cli
+}
+
+/** The arguments and pid of the fake CLI's `theme dev` run, once it started. */
+async function fakeRun(cli: string): Promise<{ args: string[]; pid: number }> {
+  const file = path.join(path.dirname(cli), 'run.json')
+  await expect.poll(() => existsSync(file)).toBe(true)
+  return JSON.parse(readFileSync(file, 'utf8'))
+}
+
+async function openStudio(
+  theme: string,
+  { catalog = fixtureCatalog(), cli = fakeShopify(), store }: { catalog?: string; cli?: string; store?: string } = {},
+) {
+  const server: ViteDevServer = await startStudio({ theme, catalog, port: 0, cli, store })
   cleanup.unshift(() => server.close())
   const url = server.resolvedUrls?.local[0]
   if (!url) throw new Error('Studio server has no local URL')
   return {
+    close: () => server.close(),
+    async readPreview() {
+      const response = await fetch(new URL('api/preview', url))
+      expect(response.status).toBe(200)
+      return response.json()
+    },
     async readTheme() {
       const response = await fetch(new URL('api/theme', url))
       expect(response.status).toBe(200)
@@ -106,7 +145,7 @@ function readSettingsData(theme: string) {
   return parseJSON(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8'))
 }
 
-function errors(offenses: { severity: string }[]) {
+function errors<T extends { severity: string }>(offenses: T[]) {
   return offenses.filter((offense) => offense.severity === 'error')
 }
 
@@ -577,8 +616,107 @@ describe('Studio API: compose the home page', () => {
 
   it('adds the real catalog hero with a clean Theme Check', async () => {
     const theme = fixtureTheme()
-    const { body } = await (await openStudio(theme, path.join(projectDir, 'catalog'))).addSection('hero')
+    const { body } = await (await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })).addSection('hero')
     expect(body.home[1]).toEqual(expect.objectContaining({ type: 'hero', colorScheme: 'scheme-1' }))
     expect(errors(body.validation)).toEqual([])
   })
 })
+
+describe('Studio API: external changes', () => {
+  it('reflects a file another process changes in read state and validation', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    expect(errors((await studio.readTheme()).validation)).toEqual([])
+
+    // What an agent would do: add a section file and put it on the home page.
+    writeFileSync(path.join(theme, 'sections/broken.liquid'), '{% if %}\n{% schema %}{"name": "Broken"}{% endschema %}\n')
+    writeHomeTemplate(theme, {
+      sections: { main: { type: 'hello-world' }, broken: { type: 'broken' } },
+      order: ['main', 'broken'],
+    })
+
+    await expect
+      .poll(async () => {
+        const { home, validation }: { home: { id: string }[]; validation: Offense[] } = await studio.readTheme()
+        return { home: home.map((section) => section.id), errors: errors(validation).map((offense) => offense.file) }
+      })
+      .toEqual({ home: ['main', 'broken'], errors: expect.arrayContaining(['sections/broken.liquid']) })
+  })
+})
+
+describe('Studio: live preview', () => {
+  // How Shopify CLI 4.8.0 prints a running theme dev, colors stripped.
+  const running =
+    '╭─ success ─────────────────────────────────────╮\n' +
+    '│  Preview your theme (t)                       │\n' +
+    '│    • http://127.0.0.1:9292                    │\n' +
+    '╰───────────────────────────────────────────────╯\n'
+
+  it('starts theme dev for the Theme and shows its preview URL', async () => {
+    const theme = fixtureTheme()
+    const cli = fakeShopify({ output: '\u001b[1mSyncing theme…\u001b[22m\n' + running })
+    const studio = await openStudio(theme, { cli, store: 'example.myshopify.com' })
+    expect((await fakeRun(cli)).args).toEqual(['theme', 'dev', '--path', theme, '--store', 'example.myshopify.com'])
+    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
+  })
+
+  it('shows that a login is required when the CLI asks for one', async () => {
+    const cli = fakeShopify({
+      output:
+        'To run this command, log in to Shopify.\n' +
+        'Authorization is required to continue, but the current environment does not support interactive prompts.\n',
+      exitCode: 1,
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'login-required', message: expect.stringContaining('shopify auth login') })
+  })
+
+  it('shows the CLI error when theme dev stops', async () => {
+    const cli = fakeShopify({
+      output:
+        '╭─ error ───────────────────────────────────────╮\n' +
+        '│  A store is required                          │\n' +
+        '╰───────────────────────────────────────────────╯\n',
+      exitCode: 1,
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'error', message: expect.stringContaining('A store is required') })
+  })
+
+  it('explains a missing Shopify CLI', async () => {
+    const studio = await openStudio(fixtureTheme(), { cli: path.join(tempDir('empty-'), 'shopify') })
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'error', message: expect.stringContaining('npm install -g @shopify/cli') })
+  })
+
+  it('explains a Shopify CLI below the required version', async () => {
+    const cli = fakeShopify({ version: '3.61.2' })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'error', message: expect.stringMatching(/3\.61\.2.*4\.0\.0/) })
+    expect(existsSync(path.join(path.dirname(cli), 'run.json'))).toBe(false)
+  })
+
+  it('stops theme dev when the Studio closes', async () => {
+    const cli = fakeShopify({ output: running })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const { pid } = await fakeRun(cli)
+    await studio.close()
+    await expect.poll(() => isRunning(pid)).toBe(false)
+  })
+})
+
+function isRunning(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
