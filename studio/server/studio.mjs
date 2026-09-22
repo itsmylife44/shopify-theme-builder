@@ -38,12 +38,12 @@ function studioApi(theme, catalog) {
     name: 'studio-api',
     configureServer(server) {
       /**
-       * @param {string} route
+       * @param {string} url
        * @param {string} method
        * @param {(req: import('node:http').IncomingMessage) => Promise<unknown>} handle
        */
-      function route(route, method, handle) {
-        server.middlewares.use(route, (req, res, next) => {
+      function route(url, method, handle) {
+        server.middlewares.use(url, (req, res, next) => {
           if (req.method !== method) return next()
           handle(req)
             .then((body) => {
@@ -105,7 +105,15 @@ async function readThemeState(theme, catalog) {
  * @param {string} file
  */
 function readJSON(theme, file) {
-  const data = parseJSON(readFileSync(path.join(theme, file), 'utf8'))
+  return parseThemeJSON(readFileSync(path.join(theme, file), 'utf8'), file)
+}
+
+/**
+ * @param {string} text
+ * @param {string} file
+ */
+function parseThemeJSON(text, file) {
+  const data = parseJSON(text)
   if (data instanceof Error) throw new Error(`${file}: ${data.message}`)
   return data
 }
@@ -118,7 +126,7 @@ function readBrandSchema(theme) {
   /** @type {Record<string, any>} */
   const settings = {}
   for (const group of readJSON(theme, 'config/settings_schema.json')) {
-    for (const setting of group.settings ?? []) settings[setting.id] = setting
+    for (const setting of group.settings ?? []) if (setting.id) settings[setting.id] = setting
   }
   const group = settings.color_schemes
   /** @type {Record<string, string>} Default color per color field of a scheme. */
@@ -141,7 +149,7 @@ function currentSettings(data) {
  */
 function readBrand(theme) {
   const schema = readBrandSchema(theme)
-  const current = currentSettings(readJSON(theme, 'config/settings_data.json'))
+  const current = currentSettings(readJSON(theme, settingsData))
   /** @type {Record<string, Record<string, string>>} */
   const colorSchemes = {}
   for (const [id, scheme] of Object.entries(current.color_schemes ?? {})) {
@@ -156,6 +164,7 @@ function readBrand(theme) {
   }
 }
 
+const settingsData = 'config/settings_data.json'
 const hexColor = /^#[0-9a-f]{6}$/i
 // Shopify font library handles: family, then n (normal), i (italic) or o (oblique) and a weight digit.
 const fontHandle = /^[a-z0-9_-]+_[nio][1-9]$/
@@ -172,9 +181,9 @@ function setBrand(theme, change) {
   const schema = readBrandSchema(theme)
   const brand = validateBrand(change, Object.keys(schema.colors))
 
-  const file = path.join(theme, 'config/settings_data.json')
+  const file = path.join(theme, settingsData)
   const raw = readFileSync(file, 'utf8')
-  const data = readJSON(theme, 'config/settings_data.json')
+  const data = parseThemeJSON(raw, settingsData)
   const current = currentSettings(data)
   data.current = current
 
