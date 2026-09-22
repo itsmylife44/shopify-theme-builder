@@ -1,6 +1,7 @@
 // The Studio server: Vite serves the React UI from studio/, and the studioApi
 // plugin adds the Node file API over the Theme folder on disk.
-import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
@@ -38,15 +39,20 @@ function studioApi(theme, catalog) {
     name: 'studio-api',
     configureServer(server) {
       /**
+       * A route answers its exact path; one ending in /:id also answers a single path segment after
+       * that prefix, and hands it to the handler.
        * @param {string} url
        * @param {string} method
-       * @param {(req: import('node:http').IncomingMessage) => Promise<unknown>} handle
+       * @param {(req: import('node:http').IncomingMessage, id: string) => Promise<unknown>} handle
        */
       function route(url, method, handle) {
-        server.middlewares.use(url, (req, res, next) => {
-          // Connect matches path prefixes; a route only answers its exact path.
-          if (req.method !== method || new URL(req.url ?? '/', 'http://studio').pathname !== '/') return next()
-          handle(req)
+        const [prefix, param] = url.split('/:')
+        server.middlewares.use(prefix, (req, res, next) => {
+          // Connect matches path prefixes and strips them from req.url.
+          const rest = new URL(req.url ?? '/', 'http://studio').pathname
+          const id = param ? rest.match(/^\/([^/]+)$/)?.[1] : rest === '/' ? '' : undefined
+          if (req.method !== method || id === undefined) return next()
+          handle(req, decodeURIComponent(id))
             .then((body) => {
               if (body instanceof File) {
                 res.setHeader('Content-Type', body.type)
@@ -68,10 +74,7 @@ function studioApi(theme, catalog) {
       }
       route('/api/theme', 'GET', () => readThemeState(theme, catalog))
       route('/api/brand', 'PUT', async (req) => {
-        const brand = await json(req).catch(() => {
-          throw new BadRequest('The request body is not JSON.')
-        })
-        setBrand(theme, brand)
+        setBrand(theme, await readBody(req))
         return readThemeState(theme, catalog)
       })
       route('/api/brand/logo', 'GET', async () => readLogo(theme))
@@ -83,8 +86,31 @@ function studioApi(theme, catalog) {
         removeLogo(theme)
         return readThemeState(theme, catalog)
       })
+      route('/api/home/sections', 'POST', async (req) => {
+        addSection(theme, catalog, await readBody(req))
+        return readThemeState(theme, catalog)
+      })
+      route('/api/home/sections/:id', 'DELETE', async (_, id) => {
+        removeSection(theme, id)
+        return readThemeState(theme, catalog)
+      })
+      route('/api/home/sections/:id', 'PATCH', async (req, id) => {
+        setColorScheme(theme, id, await readBody(req))
+        return readThemeState(theme, catalog)
+      })
+      route('/api/home/order', 'PUT', async (req) => {
+        reorderSections(theme, await readBody(req))
+        return readThemeState(theme, catalog)
+      })
     },
   }
+}
+
+/** @param {import('node:http').IncomingMessage} req */
+function readBody(req) {
+  return json(req).catch(() => {
+    throw new BadRequest('The request body is not JSON.')
+  })
 }
 
 class HttpError extends Error {
@@ -99,7 +125,7 @@ class NotFound extends HttpError {
 
 /**
  * @typedef {{ file: string, line: number, severity: 'error' | 'warning', check: string, message: string }} Offense
- * @typedef {{ id: string, type: string }} TemplateSection
+ * @typedef {{ id: string, type: string, colorScheme?: string | null }} TemplateSection A section on a page; colorScheme is absent when its schema has no color scheme setting.
  * @typedef {{
  *   colorSchemes: Record<string, Record<string, string>>,
  *   colorFields: string[],
@@ -229,11 +255,23 @@ function setBrand(theme, change) {
  * @param {(current: Record<string, any>) => void} change
  */
 function updateSettings(theme, change) {
-  const file = path.join(theme, settingsData)
+  updateJSON(theme, settingsData, (data) => {
+    data.current = currentSettings(data)
+    change(data.current)
+  })
+}
+
+/**
+ * Changes a Theme JSON file in place, keeping everything the change doesn't touch.
+ * @param {string} theme
+ * @param {string} name
+ * @param {(data: Record<string, any>) => void} change
+ */
+function updateJSON(theme, name, change) {
+  const file = path.join(theme, name)
   const raw = readFileSync(file, 'utf8')
-  const data = parseThemeJSON(raw, settingsData)
-  data.current = currentSettings(data)
-  change(data.current)
+  const data = parseThemeJSON(raw, name)
+  change(data)
   // Keep the comment header Shopify writes at the top of the file.
   const header = raw.match(/^\s*\/\*[\s\S]*?\*\/\s*/)?.[0] ?? ''
   writeFileSync(file, header + JSON.stringify(data, null, 2) + '\n')
@@ -362,7 +400,121 @@ function validateBrand(change, colorFields) {
  */
 function readTemplate(theme, name) {
   const template = readJSON(theme, `templates/${name}.json`)
-  return template.order.map((/** @type {string} */ id) => ({ id, type: template.sections[id].type }))
+  return template.order.map((/** @type {string} */ id) => {
+    const { type, settings } = template.sections[id]
+    const setting = colorSchemeSetting(theme, type)
+    if (!setting) return { id, type }
+    return { id, type, colorScheme: settings?.[setting.id] ?? setting.default ?? null }
+  })
+}
+
+const home = 'templates/index.json'
+const sectionName = /^[a-z0-9_-]+$/i
+// Shopify's limit per JSON template.
+const maxSections = 25
+
+/**
+ * Adds a section at the end of the home page. A catalog section the Theme doesn't have yet is copied
+ * into it first; a section file already in the Theme is never overwritten (copy-once).
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {unknown} body
+ */
+function addSection(theme, catalog, body) {
+  const { type } = /** @type {{ type?: unknown }} */ (body ?? {})
+  if (typeof type !== 'string' || !sectionName.test(type)) throw new BadRequest('type must be a section name, like hero.')
+  const file = path.join(theme, 'sections', `${type}.liquid`)
+  const source = path.join(catalog, 'sections', `${type}.liquid`)
+  if (!existsSync(file) && !existsSync(source)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
+  updateJSON(theme, home, (template) => {
+    if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
+    let id
+    do id = `${type}_${randomBytes(3).toString('hex')}`
+    while (id in template.sections)
+    template.sections[id] = { type, settings: {} }
+    template.order.push(id)
+    if (!existsSync(file)) copyFileSync(source, file)
+  })
+}
+
+/**
+ * Removes a section from the home page. Its file stays in the Theme.
+ * @param {string} theme
+ * @param {string} id
+ */
+function removeSection(theme, id) {
+  updateJSON(theme, home, (template) => {
+    homeSection(template, id)
+    delete template.sections[id]
+    template.order = template.order.filter((/** @type {string} */ other) => other !== id)
+  })
+}
+
+/**
+ * Puts the home sections in a new order, which must list each of them exactly once.
+ * @param {string} theme
+ * @param {unknown} body
+ */
+function reorderSections(theme, body) {
+  const { order } = /** @type {{ order?: unknown }} */ (body ?? {})
+  updateJSON(theme, home, (template) => {
+    const current = new Set(template.order)
+    if (
+      !Array.isArray(order) ||
+      order.length !== current.size ||
+      new Set(order).size !== order.length ||
+      !order.every((id) => current.has(id))
+    ) {
+      throw new BadRequest('order must list each home section id exactly once.')
+    }
+    template.order = order
+  })
+}
+
+/**
+ * Sets the color scheme of a home section whose schema has a color scheme setting.
+ * @param {string} theme
+ * @param {string} id
+ * @param {unknown} body
+ */
+function setColorScheme(theme, id, body) {
+  const { colorScheme, ...unknown } = /** @type {Record<string, unknown>} */ (body ?? {})
+  const extra = Object.keys(unknown)
+  if (extra.length > 0) throw new BadRequest(`Unknown section field: ${extra.join(', ')}.`)
+  const schemes = Object.keys(readBrand(theme).colorSchemes)
+  if (typeof colorScheme !== 'string' || !schemes.includes(colorScheme)) {
+    throw new BadRequest(`colorScheme must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
+  }
+  updateJSON(theme, home, (template) => {
+    const section = homeSection(template, id)
+    const setting = colorSchemeSetting(theme, section.type)
+    if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
+    section.settings = { ...section.settings, [setting.id]: colorScheme }
+  })
+}
+
+/**
+ * @param {Record<string, any>} template
+ * @param {string} id
+ */
+function homeSection(template, id) {
+  if (!Object.hasOwn(template.sections, id)) throw new NotFound(`The home page has no section ${id}.`)
+  return template.sections[id]
+}
+
+/**
+ * The color scheme setting in a Theme section's schema, if it has one.
+ * @param {string} theme
+ * @param {string} type
+ * @returns {{ id: string, default?: string } | undefined}
+ */
+function colorSchemeSetting(theme, type) {
+  const file = path.join(theme, 'sections', `${type}.liquid`)
+  if (!sectionName.test(type) || !existsSync(file)) return undefined
+  const schema = readFileSync(file, 'utf8').match(/{%-?\s*schema\s*-?%}([\s\S]*?){%-?\s*endschema\s*-?%}/)?.[1]
+  const data = schema ? parseJSON(schema) : undefined
+  if (!data || data instanceof Error) return undefined
+  return data.settings?.find((/** @type {{ type: string }} */ setting) => setting.type === 'color_scheme')
 }
 
 /** @param {string} dir */

@@ -28,11 +28,15 @@ function fixtureTheme() {
   return theme
 }
 
+const catalogHero =
+  '<div class="color-{{ section.settings.color_scheme }}"></div>\n' +
+  '{% schema %}{"name": "Hero", "settings": [{"type": "color_scheme", "id": "color_scheme", "label": "Color scheme", "default": "scheme-1"}]}{% endschema %}\n'
+
 /** A Section Catalog holding one section, so tests don't depend on the real catalog's contents. */
 function fixtureCatalog() {
   const catalog = tempDir('catalog-')
   mkdirSync(path.join(catalog, 'sections'))
-  writeFileSync(path.join(catalog, 'sections/hero.liquid'), '{% schema %}{"name": "Hero"}{% endschema %}\n')
+  writeFileSync(path.join(catalog, 'sections/hero.liquid'), catalogHero)
   return catalog
 }
 
@@ -70,7 +74,37 @@ async function openStudio(theme: string, catalog = fixtureCatalog()) {
     fetchLogo() {
       return fetch(new URL('api/brand/logo', url))
     },
+    addSection(type: unknown) {
+      return send('POST', 'api/home/sections', { type })
+    },
+    removeSection(id: string) {
+      return send('DELETE', `api/home/sections/${encodeURIComponent(id)}`)
+    },
+    reorderSections(order: unknown) {
+      return send('PUT', 'api/home/order', { order })
+    },
+    setColorScheme(id: string, colorScheme: unknown) {
+      return send('PATCH', `api/home/sections/${encodeURIComponent(id)}`, { colorScheme })
+    },
   }
+
+  async function send(method: string, path: string, body?: unknown) {
+    const response = await fetch(new URL(path, url), {
+      method,
+      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+    return { status: response.status, body: await response.json() }
+  }
+}
+
+function readHomeTemplate(theme: string) {
+  return parseJSON(readFileSync(path.join(theme, 'templates/index.json'), 'utf8'))
+}
+
+/** Writes a home template the way the Theme Editor would: a comment header, settings, blocks and keys the Studio doesn't own. */
+function writeHomeTemplate(theme: string, template: object) {
+  writeFileSync(path.join(theme, 'templates/index.json'), '/* Written by the Theme Editor */\n' + JSON.stringify(template, null, 2))
 }
 
 function readSettingsData(theme: string) {
@@ -347,5 +381,194 @@ describe('studio command', () => {
     const result = studio()
     expect(result.code).toBe(1)
     expect(result.stderr).toContain('Usage: studio --theme <dir>')
+  })
+})
+
+describe('Studio API: compose the home page', () => {
+  it('adds a catalog section at the end of the home page, copying its file into the Theme', async () => {
+    const theme = fixtureTheme()
+    const { status, body } = await (await openStudio(theme)).addSection('hero')
+    expect(status).toBe(200)
+    expect(readFileSync(path.join(theme, 'sections/hero.liquid'), 'utf8')).toBe(catalogHero)
+    const template = readHomeTemplate(theme)
+    expect(template.order).toEqual(['main', expect.stringMatching(/^hero_/)])
+    const id = template.order[1]
+    expect(template.sections[id]).toEqual({ type: 'hero', settings: {} })
+    expect(body.home).toEqual([
+      { id: 'main', type: 'hello-world' },
+      { id, type: 'hero', colorScheme: 'scheme-1' },
+    ])
+    expect(errors(body.validation)).toEqual([])
+  })
+
+  it('copies a catalog section once and never overwrites the Theme\'s own copy', async () => {
+    const theme = fixtureTheme()
+    const own = '<div>Edited by the Creator</div>\n{% schema %}{"name": "Hero"}{% endschema %}\n'
+    writeFileSync(path.join(theme, 'sections/hero.liquid'), own)
+    const studio = await openStudio(theme)
+    await studio.addSection('hero')
+    const { status } = await studio.addSection('hero')
+    expect(status).toBe(200)
+    expect(readFileSync(path.join(theme, 'sections/hero.liquid'), 'utf8')).toBe(own)
+    const template = readHomeTemplate(theme)
+    expect(template.order).toHaveLength(3)
+    expect(new Set(template.order).size).toBe(3)
+  })
+
+  it('adds a section the Theme has even when the catalog does not', async () => {
+    const theme = fixtureTheme()
+    const { status, body } = await (await openStudio(theme)).addSection('custom-section')
+    expect(status).toBe(200)
+    expect(body.home.map((section: { type: string }) => section.type)).toEqual(['hello-world', 'custom-section'])
+  })
+
+  it.each([
+    ['a section neither the Theme nor the catalog has', 'slideshow', 404],
+    ['a type that is not a section name', '../layout/theme', 400],
+    ['a missing type', undefined, 400],
+  ])('refuses to add %s and writes nothing', async (_, type, status) => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    const response = await (await openStudio(theme)).addSection(type)
+    expect(response.status).toBe(status)
+    expect(response.body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'templates/index.json'), 'utf8')).toBe(before)
+  })
+
+  it('refuses a 26th section, Shopify\'s limit per template', async () => {
+    const theme = fixtureTheme()
+    const ids = Array.from({ length: 25 }, (_, i) => `s${i}`)
+    writeHomeTemplate(theme, {
+      sections: Object.fromEntries(ids.map((id) => [id, { type: 'hello-world' }])),
+      order: ids,
+    })
+    const studio = await openStudio(theme)
+    const { status } = await studio.addSection('hero')
+    expect(status).toBe(400)
+    expect(readHomeTemplate(theme).order).toHaveLength(25)
+    expect(existsSync(path.join(theme, 'sections/hero.liquid'))).toBe(false)
+  })
+
+  /** A home page composed in the Theme Editor: settings, blocks and keys the Studio doesn't own. */
+  function composedTheme() {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/hero.liquid'), catalogHero)
+    writeHomeTemplate(theme, {
+      layout: 'theme',
+      sections: {
+        top: { type: 'hero', settings: { color_scheme: 'scheme-2', heading: 'Summer sale' } },
+        middle: {
+          type: 'custom-section',
+          settings: { background_image: 'shopify://shop_images/bg.jpg' },
+          blocks: { text_1: { type: 'text', settings: { text: 'Hello' } } },
+          block_order: ['text_1'],
+          disabled: true,
+        },
+        bottom: { type: 'hello-world', settings: {}, custom_key: { kept: true } },
+      },
+      order: ['top', 'middle', 'bottom'],
+      wrapper: 'div',
+    })
+    return theme
+  }
+
+  it('reads each section\'s color scheme, or none when its schema has no color scheme setting', async () => {
+    const state = await (await openStudio(composedTheme())).readTheme()
+    expect(state.home).toEqual([
+      { id: 'top', type: 'hero', colorScheme: 'scheme-2' },
+      { id: 'middle', type: 'custom-section' },
+      { id: 'bottom', type: 'hello-world' },
+    ])
+  })
+
+  it('removes a section from the home page and keeps its file in the Theme', async () => {
+    const theme = composedTheme()
+    const { status, body } = await (await openStudio(theme)).removeSection('top')
+    expect(status).toBe(200)
+    const template = readHomeTemplate(theme)
+    expect(template.order).toEqual(['middle', 'bottom'])
+    expect(template.sections).not.toHaveProperty('top')
+    expect(existsSync(path.join(theme, 'sections/hero.liquid'))).toBe(true)
+    expect(body.home.map((section: { id: string }) => section.id)).toEqual(['middle', 'bottom'])
+  })
+
+  it('refuses to remove a section the home page does not have', async () => {
+    const theme = composedTheme()
+    const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    const { status } = await (await openStudio(theme)).removeSection('nope')
+    expect(status).toBe(404)
+    expect(readFileSync(path.join(theme, 'templates/index.json'), 'utf8')).toBe(before)
+  })
+
+  it('reorders the home sections', async () => {
+    const theme = composedTheme()
+    const { status, body } = await (await openStudio(theme)).reorderSections(['bottom', 'top', 'middle'])
+    expect(status).toBe(200)
+    expect(readHomeTemplate(theme).order).toEqual(['bottom', 'top', 'middle'])
+    expect(body.home.map((section: { id: string }) => section.id)).toEqual(['bottom', 'top', 'middle'])
+  })
+
+  it.each([
+    ['a missing section', ['bottom', 'top']],
+    ['an unknown section', ['bottom', 'top', 'nope']],
+    ['a repeated section', ['bottom', 'top', 'top']],
+    ['something that is not a list', 'top'],
+  ])('refuses an order with %s and writes nothing', async (_, order) => {
+    const theme = composedTheme()
+    const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    const { status, body } = await (await openStudio(theme)).reorderSections(order)
+    expect(status).toBe(400)
+    expect(body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'templates/index.json'), 'utf8')).toBe(before)
+  })
+
+  it('sets a section\'s color scheme', async () => {
+    const theme = composedTheme()
+    const { status, body } = await (await openStudio(theme)).setColorScheme('top', 'scheme-1')
+    expect(status).toBe(200)
+    expect(readHomeTemplate(theme).sections.top.settings).toEqual({ color_scheme: 'scheme-1', heading: 'Summer sale' })
+    expect(body.home[0]).toEqual({ id: 'top', type: 'hero', colorScheme: 'scheme-1' })
+  })
+
+  it.each([
+    ['a color scheme the Brand does not have', 'top', 'scheme-9', 400],
+    ['a color scheme that is not a string', 'top', 1, 400],
+    ['a section without a color scheme setting', 'bottom', 'scheme-1', 400],
+    ['a section the home page does not have', 'nope', 'scheme-1', 404],
+  ])('refuses %s and writes nothing', async (_, id, colorScheme, status) => {
+    const theme = composedTheme()
+    const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    const response = await (await openStudio(theme)).setColorScheme(id, colorScheme)
+    expect(response.status).toBe(status)
+    expect(response.body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'templates/index.json'), 'utf8')).toBe(before)
+  })
+
+  it('keeps settings, blocks, the comment header and keys it does not own through every operation', async () => {
+    const theme = composedTheme()
+    const original = readHomeTemplate(theme)
+    const studio = await openStudio(theme)
+    await studio.addSection('hero')
+    const added = readHomeTemplate(theme).order[3]
+    await studio.setColorScheme('top', 'scheme-1')
+    await studio.reorderSections(['bottom', added, 'middle', 'top'])
+    await studio.removeSection(added)
+    const raw = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
+    expect(raw.startsWith('/* Written by the Theme Editor */\n')).toBe(true)
+    expect(parseJSON(raw)).toEqual({
+      ...original,
+      sections: {
+        ...original.sections,
+        top: { type: 'hero', settings: { color_scheme: 'scheme-1', heading: 'Summer sale' } },
+      },
+      order: ['bottom', 'middle', 'top'],
+    })
+  })
+
+  it('adds the real catalog hero with a clean Theme Check', async () => {
+    const theme = fixtureTheme()
+    const { body } = await (await openStudio(theme, path.join(projectDir, 'catalog'))).addSection('hero')
+    expect(body.home[1]).toEqual(expect.objectContaining({ type: 'hero', colorScheme: 'scheme-1' }))
+    expect(errors(body.validation)).toEqual([])
   })
 })
