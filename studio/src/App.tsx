@@ -1,10 +1,11 @@
-import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, ExternalLinkIcon, Trash2Icon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
+import type { PreviewState } from '../server/preview.mjs'
 import type { Brand, Offense, TemplateSection, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Combobox,
@@ -26,23 +27,36 @@ export function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const showState = (state: ThemeState) => setLoad({ status: 'ready', state })
 
+  // Reads the Theme at start and again whenever its files change, from the Studio or elsewhere.
   useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/theme', { signal: controller.signal })
-      .then(async (response) => {
-        const body = await response.json()
-        if (!response.ok) throw new Error(body.error)
-        setLoad({ status: 'ready', state: body })
-      })
-      .catch((error: Error) => {
-        if (!controller.signal.aborted) setLoad({ status: 'error', message: error.message })
-      })
-    return () => controller.abort()
+    let controller = new AbortController()
+    function read() {
+      // Only the latest read may show, so an older answer arriving late is dropped.
+      controller.abort()
+      controller = new AbortController()
+      const { signal } = controller
+      fetch('/api/theme', { signal })
+        .then(async (response) => {
+          const body = await response.json()
+          if (!response.ok) throw new Error(body.error)
+          setLoad({ status: 'ready', state: body })
+        })
+        .catch((error: Error) => {
+          if (!signal.aborted) setLoad({ status: 'error', message: error.message })
+        })
+    }
+    read()
+    import.meta.hot?.on('studio:theme', read)
+    return () => {
+      controller.abort()
+      import.meta.hot?.off('studio:theme', read)
+    }
   }, [])
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
       <h1 className="font-heading text-xl font-medium">Studio</h1>
+      <Preview />
       {load.status === 'loading' ? (
         <Skeleton className="h-64 w-full" />
       ) : load.status === 'error' ? (
@@ -228,6 +242,67 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
           </Button>
         </CardFooter>
       </form>
+    </Card>
+  )
+}
+
+const previewBadges: Record<PreviewState['status'], string> = {
+  starting: 'Starting',
+  running: 'Running',
+  'login-required': 'Login required',
+  error: 'Error',
+}
+
+/** The status of `shopify theme dev`, and the link to the preview once it runs. */
+function Preview() {
+  const [preview, setPreview] = useState<PreviewState | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    function update(state: PreviewState) {
+      // A pushed status is newer than the one being fetched.
+      controller.abort()
+      setPreview(state)
+    }
+    fetch('/api/preview', { signal: controller.signal })
+      .then((response) => response.json())
+      .then(setPreview)
+      .catch(() => {})
+    import.meta.hot?.on('studio:preview', update)
+    return () => {
+      controller.abort()
+      import.meta.hot?.off('studio:preview', update)
+    }
+  }, [])
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Preview</CardTitle>
+        <CardDescription>The Theme rendered by Shopify through shopify theme dev.</CardDescription>
+        {preview ? (
+          <CardAction>
+            <Badge variant={preview.status === 'error' ? 'destructive' : 'secondary'}>{previewBadges[preview.status]}</Badge>
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        {preview === null ? (
+          <Skeleton className="h-9 w-full" />
+        ) : preview.status === 'running' ? (
+          <div className="flex flex-wrap items-center gap-4">
+            <a href={preview.url} target="_blank" rel="noreferrer" className={buttonVariants()}>
+              Open preview
+              <ExternalLinkIcon data-icon="inline-end" />
+            </a>
+            <p className="text-muted-foreground">
+              {preview.url} works in Google Chrome and reloads when the Theme changes.
+            </p>
+          </div>
+        ) : (
+          <p className={preview.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>{preview.message}</p>
+        )}
+      </CardContent>
     </Card>
   )
 }
