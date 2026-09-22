@@ -650,6 +650,17 @@ describe('Studio API: compose the home page', () => {
     expect(body.home[1]).toEqual(expect.objectContaining({ type: 'hero', colorScheme: 'scheme-1' }))
     expect(errors(body.validation)).toEqual([])
   })
+
+  it('never offers the real catalog header or footer for the home page', async () => {
+    const theme = fixtureTheme()
+    cpSync(path.join(projectDir, 'catalog'), theme, { recursive: true })
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    const { catalog } = await studio.readTheme()
+    expect(catalog).toContain('hero')
+    expect(catalog).not.toContain('header')
+    expect(catalog).not.toContain('footer')
+    for (const type of ['header', 'footer']) expect((await studio.addSection(type)).status).toBe(400)
+  })
 })
 
 describe('Studio API: external changes', () => {
