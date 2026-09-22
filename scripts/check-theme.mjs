@@ -1,4 +1,4 @@
-// Seam 2: assembles an example Theme (the Base Theme plus every Section Catalog
+// Assembles an example Theme (the Base Theme plus every Section Catalog
 // file) in a temp folder and runs Theme Check on it. Exits 1 on any error.
 // Usage: node scripts/check-theme.mjs [catalogDir]   (default: catalog/)
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
@@ -16,12 +16,14 @@ try {
   if (existsSync(catalogDir)) cpSync(catalogDir, theme, { recursive: true })
 
   const offenses = await check(theme)
+  let errors = 0
   for (const offense of offenses) {
     const file = path.relative(theme, fileURLToPath(offense.uri))
-    const level = offense.severity === Severity.ERROR ? 'error' : 'warning'
-    console.log(`${file}:${offense.start.line} ${level} ${offense.check}: ${offense.message}`)
+    const isError = offense.severity === Severity.ERROR
+    if (isError) errors++
+    // Theme Check lines are 0-indexed.
+    console.log(`${file}:${offense.start.line + 1} ${isError ? 'error' : 'warning'} ${offense.check}: ${offense.message}`)
   }
-  const errors = offenses.filter((offense) => offense.severity === Severity.ERROR).length
   console.log(`Theme Check: ${errors} errors, ${offenses.length - errors} warnings`)
   process.exitCode = errors > 0 ? 1 : 0
 } finally {
