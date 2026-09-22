@@ -1,6 +1,7 @@
 // The Theme's live preview: the Studio runs `shopify theme dev` and reads its status from the CLI's
 // output (ADR-0003). The output formats below were checked against Shopify CLI 4.8.0.
 import { execFile, spawn } from 'node:child_process'
+import { createServer } from 'node:net'
 import { promisify, stripVTControlCharacters } from 'node:util'
 
 // The oldest CLI whose output the Studio was checked against.
@@ -34,10 +35,10 @@ export function startPreview({ cli, theme, store, onChange }) {
     onChange(state)
   }
 
-  checkCli(cli).then(
-    () => {
+  checkCli(cli).then(() => freePort()).then(
+    (port) => {
       if (stopped) return
-      const args = ['theme', 'dev', '--path', theme, ...(store ? ['--store', store] : [])]
+      const args = ['theme', 'dev', '--path', theme, ...(store ? ['--store', store] : []), '--port', String(port)]
       // No stdin: theme dev must not take over the Studio's terminal with its own prompts and keys.
       child = spawn(cli, args, { stdio: ['ignore', 'pipe', 'pipe'] })
       let output = ''
@@ -100,6 +101,22 @@ async function checkCli(cli) {
   if (index !== -1 && have[index] < need[index]) {
     throw new Error(`The Shopify CLI is ${version}; the Studio needs ${minimumCliVersion} or newer. ${install}`)
   }
+}
+
+/**
+ * 9292, theme dev's usual port, or a free one when another theme dev (for another Theme, say) holds it.
+ * @param {number} port
+ * @returns {Promise<number>}
+ */
+function freePort(port = 9292) {
+  return new Promise((resolve) => {
+    const server = createServer()
+    server.once('error', () => resolve(freePort(0)))
+    server.listen(port, '127.0.0.1', () => {
+      const { port } = /** @type {import('node:net').AddressInfo} */ (server.address())
+      server.close(() => resolve(port))
+    })
+  })
 }
 
 /**
