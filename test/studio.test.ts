@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -663,7 +664,16 @@ describe('Studio: live preview', () => {
     const theme = fixtureTheme()
     const cli = fakeShopify({ output: '\u001b[1mSyncing theme…\u001b[22m\n' + running })
     const studio = await openStudio(theme, { cli, store: 'example.myshopify.com' })
-    expect((await fakeRun(cli)).args).toEqual(['theme', 'dev', '--path', theme, '--store', 'example.myshopify.com'])
+    expect((await fakeRun(cli)).args).toEqual([
+      'theme',
+      'dev',
+      '--path',
+      theme,
+      '--store',
+      'example.myshopify.com',
+      '--port',
+      expect.stringMatching(/^\d+$/),
+    ])
     await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
   })
 
@@ -725,6 +735,18 @@ describe('Studio: live preview', () => {
       .poll(() => studio.readPreview())
       .toEqual({ status: 'error', message: expect.stringMatching(/4\.7\.9.*4\.8\.0/) })
     expect(existsSync(path.join(path.dirname(cli), 'run.json'))).toBe(false)
+  })
+
+  it('runs theme dev on another port when 9292 is taken, as by a theme dev for another Theme', async () => {
+    const taken = createServer()
+    // Another process may hold 9292 already; either way it is taken.
+    await new Promise((resolve) => taken.once('error', resolve).listen(9292, '127.0.0.1', () => resolve(undefined)))
+    cleanup.push(() => new Promise((resolve) => taken.close(() => resolve())))
+    const cli = fakeShopify()
+    await openStudio(fixtureTheme(), { cli })
+    const { args } = await fakeRun(cli)
+    expect(args.slice(-2)).toEqual(['--port', expect.stringMatching(/^\d+$/)])
+    expect(args.at(-1)).not.toBe('9292')
   })
 
   it('stops theme dev when the Studio closes', async () => {
