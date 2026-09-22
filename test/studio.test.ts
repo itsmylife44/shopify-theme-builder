@@ -61,7 +61,7 @@ if (process.argv[2] === 'version') {
   console.log(${JSON.stringify(version)})
   process.exit(0)
 }
-require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'run.json'))}, JSON.stringify({ args: process.argv.slice(2), pid: process.pid }))
+require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'run.json'))}, JSON.stringify({ args: process.argv.slice(2), pid: process.pid, storePassword: process.env.SHOPIFY_FLAG_STORE_PASSWORD }))
 process.stdout.write(${JSON.stringify(output)})
 setTimeout(() => process.stdout.write(${JSON.stringify(later)}), 500)
 ${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `setTimeout(() => process.exit(${exitCode}), 600)`}
@@ -72,7 +72,7 @@ ${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `setTimeout(() => pro
 }
 
 /** The arguments and pid of the fake CLI's `theme dev` run, once it started. */
-async function fakeRun(cli: string): Promise<{ args: string[]; pid: number }> {
+async function fakeRun(cli: string): Promise<{ args: string[]; pid: number; storePassword?: string }> {
   const file = path.join(path.dirname(cli), 'run.json')
   await expect.poll(() => existsSync(file)).toBe(true)
   return JSON.parse(readFileSync(file, 'utf8'))
@@ -80,9 +80,14 @@ async function fakeRun(cli: string): Promise<{ args: string[]; pid: number }> {
 
 async function openStudio(
   theme: string,
-  { catalog = fixtureCatalog(), cli = fakeShopify(), store }: { catalog?: string; cli?: string; store?: string } = {},
+  {
+    catalog = fixtureCatalog(),
+    cli = fakeShopify(),
+    store,
+    storePassword,
+  }: { catalog?: string; cli?: string; store?: string; storePassword?: string } = {},
 ) {
-  const server: ViteDevServer = await startStudio({ theme, catalog, port: 0, cli, store })
+  const server: ViteDevServer = await startStudio({ theme, catalog, port: 0, cli, store, storePassword })
   cleanup.unshift(() => server.close())
   const url = server.resolvedUrls?.local[0]
   if (!url) throw new Error('Studio server has no local URL')
@@ -719,6 +724,29 @@ describe('Studio: live preview', () => {
     await expect
       .poll(() => studio.readPreview())
       .toEqual({ status: 'error', message: expect.stringContaining('A store is required') })
+  })
+
+  it('hands the storefront password to theme dev without putting it in the arguments', async () => {
+    const cli = fakeShopify()
+    await openStudio(fixtureTheme(), { cli, storePassword: 'secret' })
+    const run = await fakeRun(cli)
+    expect(run.storePassword).toBe('secret')
+    expect(run.args).not.toContain('secret')
+  })
+
+  it('asks for the storefront password when the store has a password page', async () => {
+    const cli = fakeShopify({
+      output:
+        '╭─ error ───────────────────────────────────────╮\n' +
+        '│  Failed to prompt:                            │\n' +
+        '│  Enter your store password                    │\n' +
+        '╰───────────────────────────────────────────────╯\n',
+      exitCode: 1,
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'error', message: expect.stringContaining('--store-password') })
   })
 
   it('explains a missing Shopify CLI', async () => {

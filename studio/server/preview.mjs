@@ -12,6 +12,11 @@ const previewUrl = /Preview your theme[\s\S]*?(https?:\/\/[^\s│]+)/
 const loginPrompt = /log in to Shopify/
 const loginWaiting = "Log in to Shopify with the link the Shopify CLI printed in the Studio's terminal; the preview starts after."
 const loginStopped = 'Run `shopify auth login` in a terminal, then restart the Studio.'
+// Development stores always have a password page, and theme dev can't ask for it without a terminal.
+const passwordPrompt = /Enter your store password/
+const passwordMissing =
+  "The store has a password page: restart the Studio with --store-password <password>, from the Shopify admin's Online Store › Preferences."
+
 
 /**
  * @typedef {{ status: 'starting' | 'login-required' | 'error', message: string } | { status: 'running', url: string }} PreviewState
@@ -19,9 +24,9 @@ const loginStopped = 'Run `shopify auth login` in a terminal, then restart the S
 
 /**
  * Starts `shopify theme dev` for a Theme. Its output also goes to the Studio's terminal.
- * @param {{ cli: string, theme: string, store?: string, onChange: (state: PreviewState) => void }} options
+ * @param {{ cli: string, theme: string, store?: string, storePassword?: string, onChange: (state: PreviewState) => void }} options
  */
-export function startPreview({ cli, theme, store, onChange }) {
+export function startPreview({ cli, theme, store, storePassword, onChange }) {
   /** @type {PreviewState} */
   let state = { status: 'starting', message: 'Starting `shopify theme dev`…' }
   /** @type {import('node:child_process').ChildProcess | undefined} */
@@ -40,7 +45,9 @@ export function startPreview({ cli, theme, store, onChange }) {
       if (stopped) return
       const args = ['theme', 'dev', '--path', theme, ...(store ? ['--store', store] : []), '--port', String(port)]
       // No stdin: theme dev must not take over the Studio's terminal with its own prompts and keys.
-      child = spawn(cli, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+      // The password goes in the CLI's environment variable, where other processes can't list it.
+      const env = storePassword ? { ...process.env, SHOPIFY_FLAG_STORE_PASSWORD: storePassword } : process.env
+      child = spawn(cli, args, { stdio: ['ignore', 'pipe', 'pipe'], env })
       let output = ''
       /**
        * Echoes the CLI's output to the Studio's terminal, where the Creator logs in, and reads the status from it.
@@ -62,6 +69,7 @@ export function startPreview({ cli, theme, store, onChange }) {
       child.on('error', (error) => set({ status: 'error', message: `Could not run the Shopify CLI: ${error.message}` }))
       child.on('exit', (code) => {
         if (state.status === 'login-required') return set({ status: 'login-required', message: loginStopped })
+        if (passwordPrompt.test(output)) return set({ status: 'error', message: passwordMissing })
         set({ status: 'error', message: `shopify theme dev stopped (exit code ${code}). ${lastLines(output)}`.trim() })
       })
     },
