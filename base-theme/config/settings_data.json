@@ -8,5 +8,24 @@
  * ------------------------------------------------------------
  */
 {
-  "current": {}
+  "current": {
+    "color_schemes": {
+      "scheme-1": {
+        "settings": {
+          "background": "#FFFFFF",
+          "text": "#333333",
+          "button": "#333333",
+          "button_label": "#FFFFFF"
+        }
+      },
+      "scheme-2": {
+        "settings": {
+          "background": "#333333",
+          "text": "#FFFFFF",
+          "button": "#FFFFFF",
+          "button_label": "#333333"
+        }
+      }
+    }
+  }
 }
