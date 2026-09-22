@@ -1,6 +1,7 @@
+import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
-import type { Brand, Offense, ThemeState } from '../server/studio.mjs'
+import type { Brand, Offense, TemplateSection, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -49,20 +50,49 @@ export function App() {
           <AlertDescription>{load.message}</AlertDescription>
         </Alert>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="flex flex-col gap-6">
           {/* Keyed by the saved Brand, so the form restarts from what was written. */}
           <BrandPanel
             key={JSON.stringify(load.state.brand)}
             brand={load.state.brand}
             onSaved={(state) => setLoad({ status: 'ready', state })}
           />
-          <HomePage sections={load.state.home} />
-          <SectionCatalog sections={load.state.catalog} />
+          <HomePage state={load.state} onSaved={(state) => setLoad({ status: 'ready', state })} />
           <ThemeCheck offenses={load.state.validation} />
         </div>
       )}
     </main>
   )
+}
+
+/** Sends writes to the Studio API one at a time and hands the Theme state each returns to onSaved. */
+function useWrite(onSaved: (state: ThemeState) => void) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  /** Resolves to whether the write succeeded; a failure shows in error. */
+  async function write(url: string, init: RequestInit) {
+    setSaving(true)
+    setError(null)
+    try {
+      const response = await fetch(url, init)
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error)
+      onSaved(body)
+      return true
+    } catch (error) {
+      setError((error as Error).message)
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return { saving, error, write }
+}
+
+function jsonRequest(method: string, body: unknown): RequestInit {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
 }
 
 function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
@@ -71,8 +101,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
   const [bodyFont, setBodyFont] = useState(brand.bodyFont)
   // Changes on every logo upload, so the preview reloads even when the file name stays the same.
   const [logoVersion, setLogoVersion] = useState(Date.now)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { saving, error, write } = useWrite(onSaved)
 
   function setColor(scheme: string, field: string, value: string) {
     setColorSchemes((schemes) => ({ ...schemes, [scheme]: { ...schemes[scheme], [field]: value } }))
@@ -102,40 +131,23 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
     return changes
   }
 
-  /** Sends one Brand write to the Studio API and shows the Theme state it returns. */
-  async function write(url: string, init: RequestInit) {
-    setSaving(true)
-    setError(null)
-    try {
-      const response = await fetch(url, init)
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error)
-      if (url === '/api/brand/logo') setLogoVersion(Date.now())
-      onSaved(body)
-    } catch (error) {
-      setError((error as Error).message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   function save(event: React.FormEvent) {
     event.preventDefault()
-    write('/api/brand', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(brandChanges()),
-    })
+    write('/api/brand', jsonRequest('PUT', brandChanges()))
+  }
+
+  async function writeLogo(init: RequestInit) {
+    if (await write('/api/brand/logo', init)) setLogoVersion(Date.now())
   }
 
   function uploadLogo(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
-    if (file) write('/api/brand/logo', { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+    if (file) writeLogo({ method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
   }
 
   return (
-    <Card className="md:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle>Brand</CardTitle>
         <CardDescription>Colors, fonts and logo, saved to config/settings_data.json.</CardDescription>
@@ -183,7 +195,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                     type="button"
                     variant="outline"
                     disabled={saving}
-                    onClick={() => write('/api/brand/logo', { method: 'DELETE' })}
+                    onClick={() => writeLogo({ method: 'DELETE' })}
                   >
                     Remove logo
                   </Button>
@@ -319,52 +331,138 @@ function FontPicker({
   )
 }
 
-function HomePage({ sections }: { sections: ThemeState['home'] }) {
+/** The home page's sections: add from the Section Catalog, remove, reorder and pick each one's color scheme. */
+function HomePage({ state, onSaved }: { state: ThemeState; onSaved: (state: ThemeState) => void }) {
+  const { saving, error, write } = useWrite(onSaved)
+  const [type, setType] = useState<string | null>(state.catalog[0] ?? null)
+  const sections = state.home
+  const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
+  const catalog = state.catalog.map((name) => ({ value: name, label: name }))
+
+  function move(index: number, offset: number) {
+    const order = sections.map((section) => section.id)
+    ;[order[index], order[index + offset]] = [order[index + offset], order[index]]
+    write('/api/home/order', jsonRequest('PUT', { order }))
+  }
+
+  function remove(section: TemplateSection) {
+    if (!confirm(`Remove ${section.type} (${section.id}) from the home page? Its settings and blocks are deleted too.`)) return
+    write(`/api/home/sections/${encodeURIComponent(section.id)}`, { method: 'DELETE' })
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Home page</CardTitle>
-        <CardDescription>Sections in page order, from templates/index.json.</CardDescription>
+        <CardDescription>Sections in page order, saved to templates/index.json.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-4">
         {sections.length > 0 ? (
           <ol className="flex flex-col gap-2">
             {sections.map((section, index) => (
-              <li key={section.id} className="flex items-center gap-3">
+              <li key={section.id} className="flex items-center gap-2">
                 <span className="w-5 text-right text-muted-foreground tabular-nums">{index + 1}</span>
-                <span className="font-medium">{section.type}</span>
-                <span className="truncate text-muted-foreground">{section.id}</span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="font-medium">{section.type}</span>
+                  <span className="truncate text-xs text-muted-foreground">{section.id}</span>
+                </div>
+                {section.colorScheme !== undefined ? (
+                  <Select
+                    items={schemes}
+                    value={section.colorScheme}
+                    disabled={saving}
+                    onValueChange={(colorScheme) =>
+                      colorScheme &&
+                      write(`/api/home/sections/${encodeURIComponent(section.id)}`, jsonRequest('PATCH', { colorScheme }))
+                    }
+                  >
+                    <SelectTrigger aria-label={`Color scheme of ${section.id}`} className="w-36">
+                      <SelectValue placeholder="Color scheme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {schemes.map((scheme) => (
+                          <SelectItem key={scheme.value} value={scheme.value}>
+                            {scheme.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Move ${section.id} up`}
+                  disabled={saving || index === 0}
+                  onClick={() => move(index, -1)}
+                >
+                  <ArrowUpIcon />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Move ${section.id} down`}
+                  disabled={saving || index === sections.length - 1}
+                  onClick={() => move(index, 1)}
+                >
+                  <ArrowDownIcon />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove ${section.id}`}
+                  disabled={saving}
+                  onClick={() => remove(section)}
+                >
+                  <Trash2Icon />
+                </Button>
               </li>
             ))}
           </ol>
         ) : (
           <EmptyState title="No sections" description="The home page has no sections yet." />
         )}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>The home page was not saved</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
       </CardContent>
-    </Card>
-  )
-}
-
-function SectionCatalog({ sections }: { sections: string[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Section Catalog</CardTitle>
-        <CardDescription>Sections available to add to a page.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {sections.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
-            {sections.map((name) => (
-              <li key={name}>
-                <Badge variant="outline">{name}</Badge>
-              </li>
-            ))}
-          </ul>
+      <CardFooter className="gap-2">
+        {catalog.length > 0 ? (
+          <>
+            <Field className="w-44">
+              <FieldLabel htmlFor="add-section" className="sr-only">
+                Section to add
+              </FieldLabel>
+              <Select items={catalog} value={type} onValueChange={setType}>
+                <SelectTrigger id="add-section" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {catalog.map((section) => (
+                      <SelectItem key={section.value} value={section.value}>
+                        {section.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Button
+              disabled={saving || !type}
+              onClick={() => write('/api/home/sections', jsonRequest('POST', { type }))}
+            >
+              Add section
+            </Button>
+          </>
         ) : (
-          <EmptyState title="Empty catalog" description="The Section Catalog has no sections yet." />
+          <p className="text-muted-foreground">The Section Catalog has no sections yet.</p>
         )}
-      </CardContent>
+      </CardFooter>
     </Card>
   )
 }
@@ -373,7 +471,7 @@ function ThemeCheck({ offenses }: { offenses: Offense[] }) {
   const errors = offenses.filter((offense) => offense.severity === 'error').length
   const warnings = offenses.length - errors
   return (
-    <Card className="md:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle>Theme Check</CardTitle>
         <CardDescription>Errors and warnings in the Theme.</CardDescription>
