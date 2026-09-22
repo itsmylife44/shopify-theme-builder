@@ -2,11 +2,21 @@ import { useEffect, useState } from 'react'
 import type { Brand, Offense, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import fontLibrary from '../server/shopify-fonts.json'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
@@ -55,13 +65,12 @@ export function App() {
   )
 }
 
-const shopImagePrefix = 'shopify://shop_images/'
-
 function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
   const [colorSchemes, setColorSchemes] = useState(brand.colorSchemes)
   const [headingFont, setHeadingFont] = useState(brand.headingFont)
   const [bodyFont, setBodyFont] = useState(brand.bodyFont)
-  const [logoFile, setLogoFile] = useState(brand.logo?.slice(shopImagePrefix.length) ?? '')
+  // Changes on every logo upload, so the preview reloads even when the file name stays the same.
+  const [logoVersion, setLogoVersion] = useState(Date.now)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,31 +97,40 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
       }),
     )
     if (Object.keys(changedSchemes).length > 0) changes.colorSchemes = changedSchemes
-    if (headingFont.trim() !== brand.headingFont) changes.headingFont = headingFont.trim()
-    if (bodyFont.trim() !== brand.bodyFont) changes.bodyFont = bodyFont.trim()
-    const logo = logoFile.trim() ? shopImagePrefix + logoFile.trim() : null
-    if (logo !== brand.logo) changes.logo = logo
+    if (headingFont !== brand.headingFont) changes.headingFont = headingFont
+    if (bodyFont !== brand.bodyFont) changes.bodyFont = bodyFont
     return changes
   }
 
-  async function save(event: React.FormEvent) {
-    event.preventDefault()
+  async function send(url: string, init: RequestInit) {
     setSaving(true)
     setError(null)
     try {
-      const response = await fetch('/api/brand', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(brandChanges()),
-      })
+      const response = await fetch(url, init)
       const body = await response.json()
       if (!response.ok) throw new Error(body.error)
+      setLogoVersion(Date.now())
       onSaved(body)
     } catch (error) {
       setError((error as Error).message)
     } finally {
       setSaving(false)
     }
+  }
+
+  function save(event: React.FormEvent) {
+    event.preventDefault()
+    send('/api/brand', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(brandChanges()),
+    })
+  }
+
+  function uploadLogo(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (file) send('/api/brand/logo', { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
   }
 
   return (
@@ -152,39 +170,34 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
               </Button>
             </FieldSet>
             <FieldGroup className="grid md:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="heading-font">Heading font</FieldLabel>
-                <Input id="heading-font" value={headingFont} onChange={(event) => setHeadingFont(event.target.value)} />
-                <FieldDescription>A Shopify font library handle, like playfair_display_n7.</FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="body-font">Body font</FieldLabel>
-                <Input id="body-font" value={bodyFont} onChange={(event) => setBodyFont(event.target.value)} />
-                <FieldDescription>
-                  Handles are listed in{' '}
-                  <a
-                    className="underline"
-                    href="https://shopify.dev/docs/storefronts/themes/architecture/settings/fonts#available-fonts"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Shopify's font library
-                  </a>
-                  .
-                </FieldDescription>
-              </Field>
+              <FontPicker id="heading-font" label="Heading font" value={headingFont} onChange={setHeadingFont} />
+              <FontPicker id="body-font" label="Body font" value={bodyFont} onChange={setBodyFont} />
             </FieldGroup>
             <Field>
               <FieldLabel htmlFor="logo">Logo</FieldLabel>
+              {brand.logoAsset ? (
+                <div className="flex items-center gap-4">
+                  <img src={`/api/brand/logo?v=${logoVersion}`} alt="Current logo" className="h-12 w-auto" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving}
+                    onClick={() => send('/api/brand/logo', { method: 'DELETE' })}
+                  >
+                    Remove logo
+                  </Button>
+                </div>
+              ) : null}
               <Input
                 id="logo"
-                placeholder="logo.png"
-                value={logoFile}
-                onChange={(event) => setLogoFile(event.target.value)}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                disabled={saving}
+                onChange={uploadLogo}
               />
               <FieldDescription>
-                The file name of an image uploaded in the Shopify admin under Content &gt; Files. Leave empty for the
-                shop name.
+                PNG, JPEG, WebP or SVG up to 2 MB, saved in the Theme's assets.
+                {brand.logo ? ' The header shows the logo picked in the Theme Editor instead.' : null}
               </FieldDescription>
             </Field>
             {error ? (
@@ -202,6 +215,103 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
         </CardFooter>
       </form>
     </Card>
+  )
+}
+
+const fontFamilies = fontLibrary.families
+const familyByHandle = new Map(fontFamilies.flatMap((family) => family.handles.map((handle) => [handle, family])))
+const familyNames = fontFamilies.map((family) => family.family)
+const weightNames: Record<string, string> = {
+  '1': 'Thin',
+  '2': 'Extra light',
+  '3': 'Light',
+  '4': 'Regular',
+  '5': 'Medium',
+  '6': 'Semibold',
+  '7': 'Bold',
+  '8': 'Extra bold',
+  '9': 'Black',
+}
+
+/** "Bold 700 italic" for bodoni_moda_i7. System fonts like mono have a single, unnamed variant. */
+function variantName(handle: string) {
+  const match = handle.match(/_([nio])([1-9])$/)
+  if (!match) return 'Regular'
+  const [, style, weight] = match
+  return `${weightNames[weight]} ${weight}00${style === 'i' ? ' italic' : style === 'o' ? ' oblique' : ''}`
+}
+
+/** Picks a font from Shopify's font library: the family, then its weight and style. */
+function FontPicker({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (handle: string) => void
+}) {
+  const family = familyByHandle.get(value)
+  const variants = (family?.handles ?? []).map((handle) => ({ value: handle, label: variantName(handle) }))
+
+  function pickFamily(name: string | null) {
+    const next = fontFamilies.find((family) => family.family === name)
+    if (!next) return
+    // Keep the weight and style when the new family has them, else fall back to regular.
+    const suffix = value.match(/_[nio][1-9]$/)?.[0]
+    onChange(
+      next.handles.find((handle) => suffix && handle.endsWith(suffix)) ??
+        next.handles.find((handle) => handle.endsWith('_n4')) ??
+        next.handles[0],
+    )
+  }
+
+  return (
+    <FieldSet>
+      <FieldLegend variant="label">{label}</FieldLegend>
+      <FieldGroup className="flex-row gap-2">
+        <Field>
+          <FieldLabel htmlFor={id} className="sr-only">
+            {label} family
+          </FieldLabel>
+          <Combobox items={familyNames} value={family?.family ?? null} onValueChange={pickFamily}>
+            <ComboboxInput id={id} placeholder="Search fonts" />
+            <ComboboxContent>
+              <ComboboxEmpty>No font found.</ComboboxEmpty>
+              <ComboboxList>
+                {(name: string) => (
+                  <ComboboxItem key={name} value={name}>
+                    {name}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </Field>
+        <Field className="w-44 shrink-0">
+          <FieldLabel htmlFor={`${id}-variant`} className="sr-only">
+            {label} weight and style
+          </FieldLabel>
+          <Select items={variants} value={value} onValueChange={(handle) => handle && onChange(handle)}>
+            <SelectTrigger id={`${id}-variant`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {variants.map((variant) => (
+                  <SelectItem key={variant.value} value={variant.value}>
+                    {variant.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </FieldGroup>
+      {family ? null : <FieldDescription>{value} is not in Shopify's font library; pick a font.</FieldDescription>}
+    </FieldSet>
   )
 }
 

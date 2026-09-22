@@ -3,6 +3,11 @@
     <a href="{{ routes.root_url }}">
       {% if settings.logo %}
         {{ settings.logo | image_url: width: 400 | image_tag: alt: shop.name, class: 'header__logo', widths: '200, 400' }}
+      {% elsif settings.logo_asset != blank %}
+        {% # The Studio's logo file has no known size; .header__logo fixes its height, so it can't shift the page. %}
+        {% # theme-check-disable ImgWidthAndHeight %}
+        <img src="{{ settings.logo_asset | asset_url }}" alt="{{ shop.name | escape }}" class="header__logo">
+        {% # theme-check-enable ImgWidthAndHeight %}
       {% else %}
         {{ shop.name }}
       {% endif %}
@@ -57,7 +62,7 @@
     width: 2rem;
   }
   header .header__logo {
-    max-height: 3rem;
+    height: 3rem;
     width: auto;
   }
   header .header__menu,

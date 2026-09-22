@@ -43,6 +43,7 @@
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
     "heading_font": "Heading font",
+    "logo_asset": "Logo file in theme assets",
     "input_corner_radius": "Input corner radius",
     "layout_direction": "Layout direction",
     "menu": "Menu",
@@ -53,6 +54,9 @@
     "show_payment_icons": "Show payment icons",
     "text_style": "Text style",
     "text": "Text"
+  },
+  "info": {
+    "logo_asset": "Set by the Studio. A logo picked above takes precedence."
   },
   "options": {
     "alignment": {

@@ -14,6 +14,12 @@
         "type": "image_picker",
         "id": "logo",
         "label": "t:general.logo"
+      },
+      {
+        "type": "text",
+        "id": "logo_asset",
+        "label": "t:labels.logo_asset",
+        "info": "t:info.logo_asset"
       }
     ]
   },
