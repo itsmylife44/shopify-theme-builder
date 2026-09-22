@@ -1,8 +1,8 @@
 // The Studio server: Vite serves the React UI from studio/, and the studioApi
 // plugin adds the Node file API over the Theme folder on disk.
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { json } from 'node:stream/consumers'
+import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
@@ -44,14 +44,20 @@ function studioApi(theme, catalog) {
        */
       function route(url, method, handle) {
         server.middlewares.use(url, (req, res, next) => {
-          if (req.method !== method) return next()
+          // Connect matches path prefixes; a route only answers its exact path.
+          if (req.method !== method || new URL(req.url ?? '/', 'http://studio').pathname !== '/') return next()
           handle(req)
             .then((body) => {
+              if (body instanceof File) {
+                res.setHeader('Content-Type', body.type)
+                res.setHeader('Cache-Control', 'no-store')
+                return body.bytes().then((bytes) => res.end(bytes))
+              }
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify(body))
             })
             .catch((/** @type {Error} */ error) => {
-              res.statusCode = error instanceof BadRequest ? 400 : 500
+              res.statusCode = error instanceof BadRequest ? 400 : error instanceof NotFound ? 404 : 500
               res.setHeader('Content-Type', 'application/json')
               res.end(JSON.stringify({ error: error.message }))
             })
@@ -65,11 +71,21 @@ function studioApi(theme, catalog) {
         setBrand(theme, brand)
         return readThemeState(theme, catalog)
       })
+      route('/api/brand/logo', 'GET', async () => readLogo(theme))
+      route('/api/brand/logo', 'PUT', async (req) => {
+        await uploadLogo(theme, req.headers['content-type'] ?? '', await buffer(req))
+        return readThemeState(theme, catalog)
+      })
+      route('/api/brand/logo', 'DELETE', async () => {
+        removeLogo(theme)
+        return readThemeState(theme, catalog)
+      })
     },
   }
 }
 
 class BadRequest extends Error {}
+class NotFound extends Error {}
 
 /**
  * @typedef {{ file: string, line: number, severity: 'error' | 'warning', check: string, message: string }} Offense
@@ -80,6 +96,7 @@ class BadRequest extends Error {}
  *   headingFont: string,
  *   bodyFont: string,
  *   logo: string | null,
+ *   logoAsset: string | null,
  * }} Brand
  * @typedef {{ home: TemplateSection[], catalog: string[], brand: Brand, validation: Offense[] }} ThemeState
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
@@ -161,13 +178,15 @@ function readBrand(theme) {
     headingFont: current.type_heading_font ?? schema.headingFont,
     bodyFont: current.type_body_font ?? schema.bodyFont,
     logo: current.logo ?? null,
+    logoAsset: current.logo_asset || null,
   }
 }
 
 const settingsData = 'config/settings_data.json'
 const hexColor = /^#[0-9a-f]{6}$/i
-// Shopify font library handles: family, then n (normal), i (italic) or o (oblique) and a weight digit.
-const fontHandle = /^[a-z0-9_-]+_[nio][1-9]$/
+/** @type {{ families: { family: string, handles: string[] }[] }} */
+const fontLibrary = JSON.parse(readFileSync(new URL('shopify-fonts.json', import.meta.url), 'utf8'))
+const fontHandles = new Set(fontLibrary.families.flatMap((family) => family.handles))
 const shopImage = /^shopify:\/\/shop_images\/[^/\s]+$/
 const schemeId = /^[a-z0-9_-]+$/i
 
@@ -181,25 +200,82 @@ function setBrand(theme, change) {
   const schema = readBrandSchema(theme)
   const brand = validateBrand(change, Object.keys(schema.colors))
 
+  updateSettings(theme, (current) => {
+    for (const [id, colors] of Object.entries(brand.colorSchemes ?? {})) {
+      current.color_schemes ??= {}
+      const scheme = (current.color_schemes[id] ??= { settings: { ...schema.colors } })
+      scheme.settings = { ...scheme.settings, ...colors }
+    }
+    if (brand.headingFont) current.type_heading_font = brand.headingFont
+    if (brand.bodyFont) current.type_body_font = brand.bodyFont
+    if (brand.logo) current.logo = brand.logo
+    else if (brand.logo === null) delete current.logo
+  })
+}
+
+/**
+ * Changes the current values in config/settings_data.json, keeping the rest of the file.
+ * @param {string} theme
+ * @param {(current: Record<string, any>) => void} change
+ */
+function updateSettings(theme, change) {
   const file = path.join(theme, settingsData)
   const raw = readFileSync(file, 'utf8')
   const data = parseThemeJSON(raw, settingsData)
-  const current = currentSettings(data)
-  data.current = current
-
-  for (const [id, colors] of Object.entries(brand.colorSchemes ?? {})) {
-    current.color_schemes ??= {}
-    const scheme = (current.color_schemes[id] ??= { settings: { ...schema.colors } })
-    scheme.settings = { ...scheme.settings, ...colors }
-  }
-  if (brand.headingFont) current.type_heading_font = brand.headingFont
-  if (brand.bodyFont) current.type_body_font = brand.bodyFont
-  if (brand.logo) current.logo = brand.logo
-  else if (brand.logo === null) delete current.logo
-
+  data.current = currentSettings(data)
+  change(data.current)
   // Keep the comment header Shopify writes at the top of the file.
   const header = raw.match(/^\s*\/\*[\s\S]*?\*\/\s*/)?.[0] ?? ''
   writeFileSync(file, header + JSON.stringify(data, null, 2) + '\n')
+}
+
+// The Studio's logo lives in the Theme's assets, since only the Admin API can add images to the
+// shop's Files (ADR-0004). The logo_asset setting names it; a Theme Editor logo takes precedence.
+/** @type {Record<string, string>} */
+const logoTypes = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/svg+xml': 'svg' }
+const maxLogoBytes = 2 * 1024 * 1024
+const studioLogo = /^logo\.(png|jpg|webp|svg)$/
+
+/**
+ * @param {string} theme
+ * @param {string} contentType
+ * @param {Buffer} file
+ */
+async function uploadLogo(theme, contentType, file) {
+  const extension = logoTypes[contentType.split(';')[0].trim()]
+  if (!extension) throw new BadRequest('The logo must be a PNG, JPEG, WebP or SVG image.')
+  if (file.length > maxLogoBytes) throw new BadRequest('The logo must be at most 2 MB.')
+  removeLogo(theme)
+  writeFileSync(path.join(theme, 'assets', `logo.${extension}`), file)
+  updateSettings(theme, (current) => {
+    current.logo_asset = `logo.${extension}`
+  })
+}
+
+/**
+ * Removes the Studio's logo file and clears the setting. A logo_asset naming any other file (set by
+ * hand in the Theme Editor) only has the setting cleared: the Studio never deletes assets it didn't write.
+ * @param {string} theme
+ */
+function removeLogo(theme) {
+  const { logoAsset } = readBrand(theme)
+  if (logoAsset && studioLogo.test(logoAsset)) rmSync(path.join(theme, 'assets', logoAsset), { force: true })
+  updateSettings(theme, (current) => {
+    delete current.logo_asset
+  })
+}
+
+/**
+ * The logo file logo_asset names, for the Brand panel's preview.
+ * @param {string} theme
+ */
+function readLogo(theme) {
+  const { logoAsset } = readBrand(theme)
+  const type = Object.keys(logoTypes).find((type) => logoAsset?.endsWith(`.${logoTypes[type]}`))
+  // logo_asset is a plain text setting: only serve a file name inside assets/.
+  const file = logoAsset && path.basename(logoAsset) === logoAsset ? path.join(theme, 'assets', logoAsset) : null
+  if (!file || !type || !existsSync(file)) throw new NotFound('The Theme has no logo file.')
+  return new File([readFileSync(file)], logoAsset ?? '', { type })
 }
 
 /**
@@ -232,8 +308,8 @@ function validateBrand(change, colorFields) {
     }
   }
   for (const [name, font] of Object.entries({ headingFont, bodyFont })) {
-    if (font !== undefined && (typeof font !== 'string' || !fontHandle.test(font))) {
-      throw new BadRequest(`${name} must be a Shopify font handle like work_sans_n4.`)
+    if (font !== undefined && (typeof font !== 'string' || !fontHandles.has(font))) {
+      throw new BadRequest(`${name} must be a font handle from Shopify's font library, like work_sans_n4.`)
     }
   }
   if (logo !== undefined && logo !== null && (typeof logo !== 'string' || !shopImage.test(logo))) {

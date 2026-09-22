@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -54,6 +54,21 @@ async function openStudio(theme: string, catalog = fixtureCatalog()) {
         body: JSON.stringify(brand),
       })
       return { status: response.status, body: await response.json() }
+    },
+    async uploadLogo(file: Uint8Array<ArrayBuffer>, type: string) {
+      const response = await fetch(new URL('api/brand/logo', url), {
+        method: 'PUT',
+        headers: { 'Content-Type': type },
+        body: new Blob([file]),
+      })
+      return { status: response.status, body: await response.json() }
+    },
+    async removeLogo() {
+      const response = await fetch(new URL('api/brand/logo', url), { method: 'DELETE' })
+      return { status: response.status, body: await response.json() }
+    },
+    fetchLogo() {
+      return fetch(new URL('api/brand/logo', url))
     },
   }
 }
@@ -117,6 +132,7 @@ describe('Studio API: set Brand', () => {
       headingFont: 'work_sans_n4',
       bodyFont: 'work_sans_n4',
       logo: null,
+      logoAsset: null,
     })
   })
 
@@ -202,6 +218,7 @@ describe('Studio API: set Brand', () => {
     ['a color that is not hex', { colorSchemes: { 'scheme-1': { background: 'red' } } }],
     ['a color the scheme does not define', { colorSchemes: { 'scheme-1': { shadow: '#000000' } } }],
     ['a font that is not a font handle', { headingFont: 'Playfair Display' }],
+    ['a font handle that is not in Shopify\'s font library', { bodyFont: 'comic_sans_n4' }],
     ['a logo that is not a shop image', { logo: 'https://example.com/logo.png' }],
     ['an unknown field', { tagline: 'Hi' }],
   ])('rejects %s and leaves settings data untouched', async (_, brand) => {
@@ -210,6 +227,62 @@ describe('Studio API: set Brand', () => {
     const { status, body } = await (await openStudio(theme)).setBrand(brand)
     expect(status).toBe(400)
     expect(body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
+  })
+})
+
+describe('Studio API: logo', () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
+  const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>')
+
+  it('stores an uploaded logo in the Theme assets and points the logo_asset setting at it', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    const { status, body } = await studio.uploadLogo(png, 'image/png')
+    expect(status).toBe(200)
+    expect(new Uint8Array(readFileSync(path.join(theme, 'assets/logo.png')))).toEqual(png)
+    expect(readSettingsData(theme).current.logo_asset).toBe('logo.png')
+    expect(body.brand.logoAsset).toBe('logo.png')
+    expect(errors(body.validation)).toEqual([])
+
+    const served = await studio.fetchLogo()
+    expect(served.headers.get('content-type')).toBe('image/png')
+    expect(new Uint8Array(await served.arrayBuffer())).toEqual(png)
+  })
+
+  it('replaces the previous logo file on a new upload', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.uploadLogo(png, 'image/png')
+    const { status } = await studio.uploadLogo(svg, 'image/svg+xml')
+    expect(status).toBe(200)
+    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(false)
+    expect(readFileSync(path.join(theme, 'assets/logo.svg'), 'utf8')).toContain('<svg')
+    expect(readSettingsData(theme).current.logo_asset).toBe('logo.svg')
+  })
+
+  it('removes the logo file and the setting', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.uploadLogo(png, 'image/png')
+    const { status, body } = await studio.removeLogo()
+    expect(status).toBe(200)
+    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(false)
+    expect(readSettingsData(theme).current).not.toHaveProperty('logo_asset')
+    expect(body.brand.logoAsset).toBe(null)
+    expect((await studio.fetchLogo()).status).toBe(404)
+  })
+
+  it.each([
+    ['a file that is not an image', new TextEncoder().encode('hello'), 'text/plain'],
+    ['an image over 2 MB', new Uint8Array(2 * 1024 * 1024 + 1), 'image/png'],
+  ])('refuses %s and writes nothing', async (_, file, type) => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const { status, body } = await (await openStudio(theme)).uploadLogo(file, type)
+    expect(status).toBe(400)
+    expect(body.error).toEqual(expect.any(String))
+    expect(existsSync(path.join(theme, 'assets/logo.png'))).toBe(false)
     expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
   })
 })
