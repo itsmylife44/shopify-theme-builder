@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import fontLibrary from '../server/shopify-fonts.json'
 import type { Brand, Offense, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import fontLibrary from '../server/shopify-fonts.json'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -102,14 +102,15 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
     return changes
   }
 
-  async function send(url: string, init: RequestInit) {
+  /** Sends one Brand write to the Studio API and shows the Theme state it returns. */
+  async function write(url: string, init: RequestInit) {
     setSaving(true)
     setError(null)
     try {
       const response = await fetch(url, init)
       const body = await response.json()
       if (!response.ok) throw new Error(body.error)
-      setLogoVersion(Date.now())
+      if (url === '/api/brand/logo') setLogoVersion(Date.now())
       onSaved(body)
     } catch (error) {
       setError((error as Error).message)
@@ -120,7 +121,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
 
   function save(event: React.FormEvent) {
     event.preventDefault()
-    send('/api/brand', {
+    write('/api/brand', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(brandChanges()),
@@ -130,7 +131,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
   function uploadLogo(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
-    if (file) send('/api/brand/logo', { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+    if (file) write('/api/brand/logo', { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
   }
 
   return (
@@ -182,7 +183,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                     type="button"
                     variant="outline"
                     disabled={saving}
-                    onClick={() => send('/api/brand/logo', { method: 'DELETE' })}
+                    onClick={() => write('/api/brand/logo', { method: 'DELETE' })}
                   >
                     Remove logo
                   </Button>
@@ -220,6 +221,9 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
 
 const fontFamilies = fontLibrary.families
 const familyByHandle = new Map(fontFamilies.flatMap((family) => family.handles.map((handle) => [handle, family])))
+const familyByName = new Map(fontFamilies.map((family) => [family.family, family]))
+// n (normal), i (italic) or o (oblique), then the weight in hundreds.
+const variantSuffix = /_([nio])([1-9])$/
 const familyNames = fontFamilies.map((family) => family.family)
 const weightNames: Record<string, string> = {
   '1': 'Thin',
@@ -235,7 +239,7 @@ const weightNames: Record<string, string> = {
 
 /** "Bold 700 italic" for bodoni_moda_i7. System fonts like mono have a single, unnamed variant. */
 function variantName(handle: string) {
-  const match = handle.match(/_([nio])([1-9])$/)
+  const match = handle.match(variantSuffix)
   if (!match) return 'Regular'
   const [, style, weight] = match
   return `${weightNames[weight]} ${weight}00${style === 'i' ? ' italic' : style === 'o' ? ' oblique' : ''}`
@@ -257,10 +261,10 @@ function FontPicker({
   const variants = (family?.handles ?? []).map((handle) => ({ value: handle, label: variantName(handle) }))
 
   function pickFamily(name: string | null) {
-    const next = fontFamilies.find((family) => family.family === name)
+    const next = name ? familyByName.get(name) : undefined
     if (!next) return
     // Keep the weight and style when the new family has them, else fall back to regular.
-    const suffix = value.match(/_[nio][1-9]$/)?.[0]
+    const suffix = value.match(variantSuffix)?.[0]
     onChange(
       next.handles.find((handle) => suffix && handle.endsWith(suffix)) ??
         next.handles.find((handle) => handle.endsWith('_n4')) ??
@@ -310,7 +314,7 @@ function FontPicker({
           </Select>
         </Field>
       </FieldGroup>
-      {family ? null : <FieldDescription>{value} is not in Shopify's font library; pick a font.</FieldDescription>}
+      {family ? null : <FieldDescription>{value} is not in Shopify's current font library (it may be deprecated); pick a font.</FieldDescription>}
     </FieldSet>
   )
 }
