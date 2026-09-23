@@ -103,9 +103,20 @@
                 >
                 <label
                   for="{{ input_id }}"
-                  class="main-product__option-label{% unless option_value.available %} main-product__option-label--unavailable{% endunless %}"
+                  class="main-product__option-label{% if option_value.swatch.image or option_value.swatch.color %} main-product__option-label--swatch{% endif %}{% unless option_value.available %} main-product__option-label--unavailable{% endunless %}"
                 >
-                  {{- option_value | escape -}}
+                  {% if option_value.swatch.image %}
+                    {{ option_value.swatch.image | image_url: width: 80, height: 80, crop: 'center' | image_tag: alt: '', class: 'main-product__swatch', width: 40, height: 40, loading: 'lazy' }}
+                    <span class="visually-hidden">{{ option_value | escape }}</span>
+                  {% elsif option_value.swatch.color %}
+                    <span
+                      class="main-product__swatch"
+                      style="background-color: rgb({{ option_value.swatch.color.rgb }});"
+                    ></span>
+                    <span class="visually-hidden">{{ option_value | escape }}</span>
+                  {% else %}
+                    {{- option_value | escape -}}
+                  {% endif %}
                   {% unless option_value.available %}
                     <span class="visually-hidden">{{ 'product.unavailable' | t }}</span>
                   {% endunless %}
@@ -431,6 +442,18 @@
     padding: 0.5rem 1rem;
     border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
     cursor: pointer;
+  }
+
+  .main-product__option-label--swatch {
+    padding: 0.25rem;
+    line-height: 0;
+  }
+
+  .main-product__swatch {
+    display: block;
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
   }
 
   .main-product__option-label--unavailable {
