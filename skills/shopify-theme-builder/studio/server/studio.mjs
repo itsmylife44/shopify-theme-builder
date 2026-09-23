@@ -105,6 +105,8 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         process.off('exit', stop)
       })
 
+      /** @type {{ method: string, pattern: RegExp }[]} Every call the routes answer, for the fallback's 404 and 405. */
+      const calls = []
       /**
        * A route answers its exact path, where each :param stands for one path segment; the handler gets
        * those segments in order.
@@ -113,6 +115,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
        * @param {(req: import('node:http').IncomingMessage, ...ids: string[]) => Promise<unknown>} handle
        */
       function route(url, method, handle) {
+        calls.push({ method, pattern: new RegExp(`^${url.replace(/:\w+/g, '[^/]+')}$`) })
         const prefix = url.split('/:')[0]
         const pattern = new RegExp(`^${url.slice(prefix.length).replace(/:\w+/g, '([^/]+)') || '/'}$`)
         server.middlewares.use(prefix, (req, res, next) => {
@@ -213,6 +216,26 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
           return write(() => reorderBlocks(theme, template, id, body))
         })
       }
+      // Any other /api call gets a JSON error, not Vite's fallback to the Studio page.
+      server.middlewares.use('/api', (req, res) => {
+        const method = req.method ?? 'GET'
+        const url = new URL(req.originalUrl ?? '/api', 'http://studio').pathname
+        /** @param {string} path */
+        const methods = (path) => calls.filter((call) => call.pattern.test(path)).map((call) => call.method)
+        const allowed = methods(url)
+        res.setHeader('Content-Type', 'application/json')
+        if (allowed.length) {
+          res.statusCode = 405
+          res.setHeader('Allow', allowed.join(', '))
+          res.end(JSON.stringify({ error: `No such call: ${method} ${url}. It takes ${allowed.join(', ')}.` }))
+          return
+        }
+        // The likely slip: a section's path without /sections/.
+        const sections = url.replace(/^\/api\/([^/]+)\//, '/api/$1/sections/')
+        const hint = methods(sections).includes(method) ? `Did you mean ${method} ${sections}?` : 'SKILL.md lists the calls.'
+        res.statusCode = 404
+        res.end(JSON.stringify({ error: `No such call: ${method} ${url}. ${hint}` }))
+      })
     },
   }
 }
