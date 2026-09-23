@@ -157,10 +157,10 @@
     --section-spacing: {{ section_spacing | divided_by: 32.0 }}rem;
     --grid-gap: {{ grid_gap | times: 0.75 | divided_by: 16 }}rem;
     --grid-row-gap: calc(var(--grid-gap) * 1.5);
-    {% # Content widths: forms, a text column beside media, a column of running text. %}
+    {% # Content widths: forms, a text column beside media, a column of running text (about 70 characters a line). %}
     --width-narrow: 30rem;
     --width-text: 40rem;
-    --width-prose: 45rem;
+    --width-prose: 70ch;
     --border-width: {{ settings.border_width }}px;
     --style-border-radius-pill: 999px;
     --style-border-radius-inputs: {{ radius_inputs }};
@@ -171,6 +171,9 @@
     --focus-ring-offset: 2px;
     --opacity-muted: 0.7;
     --opacity-disabled: 0.5;
+    {% # Touch targets: primary controls (buttons, fields, menu, close, variant options) are at least --target-size, every other control --target-size-min. %}
+    --target-size: 44px;
+    --target-size-min: 24px;
     {% # Buttons: the shared .button and .button--secondary in critical.css. %}
     --button-padding-block: var(--space-sm);
     --button-padding-inline: var(--space-lg);

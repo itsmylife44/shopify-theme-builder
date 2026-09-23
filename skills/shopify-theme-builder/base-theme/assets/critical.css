@@ -227,6 +227,25 @@ h6,
   cursor: not-allowed;
 }
 
+/* Touch targets: every control is at least --target-size-min square, and buttons, selects and
+   fields --target-size tall. Sections give their icon controls, option labels and links in
+   menus the same variables. */
+button,
+summary,
+select,
+textarea,
+input:not([type='checkbox'], [type='radio']) {
+  min-block-size: var(--target-size-min);
+  min-inline-size: var(--target-size-min);
+}
+
+.button,
+.button--secondary,
+select,
+input:not([type='checkbox'], [type='radio']) {
+  min-block-size: var(--target-size);
+}
+
 /* Product cards: the product-card snippet, shaped by the --card-* variables. Its text-align
    value (start, center or end) also places the quick add button. */
 .product-card {
