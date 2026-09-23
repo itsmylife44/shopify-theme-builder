@@ -308,6 +308,39 @@ describe('Article page', () => {
   })
 })
 
+describe('404 page', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-404.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('ships a 404 template with the main 404, a catalog section only for 404 templates', () => {
+    const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/404.json'), 'utf8'))
+    expect(order.map((id: string) => sections[id].type)).toEqual(['main-404'])
+    expect(schema.enabled_on).toEqual({ templates: ['404'] })
+    expect(schema.limit).toBe(1)
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('color-{{ section.settings.color_scheme }}')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.main_404' }])
+  })
+
+  it('shows the heading and text the Creator writes, a search form and a link back to the shop', () => {
+    expect(source).toContain('{{ section.settings.heading }}')
+    expect(source).toContain('{{ section.settings.text }}')
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'heading', default: expect.any(String) }))
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'text', default: expect.any(String) }))
+    expect(source).toContain('<form action="{{ routes.search_url }}" method="get" role="search"')
+    expect(source).toContain('name="q"')
+    expect(source).toContain('href="{{ routes.all_products_collection_url }}"')
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/main-404.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/templates/404.json')
+  })
+})
+
 describe('Unit prices', () => {
   const sections = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
   const read = (name: string) => readFileSync(path.join(sections, `${name}.liquid`), 'utf8')

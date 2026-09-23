@@ -1,0 +1,83 @@
+{% comment %}The 404 page: a heading and text, a search form and a link back to the shop.{% endcomment %}
+<div class="basic-page basic-page--center full-width color-{{ section.settings.color_scheme }}">
+  {% if section.settings.heading != blank %}
+    <h1>{{ section.settings.heading }}</h1>
+  {% endif %}
+
+  {% if section.settings.text != blank %}
+    <div class="basic-page__text">{{ section.settings.text }}</div>
+  {% endif %}
+
+  <form action="{{ routes.search_url }}" method="get" role="search" class="main-404__search">
+    <input
+      type="search"
+      name="q"
+      placeholder="{{ 'search.placeholder' | t }}"
+      aria-label="{{ 'search.title' | t }}"
+    >
+    <button type="submit">{{ 'search.submit' | t }}</button>
+  </form>
+
+  {% if section.settings.button_label != blank %}
+    <a class="basic-page__button" href="{{ routes.all_products_collection_url }}">
+      {{- section.settings.button_label | escape -}}
+    </a>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .main-404__search {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 32rem;
+  }
+
+  .main-404__search input {
+    flex: 1 1 12rem;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.main_404",
+  "tag": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["404"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Page not found"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>The page you're looking for doesn't exist or has moved. Try a search, or keep shopping.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "Continue shopping"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.main_404"
+    }
+  ]
+}
+{% endschema %}
