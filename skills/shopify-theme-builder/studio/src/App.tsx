@@ -1058,11 +1058,42 @@ function SchemeSwatch({ brand, scheme }: { brand: Brand; scheme: string }) {
     <span
       aria-hidden
       className="flex size-4 shrink-0 items-center justify-center rounded-sm border text-[9px] font-semibold"
-      style={{ background: colors?.background, color: colors?.text }}
+      style={{ backgroundColor: colors?.background, backgroundImage: colors?.background_gradient, color: colors?.text }}
     >
       A
     </span>
   )
+}
+
+// The pairs a scheme keeps readable (WCAG AA): text at 4.5:1, input borders at 3:1.
+const contrastPairs = [
+  ['text', 'background', 4.5],
+  ['button_label', 'button', 4.5],
+  ['accent', 'background', 4.5],
+  ['border', 'background', 3],
+] as const
+
+function luminance(hex: string) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function contrastRatio(a: string, b: string) {
+  const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+function ContrastWarning({ colors }: { colors: Record<string, string> }) {
+  const failing = contrastPairs.flatMap(([color, on, minimum]) => {
+    if (!colors[color] || !colors[on]) return []
+    const ratio = contrastRatio(colors[color], colors[on])
+    // Rounded down, so a failing ratio never shows as the minimum.
+    return ratio < minimum ? [`${color.replaceAll('_', ' ')} on ${on} is ${Math.floor(ratio * 10) / 10}:1, needs ${minimum}:1`] : []
+  })
+  return failing.length > 0 ? <FieldDescription className="text-destructive">Low contrast: {failing.join('; ')}.</FieldDescription> : null
 }
 
 function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
@@ -1091,7 +1122,8 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
     const changes: Record<string, unknown> = {}
     const changedSchemes = Object.fromEntries(
       Object.entries(colorSchemes).flatMap(([scheme, colors]) => {
-        const changed = Object.entries(colors).filter(([field, value]) => value !== brand.colorSchemes[scheme]?.[field])
+        // A gradient the Theme lacks reads as empty, so clearing a new one sends nothing.
+        const changed = Object.entries(colors).filter(([field, value]) => value !== (brand.colorSchemes[scheme]?.[field] ?? ''))
         return changed.length > 0 ? [[scheme, Object.fromEntries(changed)]] : []
       }),
     )
@@ -1121,7 +1153,10 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
       <FieldGroup className="gap-5">
         <FieldSet>
           <FieldLegend>Color schemes</FieldLegend>
-          <FieldDescription>Each section picks one of these schemes for its colors.</FieldDescription>
+          <FieldDescription>
+            Each section picks one of these schemes for its colors. The accent colors links, sale prices and badges; the border,
+            inputs and dividers.
+          </FieldDescription>
           <FieldGroup className="gap-3">
             {Object.entries(colorSchemes).map(([scheme, colors]) => (
               <FieldSet key={scheme} className="gap-2 rounded-md border p-3">
@@ -1145,6 +1180,21 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                     </Field>
                   ))}
                 </div>
+                {brand.gradientFields.map((field) => (
+                  <Field key={field} className="gap-1">
+                    <FieldLabel htmlFor={`${scheme}-${field}`} className="text-xs font-normal">
+                      {field.replaceAll('_', ' ')}
+                    </FieldLabel>
+                    <Input
+                      id={`${scheme}-${field}`}
+                      className="h-7 text-xs"
+                      placeholder="linear-gradient(180deg, #FFFFFF, #EEEEEE)"
+                      value={colors[field] ?? ''}
+                      onChange={(event) => setColor(scheme, field, event.target.value)}
+                    />
+                  </Field>
+                ))}
+                <ContrastWarning colors={colors} />
               </FieldSet>
             ))}
           </FieldGroup>

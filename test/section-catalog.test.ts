@@ -1331,6 +1331,49 @@ describe('Style system', () => {
     }
   })
 
+  it('takes the accent and border colors from each color scheme', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    expect(variables).toContain('--color-accent: {{ scheme.settings.accent }};')
+    expect(variables).toContain('--color-border: {{ scheme.settings.border }};')
+    expect(variables).toMatch(/--color-border-subtle: rgb\(from {{ scheme\.settings\.border }} r g b \/ [\d.]+\);/)
+  })
+
+  it('borders every input and select with the border color, not the text color', () => {
+    const critical = read('base-theme/assets/critical.css')
+    for (const { file, css } of [...stylesheets, { file: 'critical.css', css: critical }]) {
+      for (const [, selectors, body] of css.matchAll(/([^{}]+){([^{}]*)}/g)) {
+        if (/\b(input|select|textarea)\b/.test(selectors) && /border(-[a-z-]+)?\s*:[^;]*currentcolor/.test(body)) {
+          expect.fail(`${file}: ${selectors.trim()} has a currentcolor border; use var(--color-border)`)
+        }
+      }
+    }
+  })
+
+  it('colors sale prices, links in running text and the cart count with the accent color', () => {
+    const critical = read('base-theme/assets/critical.css')
+    expect(critical).toMatch(/\.price__sale {[^}]*color: var\(--color-accent\)/)
+    expect(critical).toMatch(/\.rte a[^{]*{[^}]*color: var\(--color-accent\)/)
+    expect(read('catalog/sections/header.liquid')).toMatch(/\.header__cart-count {[^}]*background-color: var\(--color-accent\)/)
+    for (const file of ['catalog/sections/main-product.liquid', 'catalog/sections/featured-product.liquid', 'catalog/sections/quick-add.liquid']) {
+      const sale = read(file).match(/compare_at_price > [\s\S]*?{% else %}/)![0]
+      expect(sale, file).toMatch(/<span class="price__sale">{{ [\w.]*price \| money }}<\/span>/)
+    }
+    // The Merchant's running text: page and article content, the collection description and text settings.
+    const runningText = /<div class="[^"]*">{{ (page\.content|article\.content|collection\.description|content|(section|block)\.settings\.(text|answer)) }}/g
+    const files = ['base-theme', 'catalog'].flatMap((dir) =>
+      readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+        .filter((file) => file.endsWith('.liquid'))
+        .map((file) => path.join(dir, file)),
+    )
+    // Text over a hero image or slide keeps the text color: the accent is checked against the background only.
+    const overMedia = ['catalog/sections/hero.liquid', 'catalog/sections/slideshow.liquid']
+    const wrappers = files
+      .filter((file) => !overMedia.includes(file))
+      .flatMap((file) => [...read(file).matchAll(runningText)].map(([tag]) => ({ file, tag })))
+    expect(wrappers.length).toBeGreaterThanOrEqual(10)
+    for (const { file, tag } of wrappers) expect(tag, file).toMatch(/class="[^"]*\brte\b/)
+  })
+
   it('switches layouts at the one 750px breakpoint', () => {
     for (const { file, css } of stylesheets) {
       for (const [query] of css.matchAll(/\((min|max)-width:[^)]*\)/g)) {

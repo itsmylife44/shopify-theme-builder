@@ -380,6 +380,7 @@ function history(theme) {
  * @typedef {{
  *   colorSchemes: Record<string, Record<string, string>>,
  *   colorFields: string[],
+ *   gradientFields: string[],
  *   headingFont: string,
  *   bodyFont: string,
  *   logo: string | null,
@@ -443,8 +444,13 @@ function readBrandSchema(theme) {
   const group = settings.color_schemes
   /** @type {Record<string, string>} Default color per color field of a scheme. */
   const colors = {}
-  for (const field of group?.definition ?? []) if (field.type === 'color') colors[field.id] = field.default
-  return { colors, headingFont: settings.type_heading_font?.default, bodyFont: settings.type_body_font?.default }
+  /** @type {string[]} The scheme's background gradient fields, a CSS gradient or none. */
+  const gradients = []
+  for (const field of group?.definition ?? []) {
+    if (field.type === 'color') colors[field.id] = field.default
+    if (field.type === 'color_background') gradients.push(field.id)
+  }
+  return { colors, gradients, headingFont: settings.type_heading_font?.default, bodyFont: settings.type_body_font?.default }
 }
 
 /**
@@ -465,11 +471,16 @@ function readBrand(theme) {
   /** @type {Record<string, Record<string, string>>} */
   const colorSchemes = {}
   for (const [id, scheme] of Object.entries(current.color_schemes ?? {})) {
-    colorSchemes[id] = Object.fromEntries(Object.keys(schema.colors).map((field) => [field, scheme.settings?.[field]]))
+    // Shopify shows a color the scheme lacks in its schema default.
+    colorSchemes[id] = Object.fromEntries([
+      ...Object.entries(schema.colors).map(([field, color]) => [field, scheme.settings?.[field] ?? color]),
+      ...schema.gradients.flatMap((field) => (scheme.settings?.[field] ? [[field, scheme.settings[field]]] : [])),
+    ])
   }
   return {
     colorSchemes,
     colorFields: Object.keys(schema.colors),
+    gradientFields: schema.gradients,
     headingFont: current.type_heading_font ?? schema.headingFont,
     bodyFont: current.type_body_font ?? schema.bodyFont,
     logo: current.logo ?? null,
@@ -479,6 +490,8 @@ function readBrand(theme) {
 
 const settingsData = 'config/settings_data.json'
 const hexColor = /^#[0-9a-f]{6}$/i
+// The value lands in a CSS rule, so nothing that could end it: no semicolon, brace or angle bracket.
+const cssGradient = /^(repeating-)?(linear|radial|conic)-gradient\([^;{}<>]*\)$/i
 /** @type {{ families: { family: string, handles: string[] }[] }} */
 const fontLibrary = JSON.parse(readFileSync(new URL('shopify-fonts.json', import.meta.url), 'utf8'))
 const fontHandles = new Set(fontLibrary.families.flatMap((family) => family.handles))
@@ -493,13 +506,15 @@ const schemeId = /^[a-z0-9_-]+$/i
  */
 function setBrand(theme, change) {
   const schema = readBrandSchema(theme)
-  const brand = validateBrand(change, Object.keys(schema.colors))
+  const brand = validateBrand(change, Object.keys(schema.colors), schema.gradients)
 
   updateSettings(theme, (current) => {
     for (const [id, colors] of Object.entries(brand.colorSchemes ?? {})) {
       current.color_schemes ??= {}
       const scheme = (current.color_schemes[id] ??= { settings: { ...schema.colors } })
       scheme.settings = { ...scheme.settings, ...colors }
+      // An empty gradient clears it, back to the plain background color.
+      for (const field of schema.gradients) if (scheme.settings[field] === '') delete scheme.settings[field]
     }
     if (brand.headingFont) current.type_heading_font = brand.headingFont
     if (brand.bodyFont) current.type_body_font = brand.bodyFont
@@ -615,9 +630,10 @@ function readLogoAsset(theme) {
  * Checks a Brand change from the Studio UI or an agent before anything is written.
  * @param {unknown} change
  * @param {string[]} colorFields
+ * @param {string[]} gradientFields
  * @returns {BrandChange}
  */
-function validateBrand(change, colorFields) {
+function validateBrand(change, colorFields, gradientFields) {
   if (typeof change !== 'object' || change === null || Array.isArray(change)) {
     throw new BadRequest('The Brand must be an object.')
   }
@@ -631,8 +647,14 @@ function validateBrand(change, colorFields) {
       if (!schemeId.test(id)) throw new BadRequest(`Invalid color scheme id: ${id}.`)
       if (typeof colors !== 'object' || colors === null) throw new BadRequest(`Color scheme ${id} must be an object.`)
       for (const [field, value] of Object.entries(colors)) {
+        if (gradientFields.includes(field)) {
+          if (typeof value !== 'string' || (value !== '' && !cssGradient.test(value))) {
+            throw new BadRequest(`${id}.${field} must be a CSS gradient like linear-gradient(180deg, #FFFFFF, #EEEEEE), or empty.`)
+          }
+          continue
+        }
         if (!colorFields.includes(field)) {
-          throw new BadRequest(`Color schemes have no ${field} color; they have ${colorFields.join(', ')}.`)
+          throw new BadRequest(`Color schemes have no ${field} color; they have ${[...colorFields, ...gradientFields].join(', ')}.`)
         }
         if (typeof value !== 'string' || !hexColor.test(value)) {
           throw new BadRequest(`${id}.${field} must be a hex color like #1A2B3C.`)

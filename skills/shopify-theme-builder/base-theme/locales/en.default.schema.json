@@ -84,10 +84,12 @@
     "editorial_split": "Editorial split"
   },
   "labels": {
+    "accent": "Accent",
     "alignment": "Alignment",
     "background": "Background",
     "background_gradient": "Background gradient",
     "body_font": "Body font",
+    "border": "Border",
     "button": "Button",
     "button_label": "Button label",
     "color_scheme": "Color scheme",
@@ -184,6 +186,8 @@
     "drop_cap": "Drop cap on the first paragraph"
   },
   "info": {
+    "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
+    "color_schemes_border": "Input borders, dividers and bordered cards. Keep it at 3:1 contrast or more against the background.",
     "density": "The space above and below every section and between the items of a grid.",
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
     "footer_show_newsletter": "Subscribers are added to your customer list with email marketing consent. Hidden on pages that have a newsletter section.",

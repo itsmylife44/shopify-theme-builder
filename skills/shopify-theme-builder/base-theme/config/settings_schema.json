@@ -281,6 +281,20 @@
             "id": "button_label",
             "label": "t:labels.button_label",
             "default": "#FFFFFF"
+          },
+          {
+            "type": "color",
+            "id": "accent",
+            "label": "t:labels.accent",
+            "info": "t:info.color_schemes_accent",
+            "default": "#333333"
+          },
+          {
+            "type": "color",
+            "id": "border",
+            "label": "t:labels.border",
+            "info": "t:info.color_schemes_border",
+            "default": "#8A8A8A"
           }
         ],
         "role": {
@@ -289,7 +303,7 @@
             "gradient": "background_gradient"
           },
           "text": "text",
-          "links": "text",
+          "links": "accent",
           "icons": "text",
           "primary_button": "button",
           "on_primary_button": "button_label",

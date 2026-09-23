@@ -158,6 +158,16 @@ h6,
   font-weight: var(--font-accent--weight);
 }
 
+/* A price on sale takes the color scheme's accent color; the price it replaces stays in the text color. */
+.price__sale {
+  color: var(--color-accent);
+}
+
+/* Links in the Merchant's running text (the rte class on its wrapper) take the accent color. */
+.rte a:not(.button, .button--secondary) {
+  color: var(--color-accent);
+}
+
 /* Every focused control shows a ring in its color scheme's text color. A visually hidden
    input, like a variant option's radio button, shows it on the label that follows it. */
 :focus-visible,
@@ -423,7 +433,7 @@ a.product-card__title:hover {
 
 .basic-page :is(input:not([type='submit'], [type='hidden']), textarea) {
   padding: var(--space-sm);
-  border: var(--border-width) solid currentcolor;
+  border: var(--border-width) solid var(--color-border);
   background: transparent;
   color: inherit;
 }

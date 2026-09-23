@@ -30,7 +30,7 @@
             {% capture variant_price %}
               {% if variant.compare_at_price > variant.price %}
                 <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
-                {{ variant.price | money }}
+                <span class="price__sale">{{ variant.price | money }}</span>
                 <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
                 <s class="featured-product__compare-at">{{ variant.compare_at_price | money }}</s>
               {% else %}

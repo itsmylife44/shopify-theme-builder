@@ -58,7 +58,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    - An image: derive the palette and the font mood from it.
 2. Tell the Creator what you took from the reference, then ask only about what it left open. Ask one question at a time. Without a reference, ask about all seven.
 3. Turn the answers into Brand values:
-   - **Color schemes.** Each scheme has four hex colors (`#RRGGBB`): `background`, `text`, `button`, `button_label`. Make `scheme-1` the main light scheme and `scheme-2` its dark inverse; add `scheme-3` for an accent color when the Brand has one. Keep text-on-background and label-on-button contrast at 4.5:1 or more.
+   - **Color schemes.** Each scheme has six hex colors (`#RRGGBB`): `background`, `text`, `button`, `button_label`, `accent` (links in running text, sale prices and badges) and `border` (inputs, dividers and bordered cards), and an optional `background_gradient` (a CSS gradient like `linear-gradient(180deg, #FAF7F2, #EFE6D8)`, or `""` to clear it). Make `scheme-1` the main light scheme and `scheme-2` its dark inverse; add `scheme-3` for a section in the Brand's accent color when it has one. Keep text-on-background, label-on-button and accent-on-background contrast at 4.5:1 or more, and border-on-background at 3:1 or more (inputs show only their border). The Studio's Brand tab flags any pair below that.
    - **Fonts.** A heading font and a body font, each a handle from `<skill-dir>/studio/server/shopify-fonts.json` (Shopify's font library), like `work_sans_n4` (`n4` is regular 400, `n7` bold, `i4` italic). When the reference's font isn't there, pick the closest family and tell the Creator.
    - **Logo.** A PNG, JPEG, WebP or SVG file, at most 2 MB. Take the file the Creator gives, or download it from their website when that site is their own brand. None is fine: the header shows the shop name.
    - **Style** (like minimal, bold, playful, luxurious) guides the fonts, the schemes and which home sections you pick in step 4.
@@ -98,7 +98,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
    | Call | Body |
    | --- | --- |
-   | `PUT /api/brand` | `{"colorSchemes": {"scheme-1": {"background": "#FFFFFF", "text": "#1A1A1A", "button": "#1A1A1A", "button_label": "#FFFFFF"}}, "headingFont": "<handle>", "bodyFont": "<handle>"}` |
+   | `PUT /api/brand` | `{"colorSchemes": {"scheme-1": {"background": "#FFFFFF", "text": "#1A1A1A", "button": "#1A1A1A", "button_label": "#FFFFFF", "accent": "#8C2F1B", "border": "#8A8A8A"}}, "headingFont": "<handle>", "bodyFont": "<handle>"}` |
    | `PUT /api/brand/logo` | the image file, with its `Content-Type` (`image/png`, `image/jpeg`, `image/webp`, `image/svg+xml`) |
    | `POST /api/<page>/sections` | `{"type": "<catalog section>"}`; `<page>` is `home`, `product`, `collection`, `page`, `contact` (the `page.contact` template), `cart`, `search`, `blog`, `article`, `404` or `collections` (the collections list) |
    | `DELETE /api/<page>/sections/<id>` | none |

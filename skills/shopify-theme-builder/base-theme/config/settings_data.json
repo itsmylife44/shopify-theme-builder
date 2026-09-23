@@ -15,7 +15,9 @@
           "background": "#FFFFFF",
           "text": "#333333",
           "button": "#333333",
-          "button_label": "#FFFFFF"
+          "button_label": "#FFFFFF",
+          "accent": "#333333",
+          "border": "#8A8A8A"
         }
       },
       "scheme-2": {
@@ -23,7 +25,9 @@
           "background": "#333333",
           "text": "#FFFFFF",
           "button": "#FFFFFF",
-          "button_label": "#333333"
+          "button_label": "#333333",
+          "accent": "#FFFFFF",
+          "border": "#858585"
         }
       }
     }

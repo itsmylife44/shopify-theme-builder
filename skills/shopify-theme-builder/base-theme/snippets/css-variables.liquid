@@ -249,8 +249,11 @@
       --color-secondary-button: {{ scheme.settings.background }};
       --color-secondary-button-label: {{ scheme.settings.text }};
       --color-secondary-button-border: {{ scheme.settings.text }};
-      --color-border: rgb(from var(--color-foreground) r g b / 0.3);
-      --color-border-subtle: rgb(from var(--color-foreground) r g b / 0.15);
+      {% # The accent: links in running text, sale prices and badges. %}
+      --color-accent: {{ scheme.settings.accent }};
+      {% # The border: inputs, bordered cards and chips; dividers take it at half strength. %}
+      --color-border: {{ scheme.settings.border }};
+      --color-border-subtle: rgb(from {{ scheme.settings.border }} r g b / 0.5);
       --card-background: {% if settings.card_style == 'surface' %}rgb(from var(--color-foreground) r g b / 0.05){% else %}transparent{% endif %};
     }
     .color-{{ scheme.id }} {
