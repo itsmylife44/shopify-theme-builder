@@ -94,7 +94,14 @@
     "step": "Step",
     "comparison_table": "Comparison table",
     "press_quotes": "Press quotes",
-    "quote": "Quote"
+    "quote": "Quote",
+    "hero_full_screen": "Hero: full screen",
+    "hero_split": "Hero: split",
+    "hero_text_on_image": "Hero: text on image",
+    "hero_small_banner": "Hero: small banner",
+    "slideshow_full_screen": "Slideshow: full screen",
+    "slideshow_split": "Slideshow: split",
+    "slideshow_text_on_image": "Slideshow: text on image"
   },
   "labels": {
     "accent": "Accent",
@@ -209,7 +216,11 @@
     "option_2": "Option 2",
     "option_3": "Option 3",
     "option_4": "Option 4",
-    "publication": "Publication"
+    "publication": "Publication",
+    "height": "Height",
+    "content_position": "Content position",
+    "content_style": "Content style",
+    "overlay_opacity": "Overlay opacity"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -246,7 +257,8 @@
     "editorial_split_quote": "A pull quote after the text, at a heading size. Leave it empty for none.",
     "lookbook_position": "From the left and top edges of the image, in percent. Place it on the product in the photo.",
     "comparison_table_options": "The products or options to compare, a column each. Leave one empty to hide its column.",
-    "press_quotes_logo": "Shown in place of the publication name. The name stays its text alternative."
+    "press_quotes_logo": "Shown in place of the publication name. The name stays its text alternative.",
+    "hero_overlay_opacity": "A layer of the color scheme's background over the media, so the text stays readable."
   },
   "options": {
     "alignment": {
@@ -371,6 +383,28 @@
     "tile_style": {
       "rule": "Line above",
       "box": "Box"
+    },
+    "height": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large",
+      "full_screen": "Full screen"
+    },
+    "content_position": {
+      "top_left": "Top left",
+      "top_center": "Top center",
+      "top_right": "Top right",
+      "middle_left": "Middle left",
+      "middle_center": "Middle center",
+      "middle_right": "Middle right",
+      "bottom_left": "Bottom left",
+      "bottom_center": "Bottom center",
+      "bottom_right": "Bottom right"
+    },
+    "content_style": {
+      "bare": "Text on the media",
+      "boxed": "Boxed",
+      "split": "Beside the media"
     }
   }
 }
