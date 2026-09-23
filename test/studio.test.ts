@@ -186,6 +186,33 @@ function errors<T extends { severity: string }>(offenses: T[]) {
   return offenses.filter((offense) => offense.severity === 'error')
 }
 
+describe('Studio API: unknown calls', () => {
+  it('answers an unknown path with a JSON 404 naming the call, never the Studio page', async () => {
+    const response = await fetch(new URL('api/nope?x=1', (await openStudio(fixtureTheme())).url))
+    expect(response.status).toBe(404)
+    expect(response.headers.get('content-type')).toBe('application/json')
+    expect((await response.json()).error).toContain('No such call: GET /api/nope.')
+  })
+
+  it('points a section path without /sections/ at the documented call', async () => {
+    const { status, body } = await (await openStudio(fixtureTheme())).send('GET', 'api/header/announcement-bar')
+    expect(status).toBe(404)
+    expect(body.error).toContain('No such call: GET /api/header/announcement-bar.')
+    expect(body.error).toContain('GET /api/header/sections/announcement-bar')
+  })
+
+  it('answers a wrong method on a known path with a JSON 405 and the allowed methods', async () => {
+    const studio = await openStudio(fixtureTheme())
+    const response = await fetch(new URL('api/brand/logo', studio.url), { method: 'POST' })
+    expect(response.status).toBe(405)
+    expect(response.headers.get('allow')).toBe('GET, PUT, DELETE')
+    expect((await response.json()).error).toContain('POST /api/brand/logo')
+    const theme = await studio.send('DELETE', 'api/theme')
+    expect(theme.status).toBe(405)
+    expect(theme.body.error).toContain('GET')
+  })
+})
+
 describe('Studio API: read Theme state', () => {
   it('returns every page\'s sections in order, the catalog sections per page and a clean validation', async () => {
     const studio = await openStudio(fixtureTheme())
