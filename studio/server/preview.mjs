@@ -25,7 +25,7 @@ const passwordMissing =
 
 /**
  * Starts `shopify theme dev` for a Theme. Its output also goes to the Studio's terminal.
- * @param {{ cli: string, theme: string, store?: string, storePassword?: string, onChange: (state: PreviewState) => void }} options
+ * @param {{ cli: string, theme: string, store: string, storePassword?: string, onChange: (state: PreviewState) => void }} options
  */
 export function startPreview({ cli, theme, store, storePassword, onChange }) {
   /** @type {PreviewState} */
@@ -44,7 +44,7 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
   checkCli(cli).then(() => freePort()).then(
     (port) => {
       if (stopped) return
-      const args = ['theme', 'dev', '--path', theme, ...(store ? ['--store', store] : []), '--port', String(port)]
+      const args = ['theme', 'dev', '--path', theme, '--store', store, '--port', String(port)]
       // No stdin: theme dev must not take over the Studio's terminal with its own prompts and keys.
       // The password goes in the CLI's environment variable, where other processes can't list it.
       const env = storePassword ? { ...process.env, SHOPIFY_FLAG_STORE_PASSWORD: storePassword } : process.env
