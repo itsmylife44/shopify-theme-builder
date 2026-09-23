@@ -90,7 +90,7 @@ export function App() {
 }
 
 /** Sends writes to the Studio API and hands the Theme state each returns to onSaved. */
-function useWrite(onSaved: (state: ThemeState) => void) {
+export function useWrite(onSaved: (state: ThemeState) => void) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -115,11 +115,11 @@ function useWrite(onSaved: (state: ThemeState) => void) {
   return { saving, error, write }
 }
 
-function jsonRequest(method: string, body: unknown): RequestInit {
+export function jsonRequest(method: string, body: unknown): RequestInit {
   return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
 }
 
-function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
+export function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
   const [colorSchemes, setColorSchemes] = useState(brand.colorSchemes)
   const [headingFont, setHeadingFont] = useState(brand.headingFont)
   const [bodyFont, setBodyFont] = useState(brand.bodyFont)

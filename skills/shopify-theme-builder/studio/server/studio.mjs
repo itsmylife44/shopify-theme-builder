@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
 import { startPreview } from './preview.mjs'
+import { startFrameProxy } from './prototype-frame-proxy.mjs'
 
 const studioDir = fileURLToPath(new URL('..', import.meta.url))
 const defaultCatalog = fileURLToPath(new URL('../../catalog', import.meta.url))
@@ -81,10 +82,13 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         storePassword,
         onChange: (state) => server.ws.send('studio:preview', state),
       })
+      // PROTOTYPE: the preview through a proxy, for the Studio's iframe.
+      const frame = startFrameProxy(() => (preview.state.status === 'running' ? preview.state.url : undefined))
       const stop = () => preview.stop()
       process.on('exit', stop)
       server.httpServer?.once('close', () => {
         watcher.close()
+        frame.then((proxy) => proxy.close())
         clearTimeout(notify)
         stop()
         process.off('exit', stop)
@@ -127,6 +131,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       }
       route('/api/theme', 'GET', readState)
       route('/api/preview', 'GET', async () => preview.state)
+      route('/api/prototype-frame', 'GET', async () => ({ url: (await frame).url }))
       route('/api/brand', 'PUT', async (req) => {
         setBrand(theme, await readBody(req))
         return readStateAfterWrite()
