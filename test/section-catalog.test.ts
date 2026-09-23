@@ -154,6 +154,16 @@ describe('Product page requirements', () => {
     expect(source).toContain("params.set('selling_plan', sellingPlan)")
   })
 
+  it('shows color and image swatches in the variant picker, falling back to the text pill', () => {
+    const picker = source.slice(source.indexOf('class="main-product__options"'), source.indexOf('</fieldset>'))
+    expect(picker).toContain('{% if option_value.swatch.image %}')
+    expect(picker).toContain('option_value.swatch.image | image_url')
+    expect(picker).toContain('{% elsif option_value.swatch.color %}')
+    expect(picker).toContain('option_value.swatch.color')
+    expect(picker).toMatch(/{% else %}\s*{{- option_value \| escape -}}/)
+    expect(picker).toContain('<span class="visually-hidden">{{ option_value | escape }}</span>')
+  })
+
   it('shows the selling plan of each cart line', () => {
     const cart = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-cart.liquid'), 'utf8')
     expect(cart).toContain('{% if item.selling_plan_allocation %}')
