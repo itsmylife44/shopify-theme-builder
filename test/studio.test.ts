@@ -274,10 +274,11 @@ describe('Studio API: set Brand', () => {
     const state = await (await openStudio(fixtureTheme())).readTheme()
     expect(state.brand).toEqual({
       colorSchemes: {
-        'scheme-1': { background: '#FFFFFF', text: '#333333', button: '#333333', button_label: '#FFFFFF' },
-        'scheme-2': { background: '#333333', text: '#FFFFFF', button: '#FFFFFF', button_label: '#333333' },
+        'scheme-1': { background: '#FFFFFF', text: '#333333', button: '#333333', button_label: '#FFFFFF', accent: '#333333', border: '#8A8A8A' },
+        'scheme-2': { background: '#333333', text: '#FFFFFF', button: '#FFFFFF', button_label: '#333333', accent: '#FFFFFF', border: '#858585' },
       },
-      colorFields: ['background', 'text', 'button', 'button_label'],
+      colorFields: ['background', 'text', 'button', 'button_label', 'accent', 'border'],
+      gradientFields: ['background_gradient'],
       headingFont: 'work_sans_n4',
       bodyFont: 'work_sans_n4',
       logo: null,
@@ -289,7 +290,10 @@ describe('Studio API: set Brand', () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme)
     const { status, body } = await studio.setBrand({
-      colorSchemes: { 'scheme-1': { background: '#FAF7F2', text: '#1F1A17' }, 'scheme-3': { background: '#0A3D62' } },
+      colorSchemes: {
+        'scheme-1': { background: '#FAF7F2', text: '#1F1A17', accent: '#8C2F1B', background_gradient: 'linear-gradient(180deg, #FAF7F2, #EFE6D8 100%)' },
+        'scheme-3': { background: '#0A3D62' },
+      },
       headingFont: 'playfair_display_n7',
       bodyFont: 'assistant_n4',
       logo: 'shopify://shop_images/logo.png',
@@ -298,9 +302,12 @@ describe('Studio API: set Brand', () => {
     const current = readSettingsData(theme).current
     expect(current.color_schemes['scheme-1'].settings).toEqual({
       background: '#FAF7F2',
+      background_gradient: 'linear-gradient(180deg, #FAF7F2, #EFE6D8 100%)',
       text: '#1F1A17',
       button: '#333333',
       button_label: '#FFFFFF',
+      accent: '#8C2F1B',
+      border: '#8A8A8A',
     })
     // A new scheme starts from the schema's default colors.
     expect(current.color_schemes['scheme-3'].settings).toEqual({
@@ -308,6 +315,8 @@ describe('Studio API: set Brand', () => {
       text: '#333333',
       button: '#333333',
       button_label: '#FFFFFF',
+      accent: '#333333',
+      border: '#8A8A8A',
     })
     expect(current.type_heading_font).toBe('playfair_display_n7')
     expect(current.type_body_font).toBe('assistant_n4')
@@ -354,6 +363,34 @@ describe('Studio API: set Brand', () => {
     })
   })
 
+  it('fills a scheme color the settings data lacks with the schema default', async () => {
+    const theme = fixtureTheme()
+    writeFileSync(
+      path.join(theme, 'config/settings_data.json'),
+      JSON.stringify({ current: { color_schemes: { 'scheme-1': { settings: { background: '#FFFFFF', text: '#000000' } } } } }),
+    )
+    const state = await (await openStudio(theme)).readTheme()
+    expect(state.brand.colorSchemes['scheme-1']).toEqual({
+      background: '#FFFFFF',
+      text: '#000000',
+      button: '#333333',
+      button_label: '#FFFFFF',
+      accent: '#333333',
+      border: '#8A8A8A',
+    })
+  })
+
+  it('reads a background gradient and clears it with an empty string', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    const gradient = 'radial-gradient(rgba(255, 255, 255, 1), rgba(238, 238, 238, 1) 100%)'
+    const { body } = await studio.setBrand({ colorSchemes: { 'scheme-2': { background_gradient: gradient } } })
+    expect(body.brand.colorSchemes['scheme-2'].background_gradient).toBe(gradient)
+    const cleared = await studio.setBrand({ colorSchemes: { 'scheme-2': { background_gradient: '' } } })
+    expect(readSettingsData(theme).current.color_schemes['scheme-2'].settings).not.toHaveProperty('background_gradient')
+    expect(cleared.body.brand.colorSchemes['scheme-2']).not.toHaveProperty('background_gradient')
+  })
+
   it('clears the logo with null', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme)
@@ -366,6 +403,8 @@ describe('Studio API: set Brand', () => {
   it.each([
     ['a color that is not hex', { colorSchemes: { 'scheme-1': { background: 'red' } } }],
     ['a color the scheme does not define', { colorSchemes: { 'scheme-1': { shadow: '#000000' } } }],
+    ['a gradient that is a hex color', { colorSchemes: { 'scheme-1': { background_gradient: '#FFFFFF' } } }],
+    ['a gradient that breaks out of its CSS rule', { colorSchemes: { 'scheme-1': { background_gradient: 'linear-gradient(red, blue); } body { display: none' } } }],
     ['a font that is not a font handle', { headingFont: 'Playfair Display' }],
     ['a font handle that is not in Shopify\'s font library', { bodyFont: 'comic_sans_n4' }],
     ['a logo that is not a shop image', { logo: 'https://example.com/logo.png' }],

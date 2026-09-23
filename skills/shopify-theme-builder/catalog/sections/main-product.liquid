@@ -96,7 +96,7 @@
       <p class="main-product__price price text-h4">
         {% if compare_at_price > price %}
           <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
-          {{ price | money }}
+          <span class="price__sale">{{ price | money }}</span>
           <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
           <s class="main-product__compare-at">{{ compare_at_price | money }}</s>
         {% else %}

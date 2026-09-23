@@ -5,7 +5,7 @@
   {% endif %}
 
   {% if section.settings.text != blank %}
-    <div class="basic-page__text">{{ section.settings.text }}</div>
+    <div class="basic-page__text rte">{{ section.settings.text }}</div>
   {% endif %}
 
   <form action="{{ routes.search_url }}" method="get" role="search" class="main-404__search">

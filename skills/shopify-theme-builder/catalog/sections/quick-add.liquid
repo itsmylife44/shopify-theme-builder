@@ -44,7 +44,7 @@
             <p class="quick-add__price price">
               {% if compare_at_price > price %}
                 <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
-                {{ price | money }}
+                <span class="price__sale">{{ price | money }}</span>
                 <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
                 <s class="quick-add__compare-at">{{ compare_at_price | money }}</s>
               {% else %}

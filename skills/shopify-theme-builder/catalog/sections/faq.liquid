@@ -9,7 +9,7 @@
       {% for block in section.blocks %}
         <details class="faq__item" {{ block.shopify_attributes }}>
           <summary class="faq__question">{{ block.settings.question | escape }}</summary>
-          <div class="faq__answer">{{ block.settings.answer }}</div>
+          <div class="faq__answer rte">{{ block.settings.answer }}</div>
         </details>
       {% endfor %}
     </div>
