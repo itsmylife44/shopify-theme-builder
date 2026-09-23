@@ -35,6 +35,17 @@ describe('Section Catalog theme check', () => {
   })
 })
 
+describe('App blocks', () => {
+  it('lets apps add blocks to the main product info column', () => {
+    const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-product.liquid'), 'utf8')
+    const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+    expect(schema.blocks).toContainEqual({ type: '@app' })
+    const details = source.slice(source.indexOf('class="main-product__details"'), source.indexOf('</product-info>'))
+    expect(details).toContain('{% render block %}')
+    expect(details).toContain('block.shopify_attributes')
+  })
+})
+
 describe('Contact page', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
 
