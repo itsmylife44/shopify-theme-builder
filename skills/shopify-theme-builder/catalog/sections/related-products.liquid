@@ -1,4 +1,4 @@
-{% comment %}Products Shopify recommends alongside the one on the page.{% endcomment %}
+{% comment %}Related or complementary products Shopify recommends alongside the one on the page.{% endcomment %}
 {% liquid
   assign show_placeholders = false
   if recommendations.performed? and recommendations.products_count == 0 and request.design_mode
@@ -10,7 +10,7 @@
   <product-recommendations
     class="related-products__inner"
     {% unless recommendations.performed? %}
-      data-url="{{ routes.product_recommendations_url }}?product_id={{ product.id }}&section_id={{ section.id }}&limit={{ section.settings.products_to_show }}&intent=related"
+      data-url="{{ routes.product_recommendations_url }}?product_id={{ product.id }}&section_id={{ section.id }}&limit={{ section.settings.products_to_show }}&intent={{ section.settings.intent }}"
     {% endunless %}
   >
     {% if recommendations.products_count > 0 or show_placeholders %}
@@ -198,6 +198,17 @@
       "default": "scheme-1"
     },
     {
+      "type": "select",
+      "id": "intent",
+      "label": "t:labels.recommendations",
+      "info": "t:info.related_products_intent",
+      "options": [
+        { "value": "related", "label": "t:options.recommendations.related" },
+        { "value": "complementary", "label": "t:options.recommendations.complementary" }
+      ],
+      "default": "related"
+    },
+    {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
@@ -225,6 +236,13 @@
   "presets": [
     {
       "name": "t:general.related_products"
+    },
+    {
+      "name": "t:general.complementary_products",
+      "settings": {
+        "intent": "complementary",
+        "heading": "Pairs well with"
+      }
     }
   ]
 }
