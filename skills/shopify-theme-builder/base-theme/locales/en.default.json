@@ -156,5 +156,8 @@
     "label": "Announcements",
     "next": "Next announcement",
     "previous": "Previous announcement"
+  },
+  "collection_list": {
+    "collection_title": "Example collection"
   }
 }

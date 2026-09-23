@@ -89,7 +89,7 @@ Every section follows the Brand through theme settings, has its own color scheme
 
 | Page | Sections |
 | --- | --- |
-| Home | Hero (image or video) · Featured collection · Image with text · Rich text · Testimonials · Logo list · FAQ · Newsletter |
+| Home | Hero (image or video) · Featured collection · Collection list · Image with text · Rich text · Testimonials · Logo list · FAQ · Newsletter |
 | Product | Main product (media, variants, add to cart, app and Custom Liquid blocks) · Related products |
 | Collection | Product grid with filters and sorting |
 | Cart | Main cart (discounts, order note, Shop Pay and other accelerated checkout buttons) |

@@ -57,7 +57,8 @@
     "testimonials": "Testimonials",
     "testimonial": "Testimonial",
     "announcement_bar": "Announcement bar",
-    "announcement": "Announcement"
+    "announcement": "Announcement",
+    "collection_list": "Collection list"
   },
   "labels": {
     "alignment": "Alignment",
@@ -118,7 +119,8 @@
     "recommendations": "Recommendations",
     "liquid": "Liquid",
     "layout": "Layout",
-    "link": "Link"
+    "link": "Link",
+    "collections": "Collections"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
