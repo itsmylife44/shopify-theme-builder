@@ -938,7 +938,7 @@ describe('Quick add', () => {
 
   it.each(Object.entries(cards))('links a product with variants on %s cards to its page, which quick add opens in a dialog instead', (name, item) => {
     const source = read(`catalog/sections/${name}.liquid`)
-    expect(source).toMatch(new RegExp(`<a\\s+class="[\\w-]+__quick-add-button"\\s+href="{{ ${item}\\.url }}"\\s+aria-haspopup="dialog"`))
+    expect(source).toMatch(new RegExp(`<a\\s+class="button [\\w-]+__quick-add-button"\\s+href="{{ ${item}\\.url }}"\\s+aria-haspopup="dialog"`))
     expect(source).toContain(`'quick_add.choose_options_label' | t: product: ${item}.title`)
     expect(source).toMatch(/\s+data-quick-add\s/)
   })
@@ -1151,6 +1151,61 @@ describe('Style system', () => {
         expect(['(min-width: 750px)', '(max-width: 749px)'], file).toContain(query)
       }
     }
+  })
+})
+
+describe('Buttons', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const files = ['base-theme', 'catalog'].flatMap((dir) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => path.join(dir, file)),
+  )
+  const stylesheet = (file: string) =>
+    [...read(file).matchAll(/{%-? stylesheet -?%}([\s\S]*?){%-? endstylesheet -?%}/g)].map((m) => m[1]).join('\n')
+
+  it('drives the button from variables, with colors from the scheme including the secondary button roles', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    for (const name of ['padding-block', 'padding-inline', 'border-width', 'radius', 'text-transform', 'font-weight']) {
+      expect(variables).toMatch(new RegExp(`--button-${name}:`))
+    }
+    expect(variables).toMatch(/--color-button-border: {{ scheme\.settings\.button }}/)
+    expect(variables).toMatch(/--color-secondary-button: {{ scheme\.settings\.background }}/)
+    expect(variables).toMatch(/--color-secondary-button-label: {{ scheme\.settings\.text }}/)
+    expect(variables).toMatch(/--color-secondary-button-border: {{ scheme\.settings\.text }}/)
+  })
+
+  it('shares a primary and a secondary button in critical.css', () => {
+    const critical = read('base-theme/assets/critical.css')
+    expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*padding: var\(--button-padding-block\) var\(--button-padding-inline\)/)
+    expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*background-color: var\(--color-button\)/)
+    expect(critical).toMatch(/\.button--secondary {[^}]*background-color: var\(--color-secondary-button\)/)
+  })
+
+  it('gives every button with a text label, and every submit input, the shared button class', () => {
+    for (const file of files) {
+      for (const [, tag, content] of read(file).matchAll(/(<button\b[^>]*>)([\s\S]*?)<\/button>/g)) {
+        // Icon controls (close, menu, arrows, a video cover) hold only an SVG or an image.
+        if (!content.replace(/<svg[\s\S]*?<\/svg>|{{[\s\S]*?image_tag[\s\S]*?}}|<[^>]+>/g, '').trim()) continue
+        expect(tag, file).toMatch(/class="[^"]*\bbutton(--secondary)?\b/)
+      }
+      for (const [tag] of read(file).matchAll(/<input\b[^>]*type="submit"[^>]*>/g)) {
+        expect(tag, file).toMatch(/class="[^"]*\bbutton(--secondary)?\b/)
+      }
+    }
+  })
+
+  it('leaves button colors, padding and shape out of every section, block and snippet', () => {
+    // The cart count is a badge in the button colors, not a button.
+    const allowed = new Set(['.header__cart-count'])
+    for (const file of files) {
+      for (const [, selector, body] of stylesheet(file).matchAll(/([^{}]+){([^{}]*)}/g)) {
+        if (/var\(--color-(secondary-)?button/.test(body)) expect(allowed, `${file}: ${selector.trim()}`).toContain(selector.trim())
+      }
+      expect(read(file), file).not.toMatch(/basic-page__button/)
+    }
+    expect(read('base-theme/assets/critical.css')).not.toMatch(/\.basic-page :is\(button/)
   })
 })
 

@@ -88,7 +88,7 @@
             {% endfor %}
           </select>
         {% endif %}
-        <button type="submit">{{ 'localization.update' | t }}</button>
+        <button type="submit" class="button--secondary">{{ 'localization.update' | t }}</button>
       {% endform %}
     {% endif %}
   {% endif %}
@@ -181,7 +181,7 @@
                 aria-controls="PredictiveSearchResults"
               >
               <input type="hidden" name="options[prefix]" value="last">
-              <button type="submit">{{ 'search.submit' | t }}</button>
+              <button type="submit" class="button--secondary">{{ 'search.submit' | t }}</button>
             </form>
             <div
               id="PredictiveSearchResults"
@@ -257,7 +257,7 @@
     padding-block: var(--space-md);
   }
 
-  .header a {
+  .header a:not(.button, .button--secondary) {
     color: inherit;
     text-decoration: none;
   }
@@ -385,12 +385,12 @@
     display: contents;
   }
 
-  .header__cart-content .main-cart {
+  .header__cart-content .basic-page {
     --content-grid: 0 1fr 0;
     padding-block: 0;
   }
 
-  .header__cart-content a {
+  .header__cart-content a:not(.button, .button--secondary) {
     text-decoration: underline;
   }
 
@@ -453,8 +453,7 @@
     display: none;
   }
 
-  .header__localization select,
-  .header__localization button {
+  .header__localization select {
     padding: var(--space-2xs) var(--space-xs);
     border: var(--border-width) solid currentcolor;
     border-radius: var(--style-border-radius-inputs);
@@ -490,8 +489,7 @@
     gap: var(--space-xs);
   }
 
-  .header__search-panel input,
-  .header__search-panel button {
+  .header__search-panel input {
     padding: var(--space-xs) var(--space-sm);
     border: var(--border-width) solid currentcolor;
     border-radius: var(--style-border-radius-inputs);
@@ -503,10 +501,6 @@
   .header__search-panel input {
     flex: 1;
     min-width: 0;
-  }
-
-  .header__search-panel button {
-    cursor: pointer;
   }
 
   .header__search-results {
@@ -658,17 +652,7 @@
   }
 
   .quick-add__add {
-    padding: var(--space-sm) var(--space-lg);
-    border: 0;
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .quick-add__add:disabled {
-    opacity: var(--opacity-disabled);
-    cursor: not-allowed;
+    width: 100%;
   }
 
   .quick-add__details {

@@ -74,7 +74,7 @@
           </label>
           <button
             type="submit"
-            class="featured-product__add"
+            class="button featured-product__add"
             {% unless current_variant.available %}
               disabled
             {% endunless %}
@@ -92,7 +92,7 @@
       {% else %}
         <h2 class="featured-product__title">{{ 'featured_collection.product_title' | t }}</h2>
         <p class="featured-product__price text-h4">{{ 1999 | money }}</p>
-        <button type="button" class="featured-product__add" disabled>{{ 'product.add_to_cart' | t }}</button>
+        <button type="button" class="button featured-product__add" disabled>{{ 'product.add_to_cart' | t }}</button>
       {% endif %}
 
       {% content_for 'blocks' %}
@@ -192,17 +192,7 @@
   }
 
   .featured-product__add {
-    padding: var(--space-sm) var(--space-lg);
-    border: 0;
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .featured-product__add:disabled {
-    opacity: var(--opacity-disabled);
-    cursor: not-allowed;
+    width: 100%;
   }
 {% endstylesheet %}
 

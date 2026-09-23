@@ -65,14 +65,14 @@
         </p>
         <p>{{ 'cart.taxes_and_shipping' | t }}</p>
         <div class="cart__actions">
-          <button type="submit" name="update" class="cart__update">{{ 'cart.update' | t }}</button>
-          <button type="submit" name="checkout">{{ 'cart.checkout' | t }}</button>
+          <button type="submit" name="update" class="button--secondary">{{ 'cart.update' | t }}</button>
+          <button type="submit" name="checkout" class="button">{{ 'cart.checkout' | t }}</button>
         </div>
       </div>
     </form>
   {% else %}
     <p>{{ 'cart.empty' | t }}</p>
-    <a class="basic-page__button" href="{{ routes.all_products_collection_url }}">
+    <a class="button" href="{{ routes.all_products_collection_url }}">
       {{- 'cart.continue_shopping' | t -}}
     </a>
   {% endif %}
@@ -136,12 +136,6 @@
     flex-wrap: wrap;
     justify-content: end;
     gap: var(--space-xs);
-  }
-
-  .basic-page .cart__actions .cart__update {
-    border: var(--border-width) solid currentcolor;
-    background: transparent;
-    color: inherit;
   }
 {% endstylesheet %}
 

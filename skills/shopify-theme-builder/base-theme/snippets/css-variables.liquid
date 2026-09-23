@@ -46,6 +46,13 @@
     --focus-ring-offset: 2px;
     --opacity-muted: 0.7;
     --opacity-disabled: 0.5;
+    {% # Buttons: the shared .button and .button--secondary in critical.css. %}
+    --button-padding-block: var(--space-sm);
+    --button-padding-inline: var(--space-lg);
+    --button-border-width: var(--border-width);
+    --button-radius: var(--style-border-radius-inputs);
+    --button-text-transform: none;
+    --button-font-weight: var(--font-body--weight);
     {% comment %}
       The breakpoint is 750px: layouts switch at @media (min-width: 750px) and (max-width: 749px), and image sizes
       at (min-width: 750px). CSS variables don't work in media queries, so it is this constant instead of a variable.
@@ -64,6 +71,10 @@
       --color-foreground: {{ scheme.settings.text }};
       --color-button: {{ scheme.settings.button }};
       --color-button-label: {{ scheme.settings.button_label }};
+      --color-button-border: {{ scheme.settings.button }};
+      --color-secondary-button: {{ scheme.settings.background }};
+      --color-secondary-button-label: {{ scheme.settings.text }};
+      --color-secondary-button-border: {{ scheme.settings.text }};
       --color-border: rgb(from var(--color-foreground) r g b / 0.3);
       --color-border-subtle: rgb(from var(--color-foreground) r g b / 0.15);
     }

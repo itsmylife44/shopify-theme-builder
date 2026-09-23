@@ -64,7 +64,7 @@
               {% endif %}
               {% if block.settings.button_label != blank %}
                 <a
-                  class="slideshow__button"
+                  class="button"
                   href="{{ block.settings.button_link | default: routes.all_products_collection_url }}"
                 >
                   {{- block.settings.button_label | escape -}}
@@ -169,14 +169,6 @@
     padding: var(--space-xl);
     background-color: var(--color-background);
     color: var(--color-foreground);
-  }
-
-  .slideshow__button {
-    display: inline-block;
-    padding: var(--space-sm) var(--space-lg);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    text-decoration: none;
   }
 
   .slideshow__controls {
