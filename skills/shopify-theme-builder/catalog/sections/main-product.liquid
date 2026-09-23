@@ -193,6 +193,60 @@
           {{ 'product.quantity' | t }}
           <input type="number" name="quantity" min="1" value="1">
         </label>
+        {% if product.gift_card? %}
+          {% liquid
+            assign today = 'now' | date: '%Y-%m-%d'
+            assign latest_send_date = 'now' | date: '%s' | plus: 7776000 | date: '%Y-%m-%d'
+          %}
+          <div class="main-product__recipient">
+            <label class="main-product__recipient-toggle">
+              <input type="checkbox" aria-controls="{{ section.id }}-recipient">
+              {{ 'product.recipient.send_to_recipient' | t }}
+            </label>
+            <fieldset id="{{ section.id }}-recipient" class="main-product__recipient-fields" hidden disabled>
+              <legend class="visually-hidden">{{ 'product.recipient.send_to_recipient' | t }}</legend>
+              <input type="hidden" name="properties[__shopify_send_gift_card_to_recipient]" value="true">
+              <input type="hidden" name="properties[__shopify_offset]" value="">
+              <label>
+                {{ 'product.recipient.email' | t }}
+                <input
+                  type="email"
+                  name="properties[Recipient email]"
+                  required
+                  autocomplete="off"
+                >
+              </label>
+              <label>
+                {{ 'product.recipient.name' | t }}
+                <input
+                  type="text"
+                  name="properties[Recipient name]"
+                  maxlength="255"
+                  autocomplete="off"
+                >
+              </label>
+              <label>
+                {{ 'product.recipient.message' | t }}
+                <textarea
+                  name="properties[Message]"
+                  maxlength="200"
+                  rows="3"
+                ></textarea>
+                <small>{{ 'product.recipient.message_info' | t }}</small>
+              </label>
+              <label>
+                {{ 'product.recipient.send_on' | t }}
+                <input
+                  type="date"
+                  name="properties[Send on]"
+                  min="{{ today }}"
+                  max="{{ latest_send_date }}"
+                >
+                <small>{{ 'product.recipient.send_on_info' | t }}</small>
+              </label>
+            </fieldset>
+          </div>
+        {% endif %}
         <button
           type="submit"
           class="main-product__add"
@@ -243,9 +297,19 @@
   class ProductInfo extends HTMLElement {
     connectedCallback() {
       this.addEventListener('change', this.onChange);
+      this.toggleRecipient();
+    }
+
+    toggleRecipient() {
+      const checkbox = this.querySelector('.main-product__recipient-toggle input');
+      const fields = this.querySelector('.main-product__recipient-fields');
+      if (!checkbox || !fields) return;
+      fields.hidden = fields.disabled = !checkbox.checked;
+      fields.querySelector('[name="properties[__shopify_offset]"]').value = new Date().getTimezoneOffset();
     }
 
     onChange = async (event) => {
+      if (event.target.closest('.main-product__recipient-toggle')) return this.toggleRecipient();
       const optionValueId = event.target.dataset.optionValueId;
       if (!optionValueId && event.target.name !== 'selling_plan') return;
       const params = new URLSearchParams({ section_id: this.dataset.section });
@@ -279,7 +343,9 @@
       }
       const quantity = this.querySelector('input[name="quantity"]')?.value;
       const focused = event.target.id;
+      const recipient = this.querySelector('.main-product__recipient');
       this.replaceChildren(...fresh.childNodes);
+      if (recipient) this.querySelector('.main-product__recipient')?.replaceWith(recipient);
       const quantityInput = this.querySelector('input[name="quantity"]');
       if (quantityInput && quantity) quantityInput.value = quantity;
       document.getElementById(focused)?.focus();
@@ -536,6 +602,41 @@
     border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
     background-color: transparent;
     color: inherit;
+  }
+
+  .main-product__recipient-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .main-product__recipient-fields[hidden] {
+    display: none;
+  }
+
+  .main-product__recipient-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .main-product__recipient-fields :is(input, textarea) {
+    padding: 0.5rem;
+    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  .main-product__recipient-fields small {
+    opacity: 0.7;
+  }
+
+  .main-product__form:has(.main-product__recipient-toggle input:checked) .shopify-payment-button {
+    display: none;
   }
 
   .main-product__add {

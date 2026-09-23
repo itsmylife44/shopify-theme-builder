@@ -121,7 +121,16 @@
     "sale_price": "Sale price",
     "sold_out": "Sold out",
     "unavailable": "Unavailable",
-    "unit_price": "Unit price"
+    "unit_price": "Unit price",
+    "recipient": {
+      "send_to_recipient": "Send as a gift to a recipient",
+      "email": "Recipient email",
+      "name": "Recipient name (optional)",
+      "message": "Message (optional)",
+      "message_info": "Up to 200 characters",
+      "send_on": "Send on (optional)",
+      "send_on_info": "Leave empty to send it now, or pick a date within 90 days"
+    }
   },
   "related_products": {
     "product_title": "Example product"

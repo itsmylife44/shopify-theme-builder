@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The product page of a gift card lets the customer send it to a recipient: email, optional name, message and send date, checked in the browser before it goes to the cart. The cart shows each line's properties, like the recipient.
 - The product page's variant picker supports combined listings: choosing an option value, text pill or swatch, that belongs to a sibling product opens that product.
 - A Custom Liquid section for any page and a Custom Liquid block for the product page, where the Merchant pastes their own Liquid or HTML, like an app snippet, a tracking code or an embed.
 - The header's search icon opens a search box that suggests queries, products, collections and pages as the customer types, with arrow-key navigation; without JavaScript it searches on the search page. New Themes get it.

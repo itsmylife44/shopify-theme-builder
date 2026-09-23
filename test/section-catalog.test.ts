@@ -215,6 +215,27 @@ describe('Product page requirements', () => {
     expect(source).toContain("params.set('selling_plan', sellingPlan)")
   })
 
+  it('lets the customer send a gift card to a recipient, with labelled and validated fields', () => {
+    const recipient = form.slice(form.indexOf('{% if product.gift_card? %}'))
+    const fields = recipient.slice(recipient.indexOf('<fieldset'), recipient.indexOf('</fieldset>'))
+    expect(recipient).toMatch(/<fieldset[^>]*class="main-product__recipient-fields"[^>]*hidden\s+disabled/)
+    expect(fields).toMatch(/type="hidden"\s+name="properties\[__shopify_send_gift_card_to_recipient\]"\s+value="true"/)
+    expect(fields).toMatch(/type="email"\s+name="properties\[Recipient email\]"\s+required/)
+    expect(recipient).toMatch(/name="properties\[Recipient name\]"\s+maxlength="255"/)
+    expect(recipient).toMatch(/name="properties\[Message\]"\s+maxlength="200"/)
+    expect(recipient).toMatch(/type="date"\s+name="properties\[Send on\]"\s+min="{{ today }}"\s+max="{{ latest_send_date }}"/)
+    expect(recipient).toContain('name="properties[__shopify_offset]"')
+    for (const key of ['send_to_recipient', 'email', 'name', 'message', 'message_info', 'send_on', 'send_on_info']) {
+      expect(recipient).toContain(`'product.recipient.${key}' | t`)
+    }
+    expect(source).toContain('fields.hidden = fields.disabled = !checkbox.checked')
+    expect(source).toContain('new Date().getTimezoneOffset()')
+  })
+
+  it('keeps what the customer typed for the recipient when the variant changes', () => {
+    expect(source).toMatch(/this\.querySelector\('\.main-product__recipient'\)\?\.replaceWith\(recipient\)/)
+  })
+
   it('shows color and image swatches in the variant picker, falling back to the text pill', () => {
     const picker = source.slice(source.indexOf('class="main-product__options"'), source.indexOf('</fieldset>'))
     expect(picker).toContain('{% if option_value.swatch.image %}')
@@ -246,6 +267,13 @@ describe('Product page requirements', () => {
     const cart = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-cart.liquid'), 'utf8')
     expect(cart).toContain('{% if item.selling_plan_allocation %}')
     expect(cart).toContain('item.selling_plan_allocation.selling_plan.name | escape')
+  })
+
+  it('shows the line item properties of each cart line, like a gift card recipient, but not hidden ones', () => {
+    const cart = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-cart.liquid'), 'utf8')
+    expect(cart).toContain('{% for property in item.properties %}')
+    expect(cart).toContain("first_character != '_'")
+    expect(cart).toContain('{{ property.first | escape }}: {{ property.last | escape }}')
   })
 })
 
