@@ -512,7 +512,7 @@ function addSection(theme, catalog, file, body) {
   const placed = existsSync(own) ? own : source
   if (!existsSync(placed)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
   if (!goesOn(placed, file)) throw new BadRequest(`The ${type} section can't go on ${file}.`)
-  const { limit } = readSchema(placed) ?? {}
+  const { limit, presets } = readSchema(placed) ?? {}
   updateJSON(theme, file, (template) => {
     if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
     const count = Object.values(template.sections).filter((/** @type {{ type: string }} */ section) => section.type === type).length
@@ -520,13 +520,37 @@ function addSection(theme, catalog, file, body) {
     let id
     do id = `${type}_${randomBytes(3).toString('hex')}`
     while (id in template.sections)
-    template.sections[id] = { type, settings: {} }
+    template.sections[id] = fromPreset(type, presets?.[0])
     template.order.push(id)
     if (!existsSync(own)) {
       addMissingFromBaseTheme(theme)
       copyFileSync(source, own)
     }
   })
+}
+
+/**
+ * A new section's template entry: the settings and blocks of its first preset, as the Theme Editor adds it,
+ * so a section like testimonials starts with its example blocks.
+ * @param {string} type
+ * @param {{ settings?: object, blocks?: unknown } | undefined} preset
+ */
+function fromPreset(type, preset) {
+  /** @type {{ type: string, settings: object, blocks?: Record<string, { type: string, settings: object }>, block_order?: string[] }} */
+  const section = { type, settings: structuredClone(preset?.settings ?? {}) }
+  // ponytail: section blocks as a list only, the form the Section Catalog uses; theme blocks keyed by id are left out.
+  if (Array.isArray(preset?.blocks) && preset.blocks.length) {
+    section.blocks = {}
+    section.block_order = []
+    for (const block of /** @type {{ type: string, settings?: object }[]} */ (preset.blocks)) {
+      let blockId
+      do blockId = `${block.type}_${randomBytes(3).toString('hex')}`
+      while (blockId in section.blocks)
+      section.blocks[blockId] = { type: block.type, settings: structuredClone(block.settings ?? {}) }
+      section.block_order.push(blockId)
+    }
+  }
+  return section
 }
 
 /**
