@@ -1,0 +1,206 @@
+{% comment %}Columns of an icon or image, a heading and text, for benefits or steps.{% endcomment %}
+{% assign text_alignment = section.settings.text_alignment | replace: 'left', 'start' | replace: 'right', 'end' %}
+<div class="multicolumn full-width color-{{ section.settings.color_scheme }}">
+  <div class="multicolumn__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="multicolumn__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ul
+      class="multicolumn__grid"
+      role="list"
+      style="--columns: {{ section.settings.columns }}; --text-alignment: {{ text_alignment }};"
+    >
+      {% for block in section.blocks %}
+        <li class="multicolumn__column" {{ block.shopify_attributes }}>
+          <div class="multicolumn__media multicolumn__media--{{ block.settings.image_size }}">
+            {% if block.settings.image != blank %}
+              {{
+                block.settings.image
+                | image_url: width: 1200
+                | image_tag: widths: '100, 200, 300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 33vw, 100vw', loading: 'lazy'
+              }}
+            {% else %}
+              {{ 'image' | placeholder_svg_tag: 'multicolumn__placeholder' }}
+            {% endif %}
+          </div>
+          {% if block.settings.heading != blank %}
+            <h3 class="multicolumn__column-heading">{{ block.settings.heading }}</h3>
+          {% endif %}
+          {% if block.settings.text != blank %}
+            <div class="multicolumn__text">{{ block.settings.text }}</div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% stylesheet %}
+  .multicolumn {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .multicolumn__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .multicolumn__heading {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    text-align: center;
+  }
+
+  .multicolumn__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem 2rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .multicolumn__grid {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+  }
+
+  .multicolumn__column {
+    display: flex;
+    flex-direction: column;
+    align-items: var(--text-alignment);
+    gap: 0.75rem;
+    text-align: var(--text-alignment);
+  }
+
+  .multicolumn__media {
+    width: 100%;
+  }
+
+  .multicolumn__media--small {
+    width: 4rem;
+  }
+
+  .multicolumn__media img,
+  .multicolumn__placeholder {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .multicolumn__media--large .multicolumn__placeholder {
+    aspect-ratio: 3 / 2;
+  }
+
+  .multicolumn__media--small .multicolumn__placeholder {
+    aspect-ratio: 1;
+  }
+
+  .multicolumn__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .multicolumn__column-heading {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .multicolumn__text > :first-child {
+    margin-block-start: 0;
+  }
+
+  .multicolumn__text > :last-child {
+    margin-block-end: 0;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.multicolumn",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Why shop with us"
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "t:labels.columns_on_desktop",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_alignment",
+      "label": "t:labels.alignment",
+      "default": "center"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "column",
+      "name": "t:general.column",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image"
+        },
+        {
+          "type": "select",
+          "id": "image_size",
+          "label": "t:labels.image_size",
+          "info": "t:info.multicolumn_image_size",
+          "options": [
+            { "value": "small", "label": "t:options.size.small" },
+            { "value": "large", "label": "t:options.size.large" }
+          ],
+          "default": "large"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "heading",
+          "label": "t:labels.heading",
+          "default": "Column"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "t:labels.text",
+          "default": "<p>Describe a benefit of your products or a step customers follow.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.multicolumn",
+      "blocks": [
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" }
+      ]
+    }
+  ]
+}
+{% endschema %}

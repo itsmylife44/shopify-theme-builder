@@ -61,7 +61,8 @@
     "collection_list": "Collection list",
     "featured_product": "Featured product",
     "slideshow": "Slideshow",
-    "slide": "Slide"
+    "slide": "Slide",
+    "multicolumn": "Multicolumn"
   },
   "labels": {
     "alignment": "Alignment",
@@ -126,7 +127,8 @@
     "collections": "Collections",
     "product": "Product",
     "autoplay": "Autoplay",
-    "change_slides_every": "Change slides every"
+    "change_slides_every": "Change slides every",
+    "image_size": "Image size"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
@@ -141,7 +143,8 @@
     "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app.",
     "custom_liquid_setting": "Add app snippets, tracking code or embeds. Liquid and HTML both work.",
     "announcement_bar_layout": "Rotate shows one message at a time, changing every 5 seconds. Stack shows them all.",
-    "slideshow_autoplay": "Customers can pause it. It doesn't play when a customer's device asks for reduced motion."
+    "slideshow_autoplay": "Customers can pause it. It doesn't play when a customer's device asks for reduced motion.",
+    "multicolumn_image_size": "Small suits icons. Large fills the column's width."
   },
   "options": {
     "alignment": {
