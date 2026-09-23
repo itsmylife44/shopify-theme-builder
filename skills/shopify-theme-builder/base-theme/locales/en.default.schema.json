@@ -85,7 +85,9 @@
     "marquee": "Marquee",
     "item": "Item",
     "spec_tiles": "Spec tiles",
-    "tile": "Tile"
+    "tile": "Tile",
+    "lookbook": "Lookbook",
+    "hotspot": "Hotspot"
   },
   "labels": {
     "accent": "Accent",
@@ -192,7 +194,9 @@
     "drop_cap": "Drop cap on the first paragraph",
     "tile_style": "Tile style",
     "value": "Value",
-    "label": "Label"
+    "label": "Label",
+    "horizontal_position": "Horizontal position",
+    "vertical_position": "Vertical position"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -226,7 +230,8 @@
     "motion": "Subtle fades sections in as they scroll into view and eases hovers. Expressive raises them and zooms images slowly. Always off for customers who reduce motion on their device, and never on what shows first.",
     "type_banner_heading": "A line or two. Press Enter where the line should break.",
     "marquee_speed": "Pauses on hover, and customers can pause it. It stays still when a customer's device asks for reduced motion, or with Motion set to None.",
-    "editorial_split_quote": "A pull quote after the text, at a heading size. Leave it empty for none."
+    "editorial_split_quote": "A pull quote after the text, at a heading size. Leave it empty for none.",
+    "lookbook_position": "From the left and top edges of the image, in percent. Place it on the product in the photo."
   },
   "options": {
     "alignment": {
