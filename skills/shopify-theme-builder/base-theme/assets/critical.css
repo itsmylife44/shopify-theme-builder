@@ -193,9 +193,9 @@ h6,
   fill: rgb(from var(--color-foreground) r g b / 0.4);
 }
 
-/* Buttons: every button and button-like link is a .button (primary) or a .button--secondary,
-   sized and shaped by the --button-* variables and colored by its color scheme. Sections
-   only lay them out. */
+/* Buttons: every button and button-like link is a .button (primary, filled or an outline
+   by the theme setting) or a .button--secondary, sized and shaped by the --button-* variables
+   and colored by its color scheme. Sections only lay them out. */
 .button,
 .button--secondary {
   display: inline-flex;
@@ -206,8 +206,8 @@ h6,
   padding: var(--button-padding-block) var(--button-padding-inline);
   border: var(--button-border-width) solid var(--color-button-border);
   border-radius: var(--button-radius);
-  background-color: var(--color-button);
-  color: var(--color-button-label);
+  background-color: var(--color-primary-button);
+  color: var(--color-primary-button-label);
   font: inherit;
   font-weight: var(--button-font-weight);
   text-align: center;
@@ -236,6 +236,7 @@ h6,
   height: 100%;
   padding: var(--card-padding);
   border: var(--card-border-width) solid var(--color-border);
+  border-radius: var(--style-border-radius-cards);
   background-color: var(--card-background);
   text-align: var(--card-text-align);
 }
@@ -244,6 +245,7 @@ h6,
   display: block;
   aspect-ratio: var(--card-image-ratio);
   overflow: hidden;
+  border-radius: var(--style-border-radius-media);
 }
 
 .product-card__image img,
@@ -317,7 +319,7 @@ a.product-card__title:hover {
 /**
  * Basic pages: the Brand-styled layout of the sections on the cart, page, blog, article,
  * search, 404, password and collections list templates. The section's color scheme class
- * sets the colors; everything else comes from the Brand's fonts and input corner radius.
+ * sets the colors; everything else comes from the Brand's fonts and shape.
  */
 .basic-page {
   display: grid;

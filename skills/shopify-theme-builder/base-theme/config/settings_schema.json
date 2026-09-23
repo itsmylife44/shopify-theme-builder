@@ -273,16 +273,103 @@
           "on_secondary_button": "text",
           "secondary_button_border": "text"
         }
+      }
+    ]
+  },
+  {
+    "name": "t:general.shape",
+    "settings": [
+      {
+        "type": "select",
+        "id": "shape_family",
+        "label": "t:labels.shape_family",
+        "info": "t:info.shape_family",
+        "options": [
+          {
+            "value": "square",
+            "label": "t:options.shape_family.square"
+          },
+          {
+            "value": "soft",
+            "label": "t:options.shape_family.soft"
+          },
+          {
+            "value": "round",
+            "label": "t:options.shape_family.round"
+          }
+        ],
+        "default": "soft"
       },
       {
         "type": "range",
-        "id": "input_corner_radius",
-        "min": 0,
-        "max": 10,
+        "id": "border_width",
+        "min": 1,
+        "max": 3,
         "step": 1,
         "unit": "px",
-        "label": "t:labels.input_corner_radius",
-        "default": 4
+        "label": "t:labels.border_width",
+        "default": 1
+      }
+    ]
+  },
+  {
+    "name": "t:general.buttons",
+    "settings": [
+      {
+        "type": "select",
+        "id": "button_primary_style",
+        "label": "t:labels.button_primary_style",
+        "options": [
+          {
+            "value": "filled",
+            "label": "t:options.button_primary_style.filled"
+          },
+          {
+            "value": "outline",
+            "label": "t:options.button_primary_style.outline"
+          }
+        ],
+        "default": "filled"
+      },
+      {
+        "type": "select",
+        "id": "button_text_case",
+        "label": "t:labels.button_text_case",
+        "options": [
+          {
+            "value": "none",
+            "label": "t:options.heading_case.none"
+          },
+          {
+            "value": "uppercase",
+            "label": "t:options.heading_case.uppercase"
+          }
+        ],
+        "default": "none"
+      },
+      {
+        "type": "select",
+        "id": "button_font_weight",
+        "label": "t:labels.button_font_weight",
+        "options": [
+          {
+            "value": "font",
+            "label": "t:options.button_font_weight.font"
+          },
+          {
+            "value": "500",
+            "label": "t:options.heading_weight.medium"
+          },
+          {
+            "value": "600",
+            "label": "t:options.heading_weight.semibold"
+          },
+          {
+            "value": "700",
+            "label": "t:options.heading_weight.bold"
+          }
+        ],
+        "default": "font"
       }
     ]
   },
