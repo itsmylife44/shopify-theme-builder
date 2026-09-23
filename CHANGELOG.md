@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- An image gallery section shows a grid of images, each with an optional caption and link, with a column count; Shopify's image placeholder shows until an image is picked.
 - A blog posts section shows the latest articles of a blog, each with its image, title, date and excerpt, with a post count and a column count; Shopify's image placeholder shows until a blog is picked.
 - A video section plays a YouTube, Vimeo or Shopify-hosted video under an optional heading. With a cover image, the video loads only when a customer presses play; YouTube videos use the privacy-enhanced mode. Shopify's placeholder shows until a video is picked.
 - A multicolumn section shows columns, each with an icon or image, a heading and text, for benefits or steps, with a column count and text alignment; Shopify's image placeholder shows until an image is picked.

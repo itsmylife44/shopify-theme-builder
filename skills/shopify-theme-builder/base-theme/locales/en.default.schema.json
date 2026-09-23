@@ -64,7 +64,9 @@
     "slide": "Slide",
     "multicolumn": "Multicolumn",
     "video": "Video",
-    "blog_posts": "Blog posts"
+    "blog_posts": "Blog posts",
+    "image_gallery": "Image gallery",
+    "image": "Image"
   },
   "labels": {
     "alignment": "Alignment",
@@ -134,7 +136,8 @@
     "video_url": "YouTube or Vimeo URL",
     "cover_image": "Cover image",
     "blog": "Blog",
-    "posts_to_show": "Posts to show"
+    "posts_to_show": "Posts to show",
+    "caption": "Caption"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
