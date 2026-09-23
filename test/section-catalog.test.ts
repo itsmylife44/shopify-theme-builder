@@ -164,6 +164,16 @@ describe('Product page requirements', () => {
     expect(picker).toContain('<span class="visually-hidden">{{ option_value | escape }}</span>')
   })
 
+  it('loads the Shopify model viewer for 3D models and plays YouTube or Vimeo media', () => {
+    const media = source.slice(source.indexOf('class="main-product__media"'), source.indexOf('</ul>'))
+    expect(media).toMatch(/{% when 'model' %}\s*<product-model[^>]*>\s*{{ media \| model_viewer_tag/)
+    expect(media).toMatch(/{% when 'external_video' %}\s*{{ media \| external_video_tag/)
+    expect(source).toContain('https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.css')
+    expect(source).toContain("name: 'model-viewer-ui'")
+    expect(source).toContain('new Shopify.ModelViewerUI(')
+    expect(source).toContain("customElements.define('product-model'")
+  })
+
   it('shows the selling plan of each cart line', () => {
     const cart = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-cart.liquid'), 'utf8')
     expect(cart).toContain('{% if item.selling_plan_allocation %}')
