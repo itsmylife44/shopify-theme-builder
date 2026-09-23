@@ -53,6 +53,47 @@
   {% endfor %}
 {% endcapture %}
 
+{% capture header_localization %}
+  {% if section.settings.show_localization %}
+    {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
+      {% form 'localization', id: 'HeaderLocalization', class: 'header__localization' %}
+        {% if localization.available_countries.size > 1 %}
+          <label class="visually-hidden" for="HeaderCountry">{{ 'localization.country' | t }}</label>
+          <select id="HeaderCountry" name="country_code">
+            {% for country in localization.available_countries %}
+              <option
+                value="{{ country.iso_code }}"
+                {% if country.iso_code == localization.country.iso_code %}
+                  selected
+                {% endif %}
+              >
+                {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        {% if localization.available_languages.size > 1 %}
+          <label class="visually-hidden" for="HeaderLanguage">{{ 'localization.language' | t }}</label>
+          <select id="HeaderLanguage" name="language_code">
+            {% for language in localization.available_languages %}
+              <option
+                value="{{ language.iso_code }}"
+                lang="{{ language.iso_code }}"
+                {% if language.iso_code == localization.language.iso_code %}
+                  selected
+                {% endif %}
+              >
+                {{ language.endonym_name | capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        <button type="submit">{{ 'localization.update' | t }}</button>
+      {% endform %}
+    {% endif %}
+  {% endif %}
+{% endcapture %}
+
 <header class="header full-width color-{{ section.settings.color_scheme }}">
   <header-menu class="header__inner">
     {% if section.settings.menu.links.size > 0 %}
@@ -81,6 +122,7 @@
               {{ menu_items }}
             </ul>
           </nav>
+          {{ header_localization | replace: 'Header', 'HeaderDrawer' }}
         </div>
       </dialog>
     {% endif %}
@@ -114,44 +156,7 @@
     {% endif %}
 
     <div class="header__icons">
-      {% if section.settings.show_localization %}
-        {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
-          {% form 'localization', id: 'HeaderLocalization', class: 'header__localization' %}
-            {% if localization.available_countries.size > 1 %}
-              <label class="visually-hidden" for="HeaderCountry">{{ 'localization.country' | t }}</label>
-              <select id="HeaderCountry" name="country_code">
-                {% for country in localization.available_countries %}
-                  <option
-                    value="{{ country.iso_code }}"
-                    {% if country.iso_code == localization.country.iso_code %}
-                      selected
-                    {% endif %}
-                  >
-                    {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
-                  </option>
-                {% endfor %}
-              </select>
-            {% endif %}
-            {% if localization.available_languages.size > 1 %}
-              <label class="visually-hidden" for="HeaderLanguage">{{ 'localization.language' | t }}</label>
-              <select id="HeaderLanguage" name="language_code">
-                {% for language in localization.available_languages %}
-                  <option
-                    value="{{ language.iso_code }}"
-                    lang="{{ language.iso_code }}"
-                    {% if language.iso_code == localization.language.iso_code %}
-                      selected
-                    {% endif %}
-                  >
-                    {{ language.endonym_name | capitalize }}
-                  </option>
-                {% endfor %}
-              </select>
-            {% endif %}
-            <button type="submit">{{ 'localization.update' | t }}</button>
-          {% endform %}
-        {% endif %}
-      {% endif %}
+      {{ header_localization }}
       {% if section.settings.show_search %}
         <details class="header__search">
           <summary class="header__search-toggle" aria-label="{{ 'header.search' | t }}">
@@ -444,6 +449,22 @@
     font-size: 0.875rem;
   }
 
+  .header__icons .header__localization {
+    flex-wrap: nowrap;
+  }
+
+  .header__icons .header__localization select {
+    max-width: 10rem;
+  }
+
+  .header__drawer .header__localization {
+    margin-block-start: auto;
+  }
+
+  header-menu:defined .header__localization button {
+    display: none;
+  }
+
   .header__localization select,
   .header__localization button {
     padding: 0.25rem 0.5rem;
@@ -534,9 +555,20 @@
     text-align: center;
   }
 
+  @media (max-width: 749px) {
+    .header__menu-button ~ .header__icons .header__localization {
+      display: none;
+    }
+  }
+
   @media (min-width: 750px) {
+    .header__inner {
+      flex-wrap: nowrap;
+    }
+
     .header__menu {
       display: block;
+      min-width: 0;
     }
 
     .header__menu-button {
@@ -701,6 +733,11 @@
       const drawer = this.querySelector('#HeaderDrawer');
       this.querySelector('.header__menu-button')?.addEventListener('click', () => drawer.showModal(), { signal });
       drawer?.addEventListener('click', (event) => event.target === drawer && drawer.close(), { signal });
+      this.addEventListener(
+        'change',
+        (event) => event.target.form?.classList.contains('header__localization') && event.target.form.requestSubmit(),
+        { signal }
+      );
       this.addEventListener(
         'keydown',
         (event) => {
