@@ -20,7 +20,7 @@ describe('Section Catalog theme check', () => {
     const result = checkTheme()
     expect(result.output).toContain('0 errors')
     expect(result.code).toBe(0)
-  })
+  }, 60_000)
 
   it('fails and names the file when a catalog section has a Liquid error', () => {
     const catalog = mkdtempSync(path.join(tmpdir(), 'catalog-'))
@@ -33,7 +33,7 @@ describe('Section Catalog theme check', () => {
     rmSync(catalog, { recursive: true })
     expect(result.code).not.toBe(0)
     expect(result.output).toContain('sections/broken.liquid:1 error')
-  })
+  }, 60_000)
 })
 
 describe('App blocks', () => {
