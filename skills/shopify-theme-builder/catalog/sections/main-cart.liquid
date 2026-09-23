@@ -18,7 +18,7 @@
               <td>
                 <div class="main-cart__product">
                   {% if item.image %}
-                    {% render 'image', class: 'main-cart__image', image: item.image, url: item.url, width: 160, height: 160, crop: 'center' %}
+                    {% render 'image', class: 'main-cart__image', image: item.image, url: item.url, width: 160, height: 160, crop: 'center', sizes: '5rem' %}
                   {% else %}
                     {{ 'product-1' | placeholder_svg_tag: 'main-cart__image placeholder' }}
                   {% endif %}

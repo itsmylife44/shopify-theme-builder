@@ -1494,3 +1494,48 @@ describe('Catalog updates', () => {
     expect(readFileSync(path.join(projectDir, 'README.md'), 'utf8')).toMatch(/catalog fixes/i)
   })
 })
+
+describe('Image loading', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const stylesheet = (source: string) => source.match(/{% stylesheet %}([\s\S]*?){% endstylesheet %}/)?.[1] ?? ''
+
+  it.each(['hero', 'slideshow', 'main-product'])('loads the first viewport image of %s first: high fetch priority, never lazy, never animated', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    // The branch that gives the image high priority also loads it eagerly.
+    expect(source).toMatch(/\n\s*if [^\n]+\n\s*assign loading = 'eager'\n\s*assign fetchpriority = 'high'\n/)
+    const call = source.match(/\| image_tag:[\s\S]*?}}/)![0]
+    expect(call).toContain('loading: loading')
+    expect(call).toContain('fetchpriority: fetchpriority')
+    expect(stylesheet(source)).not.toMatch(/animation|@keyframes/)
+  })
+
+  // The catalog's sections and the Base Theme snippets they render.
+  const files = [
+    ...readdirSync(path.join(skillDir, 'catalog/sections'))
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => `catalog/sections/${file}`),
+    'base-theme/snippets/product-card.liquid',
+    'base-theme/snippets/image.liquid',
+  ]
+
+  it.each(files)('gives every image_tag in %s sizes and keeps its width and height, so it holds a ratio', (file) => {
+    const source = read(file).replace(/{% doc %}[\s\S]*?{% enddoc %}/, '')
+    for (const [call] of source.matchAll(/\| image_tag\b[^}]*}}/g)) {
+      expect(call, call).toMatch(/\bsizes:/)
+      expect(call, call).not.toMatch(/\b(width|height): (nil|false|'')/)
+    }
+    for (const [call] of source.matchAll(/{% render 'image',[^%]*%}/g)) {
+      expect(call, call).toMatch(/\bsizes:/)
+    }
+  })
+
+  it.each(['blog-posts', 'collection-list', 'image-gallery', 'main-blog', 'main-list-collections', 'main-search', 'multicolumn'])(
+    'fits every image of the %s grid into a fixed ratio box, so mixed image ratios keep the rows even',
+    (name) => {
+      const css = stylesheet(read(`catalog/sections/${name}.liquid`))
+      expect(css).toMatch(/aspect-ratio:/)
+      expect(css).toMatch(/object-fit: cover/)
+    },
+  )
+})
