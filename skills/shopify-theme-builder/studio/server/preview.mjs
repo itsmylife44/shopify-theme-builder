@@ -23,7 +23,7 @@ const passwordMissing =
 
 
 /**
- * @typedef {{ status: 'starting' | 'login-required' | 'error', message: string } | { status: 'running', url: string }} PreviewState
+ * @typedef {{ status: 'starting' | 'login-required' | 'reconnecting' | 'error', message: string } | { status: 'running', url: string }} PreviewState
  */
 
 /**
@@ -46,14 +46,18 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     onChange(state)
   }
 
-  checkCli(cli).then(() => freePort(themePort(theme))).then(
-    (port) => {
+  // ponytail: one restart a minute at most; a session lost again right away isn't one a restart fixes.
+  let reconnected = 0
+
+  function run() {
+    freePort(themePort(theme)).then((port) => {
       if (stopped) return
       const args = ['theme', 'dev', '--path', theme, '--store', store, '--port', String(port)]
       // No stdin: theme dev must not take over the Studio's terminal with its own prompts and keys.
       // The password goes in the CLI's environment variable, where other processes can't list it.
       const env = storePassword ? { ...process.env, SHOPIFY_FLAG_STORE_PASSWORD: storePassword } : process.env
-      child = spawn(cli, args, { stdio: ['ignore', 'pipe', 'pipe'], env })
+      const current = spawn(cli, args, { stdio: ['ignore', 'pipe', 'pipe'], env })
+      child = current
       let output = ''
       /**
        * Echoes the CLI's output to the Studio's terminal, where the Creator logs in, and reads the status from it.
@@ -71,17 +75,20 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
           set({ status: 'login-required', message: loginWaiting })
         }
       }
-      child.stdout?.on('data', echoAndRead(process.stdout))
-      child.stderr?.on('data', echoAndRead(process.stderr))
-      child.on('error', (error) => set({ status: 'error', message: `Could not run the Shopify CLI: ${error.message}` }))
-      child.on('exit', (code) => {
+      current.stdout?.on('data', echoAndRead(process.stdout))
+      current.stderr?.on('data', echoAndRead(process.stderr))
+      current.on('error', (error) => set({ status: 'error', message: `Could not run the Shopify CLI: ${error.message}` }))
+      current.on('exit', (code) => {
+        // A run that reconnect() replaced ends quietly.
+        if (current !== child) return
         if (state.status === 'login-required') return set({ status: 'login-required', message: loginStopped })
         if (passwordPrompt.test(output)) return set({ status: 'error', message: passwordMissing })
         set({ status: 'error', message: `shopify theme dev stopped (exit code ${code}). ${lastLines(output)}`.trim() })
       })
-    },
-    (/** @type {Error} */ error) => set({ status: 'error', message: error.message }),
-  )
+    })
+  }
+
+  checkCli(cli).then(run, (/** @type {Error} */ error) => set({ status: 'error', message: error.message }))
 
   return {
     get state() {
@@ -90,6 +97,21 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     /** The Theme Editor of theme dev's development theme, once theme dev printed its share link. */
     get editor() {
       return editor
+    },
+    /**
+     * Restarts theme dev when its storefront session expired, since a new run logs in to the storefront again.
+     * Returns false and does nothing while theme dev isn't running, or when it restarted less than a minute ago.
+     */
+    reconnect() {
+      if (state.status !== 'running' || Date.now() - reconnected < 60_000) return false
+      reconnected = Date.now()
+      set({ status: 'reconnecting', message: 'Reconnecting to the store, whose storefront session expired…' })
+      const previous = child
+      child = undefined
+      // The new run waits for the old one to free the preview port, so it takes the same port again.
+      if (previous && previous.exitCode === null && previous.signalCode === null) previous.once('exit', run).kill()
+      else run()
+      return true
     },
     stop() {
       stopped = true

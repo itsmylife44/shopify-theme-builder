@@ -1749,6 +1749,43 @@ describe('Studio: live preview', () => {
     expect(await (await fetch(`${body.url}/products.json`)).text()).toBe('{"products":[{"handle":"clay-mug"}]}')
   })
 
+  // theme dev's storefront session can expire (#113): the store then answers 401, or redirects to its password page.
+  it.each([
+    ['a 401', (res: import('node:http').ServerResponse) => res.writeHead(401).end()],
+    ['a redirect to the password page', (res: import('node:http').ServerResponse) => res.writeHead(302, { Location: '/password' }).end()],
+  ])('restarts theme dev when its storefront session expires with %s, then serves the preview again', async (_, expire) => {
+    let expired = true
+    const themeDev = createHttpServer((req, res) => {
+      if (expired) return expire(res)
+      res.writeHead(200, { 'Content-Type': 'text/html' }).end('<html><body><p>Shop</p></body></html>')
+    })
+    await new Promise<void>((resolve) => themeDev.listen(0, '127.0.0.1', resolve))
+    cleanup.push(() => new Promise((resolve) => themeDev.close(() => resolve())))
+    const themeDevUrl = `http://127.0.0.1:${(themeDev.address() as import('node:net').AddressInfo).port}`
+    // Every run prints its preview link half a second after it starts, long enough to see the reconnection.
+    const cli = fakeShopify({ later: running.replace('http://127.0.0.1:9292', themeDevUrl) })
+    const studio = await openStudio(fixtureTheme(), { cli, storePassword: 'secret' })
+    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
+    const { pid } = await fakeRun(cli)
+    const { body } = await studio.send('GET', 'api/frame')
+
+    // The Creator's preview never lands on the password page: the proxy answers while theme dev restarts.
+    const lost = await fetch(`${body.url}/`, { redirect: 'manual' })
+    expect(lost.status).toBe(503)
+    expect(await studio.readPreview()).toEqual({ status: 'reconnecting', message: expect.stringContaining('Reconnecting') })
+    await expect.poll(() => isRunning(pid)).toBe(false)
+    expired = false
+    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
+    expect((await fakeRun(cli)).pid).not.toBe(pid)
+    expect(await (await fetch(`${body.url}/`)).text()).toContain('<p>Shop</p>')
+
+    // A session lost again right away isn't fixed by restarting: no restart loop, the answer goes through.
+    expired = true
+    const again = await fetch(`${body.url}/`, { redirect: 'manual' })
+    expect(again.status).not.toBe(503)
+    expect((await studio.readPreview()).status).toBe('running')
+  })
+
   const loginPrompt =
     'To run this command, log in to Shopify.\n' +
     'User verification code: ABCD-EFGH\n' +
