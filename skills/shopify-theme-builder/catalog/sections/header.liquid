@@ -1,4 +1,4 @@
-{% comment %}The shop's header: the logo or shop name, the menu, the account link and the cart.{% endcomment %}
+{% comment %}The shop's header: the logo or shop name, the menu, the search link, the account link and the cart.{% endcomment %}
 <header class="header full-width color-{{ section.settings.color_scheme }}">
   <div class="header__inner">
     <a class="header__logo" href="{{ routes.root_url }}">
@@ -42,6 +42,15 @@
     {% endif %}
 
     <div class="header__icons">
+      {% if section.settings.show_search %}
+        <a class="header__search" href="{{ routes.search_url }}" aria-label="{{ 'header.search' | t }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <circle cx="8.75" cy="8.75" r="5.25" stroke="currentColor" stroke-width="var(--icon-stroke-width)" />
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12.5 12.5 4 4" />
+          </svg>
+        </a>
+      {% endif %}
+
       {% if shop.customer_accounts_enabled %}
         <shopify-account menu="{{ section.settings.customer_account_menu }}">
           {{ 'icon-account.svg' | inline_asset_content }}
@@ -130,6 +139,10 @@
     width: 2rem;
   }
 
+  .header__search {
+    display: flex;
+  }
+
   .header__cart {
     position: relative;
     display: flex;
@@ -187,6 +200,12 @@
       "id": "customer_account_menu",
       "label": "t:labels.customer_account_menu",
       "default": "customer-account-main-menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_search",
+      "label": "t:labels.show_search",
+      "default": true
     }
   ],
   "presets": [

@@ -129,3 +129,14 @@ describe('Base Theme templates', () => {
     expect(result.output).toContain('0 errors')
   })
 })
+
+describe('Header search', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/header.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('links to the search page from the header icons, with an accessible label and a setting to hide it', () => {
+    const icons = source.slice(source.indexOf('class="header__icons"'), source.indexOf('class="header__cart"'))
+    expect(icons).toMatch(/{%-? if section\.settings\.show_search -?%}\s*<a class="header__search" href="{{ routes\.search_url }}" aria-label="{{ 'header\.search' \| t }}">/)
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'show_search', type: 'checkbox', default: true }))
+  })
+})
