@@ -1,53 +1,78 @@
+<div align="center">
+
 # Shopify Theme Builder
 
-An agent skill that builds your own Shopify theme by talking to your coding agent, without writing Liquid by hand.
+**Describe your brand. Your coding agent builds the Shopify theme.**
 
-You describe your brand (or point at your website, a screenshot or a moodboard). The agent starts from Shopify's Skeleton theme, adds prebuilt sections, and writes your colors, fonts and logo into the theme's native settings, so the Merchant (the shop's owner) can keep editing everything in Shopify's Theme Editor. A local **Studio** opens next to it: adjust the brand and compose the home, product and collection pages while `shopify theme dev` shows the real rendered theme.
+An agent skill for Claude Code, Codex, Cursor and other coding agents: it turns your website, a screenshot or a moodboard into a real Shopify theme, with a local Studio that shows the rendered store while you shape it.
 
-There is no hosted service and no AI inside the Studio. All generation happens in your own agent, and the theme is a plain folder you own.
+[![CI](https://github.com/itsmylife44/shopify-theme-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/itsmylife44/shopify-theme-builder/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+[![Agent skill](https://img.shields.io/badge/agent%20skill-npx%20skills%20add-black.svg)](https://github.com/vercel-labs/skills)
 
-> This project is not affiliated with, endorsed by, or sponsored by Shopify Inc. "Shopify" is a trademark of Shopify Inc., used here only to say what the skill works with.
+[Quickstart](#quickstart) · [How it works](#how-it-works) · [The Studio](#the-studio) · [Sections](#the-section-catalog) · [FAQ](#faq)
 
-## Install
+![The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected section's settings on the right](docs/images/studio.png)
+
+</div>
+
+## Quickstart
 
 ```sh
 npx skills add itsmylife44/shopify-theme-builder
 ```
 
-This installs the skill into the current project for the agents the [skills CLI](https://github.com/vercel-labs/skills) detects (Claude Code, Codex, Cursor and others). Add `-g` to install it for every project.
+Then ask your agent:
 
-To update it, run `npx skills update -p` in that project (or `npx skills update -g` for a global install). The update replaces the skill's folder, so the agent reinstalls the Studio's dependencies the next time it runs.
+> *Build me a Shopify theme for my shop. Here's my website: https://…*
 
-## Prerequisites
+That's it. The agent checks what your machine needs, asks only what it can't read from your brand, builds the theme and opens the Studio. You need Node.js 22.12+, Git and the Shopify CLI ([details](#prerequisites)); no store yet? The agent creates a free development store for you.
 
-- **Node.js 22.12** or newer, and **Git 2.28** or newer.
-- **Shopify CLI 4.8.0** or newer: `npm install -g @shopify/cli@latest`.
-- **A store** where you are the owner, or have a staff or collaborator account with theme permissions. No store yet? The agent can create a free development store for you. Give each theme its own store: the Shopify CLI keeps one development theme per store per machine.
+## Why
 
-The agent checks all of these first, plus the Studio's dependencies in the skill's folder (`npm ci --omit=dev`), and tells you how to fix what's missing.
+A Shopify store that looks like *your* brand usually means one of three things: a paid theme that looks like every other store using it, weeks of learning Liquid, or an agency. AI page builders are faster, but they lock you into an app, a subscription and their own editor.
 
-## Walkthrough
+Shopify Theme Builder takes a different path:
 
-1. Ask your agent: *"Build me a Shopify theme for my shop. Here's my website: https://…"*
-2. The agent checks the prerequisites and asks for your store's `<shop>.myshopify.com` address, or creates a development store for you. The first time, log in to the Shopify CLI with `shopify auth login` in your own terminal.
-3. It reads your brand from the reference and asks only about what's left: colors, fonts, logo, style, the shop's language, the shop name and the theme's author.
-4. It creates the theme in a new folder with its own Git history, writes the brand, composes the pages, writes their text in your shop's language and opens the Studio. A development store also needs its storefront password for the preview.
-5. Open the Studio in Chrome: your real theme in the middle, its sections on the left, the selected section's colors and text on the right (see [The Studio](#the-studio)). Or ask the agent; either way Theme Check runs after every change.
-6. Need a section the catalog doesn't have? Ask for one; the agent writes it with the same conventions and validates it.
-7. When you're done, ask to deliver: the agent uploads the theme to the store **unpublished**, or packages it as a zip, or explains the GitHub integration. It never publishes: making a theme live is the Merchant's decision.
+- **Your agent does the work.** No hosted service, no AI inside the Studio, no account to create. Generation runs in the coding agent you already use.
+- **Native from the first file.** The theme starts from [Skeleton](https://github.com/Shopify/skeleton-theme), Shopify's own minimal theme. Your colors, fonts and logo live in the theme's settings, so the shop's owner keeps editing everything in Shopify's Theme Editor, with no app installed.
+- **You own a plain folder.** The theme is a Git repository with no build step, ready for Shopify's GitHub integration. Change it by hand, with your agent, or in the Studio.
+- **Checked on every change.** Shopify's Theme Check runs after each edit; the agent fixes errors before it hands you anything.
+- **Nothing goes live by surprise.** Delivery uploads the theme *unpublished*. Publishing stays the owner's decision.
+
+| | Paid theme | Agency or freelancer | AI page-builder app | **Shopify Theme Builder** |
+| --- | --- | --- | --- | --- |
+| Looks like your brand | Partly | Yes | Partly | **Yes** |
+| Time to a first version | Hours | Weeks | Minutes | **Minutes** |
+| Edited in Shopify's Theme Editor | Yes | Depends | Often in the app's own editor | **Yes** |
+| No app or subscription on the store | Yes | Yes | No | **Yes** |
+| You own the code | License | Depends on the contract | No | **Yes** |
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Your brand<br/>website · screenshot · moodboard"] --> B["Your coding agent<br/>+ this skill"]
+    B --> C["Theme folder<br/>Skeleton + catalog sections"]
+    C <--> D["Studio<br/>live preview in Chrome"]
+    C --> E["Your Shopify store<br/>uploaded unpublished"]
+```
+
+1. **Brand.** The agent reads your colors, fonts, logo and style from the reference, and asks about the rest: the shop's language, its name, the theme's author.
+2. **Theme.** It creates the theme in a new folder with its own Git history, writes the Brand, composes the home, product and collection pages from the Section Catalog, and writes every heading and paragraph in your shop's language.
+3. **Studio.** It opens the Studio, where you see the real store rendered by Shopify and change colors, text and section order.
+4. **Custom sections.** Need something the catalog doesn't have, like a size guide? Ask. The agent writes a section with the same conventions and validates it.
+5. **Delivery.** Ask to deliver: the agent uploads the theme to your store unpublished, packages it as a zip, or explains the GitHub integration.
 
 ## The Studio
 
 The Studio is a local app that opens next to your agent, in Google Chrome. It shows your real theme, rendered by Shopify through `shopify theme dev`, and saves every change straight into the theme's files, where your agent sees it too.
 
-![The Studio: the home page's sections on the left, the live preview in the middle, the selected section's settings on the right](docs/images/studio.png)
-
-- **Pages.** Switch between the home, product and collection pages in the top bar.
-- **Sections.** Click a section in the preview, or in the list on the left, to select it. On the right, pick its color scheme, write its text (and its blocks' text, like each testimonial), move it up or down, or remove it.
-- **Add sections** from the Section Catalog, or the Custom Sections your agent wrote, each with a line saying what it does.
-- **Brand.** Colors, fonts from Shopify's font library, and the logo, for the whole theme.
-- **Checks.** Theme Check runs after every change; the top bar shows whether it passes.
-- **Desktop and mobile** previews, and a link that opens the preview in its own tab.
+- **Click to edit.** Click a section in the preview, or in the list on the left. On the right, pick its color scheme, rewrite its text (and its blocks' text, like each testimonial), move it or remove it.
+- **Add sections** from the Section Catalog, or the Custom Sections your agent wrote.
+- **Brand.** Color schemes, fonts from Shopify's font library, and the logo, for the whole theme.
+- **Pages.** Home, product and collection, in the top bar.
+- **Desktop and mobile** previews, and a Theme Check status that updates after every change.
 
 <p>
   <img src="docs/images/studio-add-section.png" alt="Adding a section: the Section Catalog, each section with its description" width="49%">
@@ -55,6 +80,81 @@ The Studio is a local app that opens next to your agent, in Google Chrome. It sh
 </p>
 
 Images, the header and footer menus, products and collections stay in Shopify's Theme Editor and admin.
+
+## The Section Catalog
+
+Every section follows the Brand through theme settings, has its own color scheme, and shows Shopify's placeholders on an empty store, so a new development store already looks like a shop.
+
+| Page | Sections |
+| --- | --- |
+| Home | Hero (image or video) · Featured collection · Image with text · Rich text · Testimonials · Logo list · FAQ · Newsletter |
+| Product | Main product (media, variants, add to cart) · Related products |
+| Collection | Product grid with filters and sorting |
+| Every page | Header · Footer (menus, email signup, payment icons) |
+
+Every other page (cart, search, blog, 404 …) uses Skeleton's own layout, styled by the same Brand.
+
+## Prerequisites
+
+- **Node.js 22.12** or newer, and **Git 2.28** or newer.
+- **Shopify CLI 4.8.0** or newer: `npm install -g @shopify/cli@latest`. The first time, log in with `shopify auth login` in your own terminal.
+- **A store** where you are the owner, or have a staff or collaborator account with theme permissions. No store yet? The agent can create a free development store for you. Give each theme its own store: the Shopify CLI keeps one development theme per store per machine.
+
+The agent checks all of these first, plus the Studio's dependencies, and tells you how to fix what's missing.
+
+## Install and update
+
+```sh
+npx skills add itsmylife44/shopify-theme-builder
+```
+
+This installs the skill into the current project for the agents the [skills CLI](https://github.com/vercel-labs/skills) detects. Add `-g` to install it for every project.
+
+To update it, run `npx skills update -p` in that project (or `npx skills update -g` for a global install). The update replaces the skill's folder, so the agent reinstalls the Studio's dependencies the next time it runs.
+
+## FAQ
+
+<details>
+<summary><b>Do I need to know Liquid or how to code?</b></summary>
+
+No. You talk to your agent and click in the Studio. The theme is still plain Liquid, so a developer can take over any time.
+</details>
+
+<details>
+<summary><b>Which agents does it work with?</b></summary>
+
+Any agent the [skills CLI](https://github.com/vercel-labs/skills) supports, including Claude Code, Codex and Cursor. The skill is a set of instructions plus a local app; it doesn't depend on one model.
+</details>
+
+<details>
+<summary><b>What does it cost?</b></summary>
+
+The skill is free and open source. You pay only for the agent you already use; a Shopify development store is free.
+</details>
+
+<details>
+<summary><b>Will it change my live store?</b></summary>
+
+No. The preview runs on a development theme, and delivery uploads the theme unpublished. Publishing is always your decision, in Shopify admin.
+</details>
+
+<details>
+<summary><b>Can my shop be in a language other than English?</b></summary>
+
+Yes. The agent writes the page text in the shop's language and adds the theme's translation files for it.
+</details>
+
+<details>
+<summary><b>Does my data go anywhere?</b></summary>
+
+The skill has no server of its own. Your agent talks to its model provider as usual, and the Shopify CLI talks to your store.
+</details>
+
+## Contributing
+
+Issues, ideas and new catalog sections are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the setup, the checks CI runs, and the conventions every section follows.
+
+If Shopify Theme Builder saved you a week of Liquid, a ⭐ helps other shop owners find it.
 
 ## License
 
@@ -66,6 +166,4 @@ Images, the header and footer menus, products and collections stay in Shopify's 
 
 A theme you build with this skill contains Base Theme files, so those files stay under Shopify's license: the theme can be used only with Shopify. The catalog sections copied into it remain MIT.
 
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+> This project is not affiliated with, endorsed by, or sponsored by Shopify Inc. "Shopify" is a trademark of Shopify Inc., used here only to say what the skill works with.
