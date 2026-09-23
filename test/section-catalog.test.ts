@@ -495,6 +495,34 @@ describe('Collection list', () => {
   })
 })
 
+describe('Featured product', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/featured-product.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="featured-product full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.featured_product' }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows the picked product with its media, price, variant picker and add to cart, and a placeholder when none is picked', () => {
+    expect(schema.settings).toContainEqual(expect.objectContaining({ type: 'product', id: 'product' }))
+    expect(source).toContain("{% form 'product', product")
+    expect(source).toContain('<select')
+    expect(source).toContain('name="id"')
+    expect(source).toContain("{{ 'product.add_to_cart' | t }}")
+    expect(source).toContain('| money')
+    expect(source).toContain("'product-1' | placeholder_svg_tag")
+  })
+
+  it('takes app blocks', () => {
+    expect(schema.blocks).toContainEqual({ type: '@app' })
+    expect(source).toContain("{% content_for 'blocks' %}")
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

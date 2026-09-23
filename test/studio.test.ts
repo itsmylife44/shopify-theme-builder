@@ -1260,7 +1260,7 @@ describe('Studio API: home page', () => {
   it('offers and adds every real catalog home section with a color scheme and a clean Theme Check', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
-    const types = ['hero', 'featured-collection', 'collection-list', 'image-with-text', 'rich-text', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
+    const types = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'image-with-text', 'rich-text', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
     expect((await studio.readTheme()).catalog.home).toEqual(types.toSorted())
     let body
     for (const type of types) ({ body } = await studio.addSection(type))
