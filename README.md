@@ -81,7 +81,7 @@ The Studio is a local app that opens next to your agent, in Google Chrome. It sh
   <img src="docs/images/studio-brand.png" alt="The Brand tab with the color schemes and fonts, next to the mobile preview" width="49%">
 </p>
 
-Images, the header and footer menus, products and collections stay in Shopify's Theme Editor and admin.
+Images stay in Shopify's Theme Editor, and products, collections and menus in the Shopify admin.
 
 ## The Section Catalog
 
