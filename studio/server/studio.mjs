@@ -198,7 +198,7 @@ class NotFound extends HttpError {
  *   logoAsset: string | null,
  * }} Brand
  * @typedef {keyof typeof pages} Page
- * @typedef {Record<Page, TemplateSection[]> & { catalog: Record<Page, string[]>, brand: Brand, validation: Offense[] }} ThemeState
+ * @typedef {Record<Page, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, brand: Brand, validation: Offense[] }} ThemeState
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
  */
 
@@ -212,6 +212,7 @@ async function readThemeState(theme, catalog, validation) {
   return {
     ...perPage((file) => readTemplate(theme, file)),
     catalog: perPage((file) => listSections(catalog, file)),
+    custom: perPage((file) => listCustomSections(theme, catalog, file)),
     brand: readBrand(theme),
     validation: await validation,
   }
@@ -699,7 +700,7 @@ function goesOn(sectionFile, template) {
 }
 
 /**
- * The catalog sections a page can take.
+ * The sections in a folder laid out like a theme that a page can take.
  * @param {string} dir
  * @param {string} template The page's JSON template.
  */
@@ -708,6 +709,18 @@ function listSections(dir, template) {
     .filter((file) => file.endsWith('.liquid') && goesOn(path.join(dir, 'sections', file), template))
     .map((file) => file.slice(0, -'.liquid'.length))
     .sort()
+}
+
+/**
+ * The Custom Sections a page can take: the Theme's sections that neither the Base Theme nor the catalog has.
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {string} template The page's JSON template.
+ */
+function listCustomSections(theme, catalog, template) {
+  return listSections(theme, template).filter(
+    (type) => ![baseTheme, catalog].some((dir) => existsSync(path.join(dir, 'sections', `${type}.liquid`))),
+  )
 }
 
 /**

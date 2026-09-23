@@ -172,7 +172,24 @@ describe('Studio API: read Theme state', () => {
     expect(state.product).toEqual([{ id: 'main', type: 'product' }])
     expect(state.collection).toEqual([{ id: 'main', type: 'collection' }])
     expect(state.catalog).toEqual({ home: ['hero'], product: ['hero'], collection: ['hero'] })
+    expect(state.custom).toEqual({ home: [], product: [], collection: [] })
     expect(state.validation.filter((o: { severity: string }) => o.severity === 'error')).toEqual([])
+  })
+
+  it('lists the Custom Sections per page: the Theme\'s sections that neither the Base Theme nor the catalog has', async () => {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/pull-quote.liquid'), '<blockquote></blockquote>\n{% schema %}{"name": "Pull quote"}{% endschema %}\n')
+    writeFileSync(
+      path.join(theme, 'sections/size-guide.liquid'),
+      '<div></div>\n{% schema %}{"name": "Size guide", "enabled_on": {"templates": ["product"]}}{% endschema %}\n',
+    )
+    const studio = await openStudio(theme)
+    await studio.addSection('hero')
+    expect((await studio.readTheme()).custom).toEqual({
+      home: ['pull-quote'],
+      product: ['pull-quote', 'size-guide'],
+      collection: ['pull-quote'],
+    })
   })
 
   it('surfaces a Theme Check error for invalid Liquid in the Theme', async () => {
