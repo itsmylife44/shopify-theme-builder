@@ -93,9 +93,10 @@ Every section follows the Brand through theme settings, has its own color scheme
 | Product | Main product (media, variants, add to cart) · Related products |
 | Collection | Product grid with filters and sorting |
 | Cart | Main cart (discounts, order note, Shop Pay and other accelerated checkout buttons) |
+| Search | Search results (products, articles and pages) with filters and sorting |
 | Every page | Header · Footer (menus, email signup, country and language selectors, payment icons) |
 
-Every other page (search, blog, 404 …) uses Skeleton's own layout, styled by the same Brand.
+Every other page (blog, 404 …) uses Skeleton's own layout, styled by the same Brand.
 
 ## Prerequisites
 

@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The search page has the collection page's filters and sorting, and shows products, articles and pages in a grid; new Themes use it.
 - The related products section can show complementary products (set in the Search & Discovery app) instead, and has a "Complementary products" preset; it shows nothing on the storefront when there are none.
 - The product page shows 3D models in Shopify's model viewer, with its zoom and fullscreen controls, and plays YouTube and Vimeo videos.
 - The product page's variant picker shows an option value's color or image swatch, with the value's name as its accessible label, and the text pill when it has none.
