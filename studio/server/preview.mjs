@@ -1,6 +1,7 @@
 // The Theme's live preview: the Studio runs `shopify theme dev` and reads its status from the CLI's
 // output (ADR-0003). The output formats below were checked against Shopify CLI 4.8.0.
 import { execFile, spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { createServer } from 'node:net'
 import { promisify, stripVTControlCharacters } from 'node:util'
 
@@ -41,7 +42,7 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     onChange(state)
   }
 
-  checkCli(cli).then(() => freePort()).then(
+  checkCli(cli).then(() => freePort(themePort(theme))).then(
     (port) => {
       if (stopped) return
       const args = ['theme', 'dev', '--path', theme, '--store', store, '--port', String(port)]
@@ -122,11 +123,21 @@ function previewUrl(output) {
 }
 
 /**
- * 9292, theme dev's usual port, or a free one when another theme dev (for another Theme, say) holds it.
+ * The preview port of a Theme: the same on every Studio start, so the Creator's preview link keeps working,
+ * and different per Theme folder, so it rarely meets another project's theme dev (which defaults to 9292).
+ * @param {string} theme
+ */
+function themePort(theme) {
+  // ponytail: two Themes may hash to the same port; the second then gets a random one, as when it's taken.
+  return 9293 + (createHash('sha256').update(theme).digest().readUInt32BE() % 700)
+}
+
+/**
+ * `port`, or a free one when another process (another project's theme dev, say) holds it.
  * @param {number} port
  * @returns {Promise<number>}
  */
-function freePort(port = 9292) {
+function freePort(port) {
   return new Promise((resolve) => {
     const server = createServer()
     server.once('error', () => resolve(freePort(0)))

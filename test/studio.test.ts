@@ -1049,6 +1049,20 @@ describe('Studio: live preview', () => {
     expect(args.at(-1)).not.toBe('9292')
   })
 
+  it('keeps the preview on the same port when the Studio restarts, even with 9292 taken', async () => {
+    const taken = createServer()
+    await new Promise((resolve) => taken.once('error', resolve).listen(9292, '127.0.0.1', () => resolve(undefined)))
+    cleanup.push(() => new Promise((resolve) => taken.close(() => resolve())))
+    const theme = fixtureTheme()
+    const first = fakeShopify()
+    const studio = await openStudio(theme, { cli: first })
+    const port = (await fakeRun(first)).args.at(-1)
+    await studio.close()
+    const second = fakeShopify()
+    await openStudio(theme, { cli: second })
+    expect((await fakeRun(second)).args.at(-1)).toBe(port)
+  })
+
   it('stops theme dev when the Studio closes', async () => {
     const cli = fakeShopify({ output: running })
     const studio = await openStudio(fixtureTheme(), { cli })
