@@ -225,6 +225,13 @@ describe('Product page requirements', () => {
     expect(picker).toContain('<span class="visually-hidden">{{ option_value | escape }}</span>')
   })
 
+  it('links option values of combined listings to their sibling product, swatches included', () => {
+    const picker = source.slice(source.indexOf('class="main-product__options"'), source.indexOf('</fieldset>'))
+    expect(picker).toContain('data-product-url="{{ option_value.product_url }}"')
+    expect(source).toContain('const { productUrl } = event.target.dataset')
+    expect(source).toMatch(/if \(productUrl && productUrl !== this\.dataset\.url\) {\s*location\.assign\(`\${productUrl}\?option_values=\${optionValues}`\)/)
+  })
+
   it('loads the Shopify model viewer for 3D models and plays YouTube or Vimeo media', () => {
     const media = source.slice(source.indexOf('class="main-product__media"'), source.indexOf('</ul>'))
     expect(media).toMatch(/{% when 'model' %}\s*<product-model[^>]*>\s*{{ media \| model_viewer_tag/)
