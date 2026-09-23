@@ -111,6 +111,12 @@
         {% endif %}
       {% endform %}
 
+      {% for block in section.blocks %}
+        <div class="main-product__app" {{ block.shopify_attributes }}>
+          {% render block %}
+        </div>
+      {% endfor %}
+
       {% if product.description != blank %}
         <div class="main-product__description">{{ product.description }}</div>
       {% endif %}
@@ -361,6 +367,11 @@
       "id": "show_dynamic_checkout",
       "label": "t:labels.show_dynamic_checkout_buttons",
       "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
     }
   ],
   "presets": [
