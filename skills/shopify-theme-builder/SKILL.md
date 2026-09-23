@@ -1,8 +1,10 @@
 ---
 name: shopify-theme-builder
 description: Builds a Creator's own Shopify theme from Shopify's Skeleton theme and a catalog of prebuilt sections, styled with their brand, and opens a local Studio with a live preview. Use when someone wants a new Shopify theme, a custom Shopify store design, or to restyle a Shopify shop from their website, screenshot or moodboard.
+license: MIT, see LICENSE. base-theme/ is under Shopify's Skeleton theme license, see base-theme/LICENSE.md.
 metadata:
   version: "0.1.0"
+  author: itsmylife44
 ---
 
 # Shopify Theme Builder
