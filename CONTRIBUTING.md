@@ -2,6 +2,8 @@
 
 Issues and plans live in [GitHub Issues](https://github.com/itsmylife44/shopify-theme-builder/issues). Everything in the repo (code, `SKILL.md`, docs) is written in English, using the terms defined in [`CONTEXT.md`](CONTEXT.md) (Creator, Merchant, Theme, Brand, Section Catalog, Studio …). Decisions are recorded in [`docs/adr/`](docs/adr), and the research behind them is in [`docs/research/`](docs/research).
 
+Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Report a security problem privately, as [`SECURITY.md`](SECURITY.md) explains, never in a public issue.
+
 ## Layout
 
 | Path | What it is |
