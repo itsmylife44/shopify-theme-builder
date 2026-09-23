@@ -35,6 +35,25 @@ describe('Section Catalog theme check', () => {
   })
 })
 
+describe('Contact page', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+
+  it('ships a page.contact template with the page content and the contact form', () => {
+    const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/page.contact.json'), 'utf8'))
+    expect(order.map((id: string) => sections[id].type)).toEqual(['page', 'contact-form'])
+    const form = readFileSync(path.join(skillDir, 'catalog/sections/contact-form.liquid'), 'utf8')
+    expect(form).toContain("{% form 'contact'")
+    expect(form).toContain('form.posted_successfully?')
+    expect(form).toContain('form.errors')
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/contact-form.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/templates/page.contact.json')
+  })
+})
+
 describe('Base Theme templates', () => {
   const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
   // The pages the Studio doesn't compose: each ships a basic layout that takes a Brand color scheme.

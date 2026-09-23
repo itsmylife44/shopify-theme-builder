@@ -1,0 +1,73 @@
+{% comment %}A contact form that sends the customer's name, email, phone and message to the shop.{% endcomment %}
+<div class="basic-page full-width color-{{ section.settings.color_scheme }}">
+  {% if section.settings.heading != blank %}
+    <h2>{{ section.settings.heading }}</h2>
+  {% endif %}
+
+  {% assign form_id = 'ContactForm-' | append: section.id %}
+  {% form 'contact', id: form_id, class: 'basic-page__form' %}
+    {% if form.posted_successfully? %}
+      <p role="status">{{ 'contact.success' | t }}</p>
+    {% elsif form.errors %}
+      <div role="alert">{{ form.errors | default_errors }}</div>
+    {% endif %}
+
+    <div class="basic-page__field">
+      <label for="{{ form_id }}-name">{{ 'contact.name' | t }}</label>
+      <input type="text" name="contact[name]" id="{{ form_id }}-name" value="{{ form.name }}" autocomplete="name">
+    </div>
+
+    <div class="basic-page__field">
+      <label for="{{ form_id }}-email">{{ 'contact.email' | t }}</label>
+      <input type="email" name="contact[email]" id="{{ form_id }}-email" value="{{ form.email }}" autocomplete="email" required>
+    </div>
+
+    <div class="basic-page__field">
+      <label for="{{ form_id }}-phone">{{ 'contact.phone' | t }}</label>
+      <input type="tel" name="contact[phone]" id="{{ form_id }}-phone" value="{{ form.phone }}" autocomplete="tel">
+    </div>
+
+    <div class="basic-page__field">
+      <label for="{{ form_id }}-message">{{ 'contact.message' | t }}</label>
+      <textarea name="contact[body]" id="{{ form_id }}-message" rows="6" autocomplete="off" required>{{ form.body }}</textarea>
+    </div>
+
+    <button type="submit">{{ section.settings.button_label | escape }}</button>
+  {% endform %}
+</div>
+
+{% schema %}
+{
+  "name": "t:general.contact_form",
+  "tag": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["page"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Get in touch"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "Send"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.contact_form"
+    }
+  ]
+}
+{% endschema %}

@@ -9,7 +9,7 @@ The product skill lives in `skills/shopify-theme-builder/`, the only folder `npx
 
 Two folders form every Theme: `base-theme/` (Shopify's Skeleton, vendored under its own `LICENSE.md`; provenance in `base-theme/PROVENANCE.md`) and `catalog/` (the Section Catalog, laid out like a theme: `catalog/sections/<name>.liquid`). An example Theme is `base-theme/` with `catalog/` copied on top.
 
-The Studio composes only the home, product and collection pages. Every other JSON template (cart, page, blog, article, search, 404, password, collections list) uses the Base Theme's own section, a basic layout built from the `.basic-page` classes in `base-theme/assets/critical.css` with a color scheme setting, so it follows the Brand. There are no `customers/*` templates: the header links to Shopify's new customer accounts, which need none, so a shop still on classic customer accounts gets no account pages.
+The Studio composes only the home, product and collection pages. Every other JSON template (cart, page, blog, article, search, 404, password, collections list) uses the Base Theme's own section, a basic layout built from the `.basic-page` classes in `base-theme/assets/critical.css` with a color scheme setting, so it follows the Brand. The contact page is the exception: `catalog/templates/page.contact.json` shows the Base Theme's `page` section above the catalog's `contact-form` (enabled only on `page` templates), and the product skill copies both into every Theme in step 3. There are no `customers/*` templates: the header links to Shopify's new customer accounts, which need none, so a shop still on classic customer accounts gets no account pages.
 
 ## Validate
 
