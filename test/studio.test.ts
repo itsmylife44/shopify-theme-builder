@@ -43,7 +43,8 @@ function fixtureCatalog() {
 }
 
 /**
- * A stand-in for the Shopify CLI: `version` prints the given version; `theme dev` records its
+ * A stand-in for the Shopify CLI: `version` prints the given version; `store execute` records its arguments
+ * in store.json and prints `store` as JSON, or fails like the CLI without stored auth; `theme dev` records its
  * arguments and pid in run.json, prints the given output (and `later` half a second on), then runs until
  * killed or exits with exitCode.
  */
@@ -52,7 +53,8 @@ function fakeShopify({
   output = '',
   later = '',
   exitCode,
-}: { version?: string; output?: string; later?: string; exitCode?: number } = {}) {
+  store,
+}: { version?: string; output?: string; later?: string; exitCode?: number; store?: object } = {}) {
   const dir = tempDir('shopify-')
   const cli = path.join(dir, 'shopify')
   writeFileSync(
@@ -60,6 +62,15 @@ function fakeShopify({
     `#!/usr/bin/env node
 if (process.argv[2] === 'version') {
   console.log(${JSON.stringify(version)})
+  process.exit(0)
+}
+if (process.argv[2] === 'store') {
+  require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'store.json'))}, JSON.stringify(process.argv.slice(2)))
+  ${
+    store
+      ? `console.log(${JSON.stringify(JSON.stringify(store, null, 2))})`
+      : `console.error('No stored app authentication found for example.myshopify.com.'); process.exit(1)`
+  }
   process.exit(0)
 }
 require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'run.json'))}, JSON.stringify({ args: process.argv.slice(2), pid: process.pid, storePassword: process.env.SHOPIFY_FLAG_STORE_PASSWORD }))
@@ -582,6 +593,116 @@ describe('Studio API: section settings', () => {
     const { sectionInfo } = await (await openStudio(theme, { catalog: realCatalog })).readTheme()
     expect(sectionInfo.footer.description).toBe('Our own footer.')
     expect(sectionInfo.hero.description).toMatch(/banner/)
+  })
+})
+
+describe('Studio API: store resource settings', () => {
+  const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
+  const picks =
+    '<div></div>\n{% schema %}{"name": "Picks", "settings": [' +
+    '{"type": "product_list", "id": "products", "label": "Products", "limit": 2},' +
+    '{"type": "collection_list", "id": "collections", "label": "Collections"},' +
+    '{"type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu"},' +
+    '{"type": "product", "id": "product", "label": "Product"}' +
+    '], "presets": [{"name": "Picks"}]}{% endschema %}\n'
+
+  async function withSection(type: string) {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/picks.liquid'), picks)
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const { body } = await studio.addSection(type)
+    const id = body.home.at(-1).id
+    const patch = (settings: object) => studio.send('PATCH', `api/home/sections/${id}`, { settings })
+    const read = async () => (await studio.send('GET', `api/home/sections/${id}`)).body
+    return { theme, studio, id, patch, read }
+  }
+
+  it("lists a section's collection and link settings with their values", async () => {
+    const featured = await withSection('featured-collection')
+    expect((await featured.read()).settings).toContainEqual({ id: 'collection', type: 'collection', label: 'Collection', value: '' })
+    const hero = await withSection('hero')
+    expect((await hero.read()).settings).toContainEqual({ id: 'button_link', type: 'url', label: 'Button link', value: '' })
+    const custom = await withSection('picks')
+    expect((await custom.read()).settings).toEqual([
+      { id: 'products', type: 'product_list', label: 'Products', value: [] },
+      { id: 'collections', type: 'collection_list', label: 'Collections', value: [] },
+      { id: 'menu', type: 'link_list', label: 'Menu', value: 'main-menu' },
+      { id: 'product', type: 'product', label: 'Product', value: '' },
+    ])
+  })
+
+  it('writes the featured collection by its handle into the template, with a clean Theme Check', async () => {
+    const { theme, id, patch, read } = await withSection('featured-collection')
+    const { status, body } = await patch({ collection: 'summer-sale' })
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(readTemplate(theme).sections[id].settings.collection).toBe('summer-sale')
+    expect((await read()).settings).toContainEqual(expect.objectContaining({ id: 'collection', value: 'summer-sale' }))
+  })
+
+  it('clears a store resource setting with an empty value', async () => {
+    const { theme, id, patch } = await withSection('picks')
+    await patch({ product: 'mug', products: ['mug', 'plate'], menu: 'footer' })
+    expect(readTemplate(theme).sections[id].settings).toMatchObject({ product: 'mug', products: ['mug', 'plate'], menu: 'footer' })
+    expect((await patch({ product: '', products: [] })).status).toBe(200)
+    const { settings } = readTemplate(theme).sections[id]
+    expect(settings).not.toHaveProperty('product')
+    expect(settings).not.toHaveProperty('products')
+  })
+
+  it.each(['/collections/all', 'https://example.com/about', 'shopify://collections/summer-sale', 'mailto:hi@example.com', ''])(
+    'writes the link %j',
+    async (link) => {
+      const { theme, id, patch } = await withSection('hero')
+      expect((await patch({ button_link: link })).status).toBe(200)
+      expect(readTemplate(theme).sections[id].settings.button_link).toBe(link || undefined)
+    },
+  )
+
+  it.each([
+    ['hero', { button_link: 'javascript:alert(1)' }, 'button_link'],
+    ['hero', { button_link: 42 }, 'button_link'],
+    ['featured-collection', { collection: 'summer sale' }, 'collection'],
+    ['featured-collection', { collection: ['summer'] }, 'collection'],
+    ['picks', { products: 'mug' }, 'products'],
+    ['picks', { products: ['a', 'b', 'c'] }, 'products'],
+    ['picks', { collections: ['ok', 'no way'] }, 'collections'],
+  ])('refuses %s %j', async (type, change, named) => {
+    const { theme, patch } = await withSection(type)
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const { status, body } = await patch(change)
+    expect(status).toBe(400)
+    expect(body.error).toContain(named)
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+  })
+
+  it("lists the store's collections, products and menus through the Shopify CLI's stored auth, read-only", async () => {
+    const cli = fakeShopify({
+      store: {
+        collections: { nodes: [{ handle: 'summer-sale', title: 'Summer sale' }] },
+        products: { nodes: [{ handle: 'mug', title: 'Mug' }] },
+        menus: { nodes: [{ handle: 'main-menu', title: 'Main menu' }] },
+      },
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const { status, body } = await studio.send('GET', 'api/store')
+    expect(status).toBe(200)
+    expect(body).toEqual({
+      collections: [{ handle: 'summer-sale', title: 'Summer sale' }],
+      products: [{ handle: 'mug', title: 'Mug' }],
+      menus: [{ handle: 'main-menu', title: 'Main menu' }],
+    })
+    const args: string[] = JSON.parse(readFileSync(path.join(path.dirname(cli), 'store.json'), 'utf8'))
+    expect(args.slice(0, 4)).toEqual(['store', 'execute', '--store', 'example.myshopify.com'])
+    expect(args).toContain('--json')
+    expect(args).not.toContain('--allow-mutations')
+  })
+
+  it('tells how to authenticate the store when the CLI has no stored auth for it', async () => {
+    const studio = await openStudio(fixtureTheme())
+    const { status, body } = await studio.send('GET', 'api/store')
+    expect(status).toBe(409)
+    expect(body.error).toContain('shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation')
   })
 })
 

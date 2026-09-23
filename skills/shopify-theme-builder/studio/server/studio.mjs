@@ -1,10 +1,12 @@
 // The Studio server: Vite serves the React UI from studio/, and the studioApi
 // plugin adds the Node file API over the Theme folder on disk.
+import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
 import { pagePaths, startFrameProxy } from './frame.mjs'
@@ -144,6 +146,8 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         if (state.status !== 'running') throw new Conflict('The preview is not running yet.')
         return { url: frame.url, paths: await pagePaths(state.url) }
       })
+      const storeResources = storeReader(cli, store)
+      route('/api/store', 'GET', storeResources)
       route('/api/brand', 'PUT', async (req) => {
         setBrand(theme, await readBody(req))
         return readStateAfterWrite()
@@ -709,45 +713,68 @@ function updateSection(theme, file, id, body) {
       if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
       section.settings = { ...section.settings, [setting.id]: colorScheme }
     }
-    if (settings) section.settings = { ...section.settings, ...textValues(settings, schema.settings, `the ${section.type} section`) }
+    if (settings) setValues(section, settings, schema.settings, `the ${section.type} section`)
     for (const [blockId, values] of Object.entries(/** @type {Record<string, object>} */ (blocks ?? {}))) {
       const block = section.blocks?.[blockId]
       if (!Object.hasOwn(section.blocks ?? {}, blockId)) throw new BadRequest(`The ${id} section has no block ${blockId}.`)
       const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
-      block.settings = { ...block.settings, ...textValues(values, blockSchema?.settings, `the ${block.type} block`) }
+      setValues(block, values, blockSchema?.settings, `the ${block.type} block`)
     }
   })
 }
 
 // The setting types the Studio edits as text. richtext holds HTML paragraphs, inline_richtext inline HTML.
 const textTypes = new Set(['text', 'inline_richtext', 'richtext'])
+// Settings that name a store resource by its handle, and the lists of handles.
+const handleTypes = new Set(['collection', 'product', 'link_list'])
+const listTypes = new Set(['collection_list', 'product_list'])
+const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, 'url'])
+const handle = /^[^\s/]+$/
+// The links a url setting takes: a store path, a web or mail link, or a shopify:// link to a store resource.
+const link = /^(\/|https?:\/\/|mailto:|tel:|shopify:\/\/)\S*$/
+// Shopify's most items in a collection_list or product_list.
+const maxListItems = 50
 
 /**
- * The values, checked against a schema's settings: each must name a text setting and be a string.
+ * Checks values against a schema's settings, then writes them into a section's or block's settings. An empty
+ * link, handle or list removes the setting, as the Theme Editor does.
+ * @param {{ settings?: Record<string, unknown> }} target
  * @param {object} values
- * @param {{ id?: string, type: string }[] | undefined} schemaSettings
+ * @param {{ id?: string, type: string, limit?: number }[] | undefined} schemaSettings
  * @param {string} owner Names the section or block in errors.
  */
-function textValues(values, schemaSettings, owner) {
+function setValues(target, values, schemaSettings, owner) {
   for (const [key, value] of Object.entries(values)) {
     const setting = schemaSettings?.find((candidate) => candidate.id === key)
-    if (!setting || !textTypes.has(setting.type)) throw new BadRequest(`${key} is not a text setting of ${owner}.`)
-    if (typeof value !== 'string') throw new BadRequest(`${key} must be a string.`)
-    // Shopify stores richtext as block HTML and refuses a value that doesn't start with a block element.
-    if (setting.type === 'richtext' && value.trim() !== '' && !/^\s*<(p|ul|ol|h[1-6])[\s>]/.test(value)) {
+    if (!setting || !editableTypes.has(setting.type)) throw new BadRequest(`${key} is not a setting the Studio edits in ${owner}.`)
+    if (listTypes.has(setting.type)) {
+      const limit = setting.limit ?? maxListItems
+      if (!Array.isArray(value) || !value.every((item) => typeof item === 'string' && handle.test(item)) || value.length > limit) {
+        throw new BadRequest(`${key} must be a list of at most ${limit} handles, like ["summer-sale"].`)
+      }
+    } else if (typeof value !== 'string') {
+      throw new BadRequest(`${key} must be a string.`)
+    } else if (handleTypes.has(setting.type) && value !== '' && !handle.test(value)) {
+      throw new BadRequest(`${key} must be a ${setting.type.replace('_', ' ')} handle, like summer-sale.`)
+    } else if (setting.type === 'url' && value !== '' && !link.test(value)) {
+      throw new BadRequest(`${key} must be a link like /collections/all, https://… or shopify://collections/<handle>.`)
+    } else if (setting.type === 'richtext' && value.trim() !== '' && !/^\s*<(p|ul|ol|h[1-6])[\s>]/.test(value)) {
+      // Shopify stores richtext as block HTML and refuses a value that doesn't start with a block element.
       throw new BadRequest(`${key} is rich text: HTML paragraphs like <p>…</p>.`)
     }
+    target.settings ??= {}
+    if (!textTypes.has(setting.type) && value.length === 0) delete target.settings[key]
+    else target.settings[key] = value
   }
-  return values
 }
 
 /**
- * @typedef {{ id: string, type: string, label: string, value: string }} TextSetting
- * @typedef {{ id: string, type: string, name: string, colorScheme?: string | null, settings: TextSetting[], blocks: { id: string, type: string, name: string, settings: TextSetting[] }[] }} SectionDetails
+ * @typedef {{ id: string, type: string, label: string, value: string | string[] }} Setting A list setting's value is a list of handles.
+ * @typedef {{ id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[], blocks: { id: string, type: string, name: string, settings: Setting[] }[] }} SectionDetails
  */
 
 /**
- * A page's section with its text settings and its blocks', labelled in the Theme's schema language.
+ * A page's section with the settings the Studio edits and its blocks', labelled in the Theme's schema language.
  * @param {string} theme
  * @param {string} file The page's JSON template.
  * @param {string} id
@@ -757,13 +784,20 @@ function readSection(theme, file, id) {
   const section = findSection(readJSON(theme, file), file, id)
   const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
   const translate = schemaTranslator(theme)
-  /** @param {{ id?: string, type: string, label?: string, default?: string }[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values */
+  /** @param {{ id?: string, type: string, label?: string, default?: unknown }[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values */
   const texts = (schemaSettings, values) =>
-    (schemaSettings ?? []).flatMap((setting) =>
-      setting.id && textTypes.has(setting.type)
-        ? [{ id: setting.id, type: setting.type, label: translate(setting.label ?? setting.id), value: String(values?.[setting.id] ?? setting.default ?? '') }]
-        : [],
-    )
+    (schemaSettings ?? []).flatMap((setting) => {
+      if (!setting.id || !editableTypes.has(setting.type)) return []
+      const value = values?.[setting.id] ?? setting.default
+      return [
+        {
+          id: setting.id,
+          type: setting.type,
+          label: translate(setting.label ?? setting.id),
+          value: listTypes.has(setting.type) ? (Array.isArray(value) ? value.map(String) : []) : String(value ?? ''),
+        },
+      ]
+    })
   const color = colorSchemeSetting(theme, section.type)
   const blocks = section.blocks ?? {}
   return {
@@ -901,6 +935,67 @@ function listCustomSections(theme, catalog, template) {
   return listSections(theme, template).filter(
     (type) => ![baseTheme, catalog].some((dir) => existsSync(path.join(dir, 'sections', `${type}.liquid`))),
   )
+}
+
+// Needs read_products for collections and products, read_online_store_navigation for menus.
+const storeScopes = 'read_products,read_online_store_navigation'
+const storeQuery = `{
+  collections(first: 250, sortKey: TITLE) { nodes { handle title } }
+  products(first: 250, sortKey: TITLE) { nodes { handle title } }
+  menus(first: 250) { nodes { handle title } }
+}`
+
+/**
+ * @typedef {{ handle: string, title: string }} StoreResource
+ * @typedef {{ collections: StoreResource[], products: StoreResource[], menus: StoreResource[] }} StoreResources
+ */
+
+/**
+ * Reads the store's collections, products and menus with the Admin API, through `shopify store execute` and the
+ * auth `shopify store auth` stored (ADR-0006). The answer is kept a minute, so the inspector opens fast.
+ * @param {string} cli
+ * @param {string} store
+ * @returns {() => Promise<StoreResources>}
+ */
+function storeReader(cli, store) {
+  /** @type {{ at: number, resources: Promise<StoreResources> } | null} */
+  let cached = null
+  return () => {
+    if (cached && Date.now() - cached.at < 60_000) return cached.resources
+    const resources = readStore(cli, store)
+    const entry = { at: Date.now(), resources }
+    cached = entry
+    resources.catch(() => {
+      if (cached === entry) cached = null
+    })
+    return resources
+  }
+}
+
+/**
+ * @param {string} cli
+ * @param {string} store
+ * @returns {Promise<StoreResources>}
+ */
+async function readStore(cli, store) {
+  /** @type {string} */
+  let output
+  try {
+    // ponytail: the first 250 of each; a search field querying the store is the upgrade for bigger shops.
+    // No --allow-mutations: the CLI refuses anything but a query.
+    output = (await promisify(execFile)(cli, ['store', 'execute', '--store', store, '--query', storeQuery, '--json'], { timeout: 60_000 })).stdout
+  } catch (error) {
+    const { stderr, message } = /** @type {{ stderr?: string, message: string }} */ (error)
+    throw new Conflict(
+      `The Studio lists the store's collections, products and menus through the Shopify CLI. ` +
+        `Run \`shopify store auth --store ${store} --scopes ${storeScopes}\` in a terminal, then try again. ` +
+        `The CLI said: ${(stderr || message).replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-300)}`,
+    )
+  }
+  const data = JSON.parse(output.slice(output.indexOf('{')))
+  /** @param {{ nodes?: StoreResource[] } | undefined} connection */
+  const list = (connection) => (connection?.nodes ?? []).map(({ handle, title }) => ({ handle, title }))
+  return { collections: list(data.collections), products: list(data.products), menus: list(data.menus) }
 }
 
 /**

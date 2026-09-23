@@ -14,17 +14,22 @@ import {
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
-import type { Brand, Offense, Page, SectionDetails, TextSetting, ThemeState } from '../server/studio.mjs'
+import type { Brand, Offense, Page, SectionDetails, Setting, StoreResources, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
   ComboboxContent,
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
 } from '@/components/ui/combobox'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
@@ -493,15 +498,48 @@ const fromParagraphs = (text: string) =>
     .map((paragraph) => `<p>${paragraph.replaceAll('\n', '<br>')}</p>`)
     .join('')
 
-/** A text setting's value as the inspector edits it, and back. */
-function editable(setting: TextSetting) {
-  return setting.type === 'richtext' && paragraphsOnly.test(setting.value) ? toParagraphs(setting.value) : setting.value
+type Value = Setting['value']
+const isParagraphs = (setting: Setting) => setting.type === 'richtext' && typeof setting.value === 'string' && paragraphsOnly.test(setting.value)
+
+/** A setting's value as the inspector edits it, and back. */
+function editable(setting: Setting) {
+  return isParagraphs(setting) ? toParagraphs(setting.value as string) : setting.value
 }
-function stored(setting: TextSetting, text: string) {
-  return setting.type === 'richtext' && paragraphsOnly.test(setting.value) ? fromParagraphs(text) : text
+function stored(setting: Setting, value: Value) {
+  // A list typed by hand is its handles separated by commas.
+  if (Array.isArray(setting.value) && typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean)
+  return isParagraphs(setting) ? fromParagraphs(value as string) : value
 }
 
-/** The selected section: color scheme, text settings (its own and its blocks'), order and removal. */
+// The settings that pick from the store, and what they pick.
+const storeKinds: Record<string, keyof StoreResources> = {
+  collection: 'collections',
+  collection_list: 'collections',
+  product: 'products',
+  product_list: 'products',
+  link_list: 'menus',
+}
+
+/** The store's collections, products and menus, fetched once `needed`, or why they can't be listed. */
+function useStore(needed: boolean) {
+  const [store, setStore] = useState<StoreResources | { error: string } | null>(null)
+  useEffect(() => {
+    if (!needed) return
+    const controller = new AbortController()
+    fetch('/api/store', { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json()
+        setStore(response.ok ? body : { error: body.error })
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setStore({ error: error.message })
+      })
+    return () => controller.abort()
+  }, [needed])
+  return store
+}
+
+/** The selected section: color scheme, settings (its own and its blocks'), order and removal. */
 function Inspector({
   state,
   page,
@@ -516,8 +554,8 @@ function Inspector({
   onSaved: (state: ThemeState) => void
 }) {
   const [details, setDetails] = useState<SectionDetails | { error: string } | null>(null)
-  // Edited texts, by setting ("heading") or block and setting ("<block id>/quote").
-  const [edits, setEdits] = useState<Record<string, string>>({})
+  // Edited values, by setting ("heading") or block and setting ("<block id>/quote").
+  const [edits, setEdits] = useState<Record<string, Value>>({})
   const { saving, error, write } = useWrite(onSaved)
   const sections = state[page]
   const index = sections.findIndex((section) => section.id === sectionId)
@@ -537,6 +575,11 @@ function Inspector({
       })
     return () => controller.abort()
   }, [url, index, state])
+
+  const ready = details !== null && !('error' in details)
+  const store = useStore(
+    ready && [details.settings, ...details.blocks.map((block) => block.settings)].some((settings) => settings.some((setting) => setting.type in storeKinds)),
+  )
 
   if (index === -1) {
     return (
@@ -570,11 +613,11 @@ function Inspector({
     if (await write(url, { method: 'DELETE' })) onClose()
   }
 
-  async function saveTexts(event: React.SubmitEvent<HTMLFormElement>) {
+  async function saveSettings(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (details === null || 'error' in details) return
-    const settings: Record<string, string> = {}
-    const blocks: Record<string, Record<string, string>> = {}
+    const settings: Record<string, Value> = {}
+    const blocks: Record<string, Record<string, Value>> = {}
     for (const setting of details.settings) {
       if (setting.id in edits) settings[setting.id] = stored(setting, edits[setting.id])
     }
@@ -587,17 +630,28 @@ function Inspector({
     if (await write(url, jsonRequest('PATCH', { settings, blocks }))) setEdits({})
   }
 
-  function textField(setting: TextSetting, key: string) {
+  function settingField(setting: Setting, key: string) {
     const value = edits[key] ?? editable(setting)
-    const change = (text: string) => setEdits((current) => ({ ...current, [key]: text }))
+    const change = (next: Value) => setEdits((current) => ({ ...current, [key]: next }))
+    const id = `setting-${key}`
+    const kind = storeKinds[setting.type]
+    let control: React.ReactNode
+    if (kind && store && !('error' in store)) {
+      control = <StorePicker id={id} value={value} options={store[kind]} onChange={change} />
+    } else if (Array.isArray(setting.value)) {
+      // Without the store's list, handles are typed, separated by commas.
+      const text = Array.isArray(value) ? value.join(', ') : value
+      control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => change(event.target.value)} />
+    } else if (setting.type === 'richtext') {
+      control = <Textarea id={id} value={value} rows={3} onChange={(event) => change(event.target.value)} />
+    } else {
+      const placeholder = setting.type === 'url' ? '/collections/all or https://…' : kind ? 'handle' : undefined
+      control = <Input id={id} value={value} placeholder={placeholder} onChange={(event) => change(event.target.value)} />
+    }
     return (
       <Field key={key}>
-        <FieldLabel htmlFor={`setting-${key}`}>{setting.label}</FieldLabel>
-        {setting.type === 'richtext' ? (
-          <Textarea id={`setting-${key}`} value={value} rows={3} onChange={(event) => change(event.target.value)} />
-        ) : (
-          <Input id={`setting-${key}`} value={value} onChange={(event) => change(event.target.value)} />
-        )}
+        <FieldLabel htmlFor={id}>{setting.label}</FieldLabel>
+        {control}
       </Field>
     )
   }
@@ -633,24 +687,30 @@ function Inspector({
         ) : null}
       </FieldGroup>
       {details.settings.length > 0 || details.blocks.some((block) => block.settings.length > 0) ? (
-        <form onSubmit={saveTexts} className="flex flex-col gap-4">
+        <form onSubmit={saveSettings} className="flex flex-col gap-4">
           <Separator />
+          {store && 'error' in store ? (
+            <Alert>
+              <AlertTitle>The store's collections, products and menus are not listed</AlertTitle>
+              <AlertDescription>{store.error} Until then, type their handles.</AlertDescription>
+            </Alert>
+          ) : null}
           <FieldGroup className="gap-4">
-            {details.settings.map((setting) => textField(setting, setting.id))}
+            {details.settings.map((setting) => settingField(setting, setting.id))}
             {details.blocks.map((block, blockIndex) =>
               block.settings.length > 0 ? (
                 <FieldSet key={block.id} className="gap-3 rounded-md border p-3">
                   <FieldLegend variant="label">
                     {block.name} {blockIndex + 1}
                   </FieldLegend>
-                  {block.settings.map((setting) => textField(setting, `${block.id}/${setting.id}`))}
+                  {block.settings.map((setting) => settingField(setting, `${block.id}/${setting.id}`))}
                 </FieldSet>
               ) : null,
             )}
           </FieldGroup>
           <div className="flex gap-2">
             <Button type="submit" disabled={saving || !changed}>
-              {saving ? 'Saving…' : 'Save text'}
+              {saving ? 'Saving…' : 'Save'}
             </Button>
             {changed ? (
               <Button type="button" variant="ghost" onClick={() => setEdits({})}>
@@ -689,6 +749,62 @@ function Inspector({
         </Button>
       </div>
     </InspectorFrame>
+  )
+}
+
+/** Picks one of the store's collections, products or menus by handle, or several for a list setting. */
+function StorePicker({
+  id,
+  value,
+  options,
+  onChange,
+}: {
+  id: string
+  value: Value
+  options: { handle: string; title: string }[]
+  onChange: (value: Value) => void
+}) {
+  const anchor = useComboboxAnchor()
+  const titles = new Map(options.map((option) => [option.handle, option.title]))
+  const label = (handle: string) => titles.get(handle) ?? handle
+  // A handle the store no longer has stays listed, so it shows and can be removed.
+  const handles = [...new Set([...options.map((option) => option.handle), ...(Array.isArray(value) ? value : value ? [value] : [])])]
+  const content = (
+    <ComboboxContent anchor={Array.isArray(value) ? anchor : undefined}>
+      <ComboboxEmpty>Nothing found.</ComboboxEmpty>
+      <ComboboxList>
+        {(handle: string) => (
+          <ComboboxItem key={handle} value={handle}>
+            {label(handle)}
+          </ComboboxItem>
+        )}
+      </ComboboxList>
+    </ComboboxContent>
+  )
+  if (Array.isArray(value)) {
+    return (
+      <Combobox multiple items={handles} value={value} onValueChange={onChange} itemToStringLabel={label}>
+        <ComboboxChips ref={anchor}>
+          <ComboboxValue>
+            {(picked: string[]) => (
+              <>
+                {picked.map((handle) => (
+                  <ComboboxChip key={handle}>{label(handle)}</ComboboxChip>
+                ))}
+                <ComboboxChipsInput id={id} placeholder={picked.length ? '' : 'Search'} />
+              </>
+            )}
+          </ComboboxValue>
+        </ComboboxChips>
+        {content}
+      </Combobox>
+    )
+  }
+  return (
+    <Combobox items={handles} value={value || null} onValueChange={(handle) => onChange(handle ?? '')} itemToStringLabel={label}>
+      <ComboboxInput id={id} placeholder="Search" showClear={value !== ''} />
+      {content}
+    </Combobox>
   )
 }
 
