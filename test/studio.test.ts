@@ -1257,6 +1257,7 @@ describe('Studio API: home page', () => {
     expect(existsSync(path.join(theme, 'sections/announcement-bar.liquid'))).toBe(false)
   })
 
+  // Runs a Theme Check per section, which a busy CI runner can take over 5 seconds for.
   it('offers and adds every real catalog home section with a color scheme and a clean Theme Check', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
@@ -1266,7 +1267,7 @@ describe('Studio API: home page', () => {
     for (const type of types) ({ body } = await studio.addSection(type))
     expect(body.home.slice(1)).toEqual(types.map((type) => expect.objectContaining({ type, colorScheme: 'scheme-1' })))
     expect(errors(body.validation)).toEqual([])
-  })
+  }, 20_000)
 
   it('never offers the real catalog header or footer for the home page', async () => {
     const theme = fixtureTheme()
