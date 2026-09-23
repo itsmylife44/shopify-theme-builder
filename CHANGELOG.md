@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A blog posts section shows the latest articles of a blog, each with its image, title, date and excerpt, with a post count and a column count; Shopify's image placeholder shows until a blog is picked.
 - A video section plays a YouTube, Vimeo or Shopify-hosted video under an optional heading. With a cover image, the video loads only when a customer presses play; YouTube videos use the privacy-enhanced mode. Shopify's placeholder shows until a video is picked.
 - A multicolumn section shows columns, each with an icon or image, a heading and text, for benefits or steps, with a column count and text alignment; Shopify's image placeholder shows until an image is picked.
 - A slideshow section shows full-width slides, each with an image, heading, text and button, that customers step through with previous and next buttons, the arrow keys or a swipe. Autoplay is off by default; when on, customers can pause it, and it stops on hover and focus and doesn't play under reduced motion. Shopify's placeholders show until images are picked.

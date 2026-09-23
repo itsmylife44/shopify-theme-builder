@@ -171,5 +171,8 @@
   "video": {
     "play": "Play video",
     "title": "Video"
+  },
+  "blog_posts": {
+    "article_title": "Example blog post"
   }
 }
