@@ -543,6 +543,154 @@
       display: none;
     }
   }
+
+  .quick-add {
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  .quick-add::backdrop {
+    background-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+
+  .quick-add__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .quick-add__inner > form[method='dialog'] {
+    align-self: end;
+  }
+
+  .quick-add__close {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .quick-add__close svg {
+    width: 2rem;
+  }
+
+  .quick-add__summary {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .quick-add__media img,
+  .quick-add__placeholder {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  .quick-add__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .quick-add__title {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .quick-add__price,
+  .quick-add__plan {
+    margin: 0;
+  }
+
+  .quick-add__compare-at {
+    margin-inline-start: 0.5rem;
+    opacity: 0.6;
+  }
+
+  .quick-add__option {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .quick-add__option legend {
+    margin-block-end: 0.5rem;
+  }
+
+  .quick-add__option-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .quick-add__option-label {
+    padding: 0.5rem 1rem;
+    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
+    cursor: pointer;
+  }
+
+  .quick-add__option-label--unavailable {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .quick-add__option-input:checked + .quick-add__option-label {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    border-color: var(--color-foreground);
+  }
+
+  .quick-add__option-input:focus-visible + .quick-add__option-label {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+
+  .quick-add__form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .quick-add__add {
+    padding: 0.875rem 1.5rem;
+    border: 0;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .quick-add__add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .quick-add__details {
+    align-self: start;
+    color: inherit;
+    text-underline-offset: 0.3em;
+  }
+
+  .quick-add .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 {% endstylesheet %}
 
 {% javascript %}
@@ -736,6 +884,90 @@
   }
 
   if (!customElements.get('cart-drawer')) customElements.define('cart-drawer', CartDrawer);
+
+  class QuickAddDialog extends HTMLElement {
+    static async load(url, optionValues, signal) {
+      const target = new URL(url, location.origin);
+      target.searchParams.set('section_id', 'quick-add');
+      if (optionValues) target.searchParams.set('option_values', optionValues);
+      const text = await fetch(target, { signal })
+        .then((response) => (response.ok ? response.text() : null))
+        .catch(() => null);
+      return text ? new DOMParser().parseFromString(text, 'text/html').querySelector('quick-add-dialog') : null;
+    }
+
+    static async open(trigger) {
+      const fresh = await QuickAddDialog.load(trigger.href);
+      if (!fresh) return location.assign(trigger.href);
+      document.querySelector('quick-add-dialog')?.remove();
+      document.body.append(fresh);
+      fresh.show(trigger);
+    }
+
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.dialog = this.querySelector('dialog');
+      this.dialog.addEventListener('click', (event) => event.target === this.dialog && this.dialog.close(), { signal });
+      this.dialog.addEventListener('close', () => this.opener?.focus(), { signal });
+      this.addEventListener('change', (event) => this.onChange(event), { signal });
+      this.addEventListener('submit', (event) => this.onSubmit(event), { signal });
+    }
+
+    disconnectedCallback() {
+      this.controller.abort();
+      this.request?.abort();
+    }
+
+    show(opener) {
+      this.opener = opener;
+      this.dialog.showModal();
+    }
+
+    async onChange(event) {
+      const input = event.target.closest('[data-option-value-id]');
+      if (!input) return;
+      const optionValues = [...this.querySelectorAll('[data-option-value-id]:checked')]
+        .map((option) => option.dataset.optionValueId)
+        .join(',');
+      this.request?.abort();
+      this.request = new AbortController();
+      const url = input.dataset.productUrl || this.querySelector('.quick-add__inner').dataset.url;
+      const fresh = await QuickAddDialog.load(url, optionValues, this.request.signal);
+      const inner = fresh?.querySelector('.quick-add__inner');
+      if (!inner) return;
+      this.querySelector('.quick-add__inner').replaceWith(inner);
+      document.getElementById(input.id)?.focus();
+    }
+
+    onSubmit(event) {
+      if (event.target.method === 'dialog') return;
+      const drawer = document.querySelector('cart-drawer');
+      if (!drawer?.add) return;
+      event.preventDefault();
+      this.dialog.close();
+      drawer.add(event.target, this.opener);
+    }
+  }
+
+  if (!customElements.get('quick-add-dialog')) {
+    customElements.define('quick-add-dialog', QuickAddDialog);
+
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-quick-add]');
+      if (!trigger || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      QuickAddDialog.open(trigger);
+    });
+
+    document.addEventListener('submit', (event) => {
+      if (!event.target.closest('[data-quick-add-form]')) return;
+      const drawer = document.querySelector('cart-drawer');
+      if (!drawer?.add) return;
+      event.preventDefault();
+      drawer.add(event.target, event.submitter);
+    });
+  }
 {% endjavascript %}
 
 {% schema %}
