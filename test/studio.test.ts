@@ -1308,6 +1308,7 @@ describe('Studio API: home page', () => {
       expect(catalog[page]).not.toContain('main-cart')
       expect(catalog[page]).not.toContain('main-search')
       expect(catalog[page]).not.toContain('main-blog')
+      expect(catalog[page]).not.toContain('main-article')
       expect(catalog[page]).not.toContain('predictive-search')
       expect(catalog[page]).not.toContain('quick-add')
     }
