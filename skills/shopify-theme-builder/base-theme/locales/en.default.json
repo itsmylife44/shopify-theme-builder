@@ -29,6 +29,13 @@
     "total": "Total",
     "update": "Update"
   },
+  "contact": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone number",
+    "message": "Message",
+    "success": "Thanks for contacting us. We'll get back to you as soon as possible."
+  },
   "customers": {
     "login": {
       "email": "Email",

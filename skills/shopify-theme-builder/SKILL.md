@@ -65,11 +65,12 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 ## 3. Create the Theme
 
 1. Ask where the Theme goes. Default: a new folder named after the shop (like `acme-theme`) in the Creator's current directory. It must be outside `<skill-dir>`, and must not exist yet or be empty; pick another name rather than write into a folder with files.
-2. Copy every file of the Base Theme, including its dotfiles, then the catalog's header, footer and footer group over the Base Theme's own. On macOS or Linux (on Windows, use the shell's equivalent):
+2. Copy every file of the Base Theme, including its dotfiles, then the catalog's header, footer and footer group over the Base Theme's own, and the catalog's contact page (the `page.contact` template and its `contact-form` section). On macOS or Linux (on Windows, use the shell's equivalent):
 
    ```sh
    mkdir -p <theme> && cp -R <skill-dir>/base-theme/. <theme>/
-   cp <skill-dir>/catalog/sections/header.liquid <skill-dir>/catalog/sections/footer.liquid <skill-dir>/catalog/sections/footer-group.json <theme>/sections/
+   cp <skill-dir>/catalog/sections/header.liquid <skill-dir>/catalog/sections/footer.liquid <skill-dir>/catalog/sections/footer-group.json <skill-dir>/catalog/sections/contact-form.liquid <theme>/sections/
+   cp <skill-dir>/catalog/templates/page.contact.json <theme>/templates/
    ```
 
    Then delete `<theme>/PROVENANCE.md`: it describes the skill's own copy of Skeleton. The Theme keeps Shopify's folder layout at its root (`layout/`, `sections/`, `templates/` …), which Shopify's GitHub integration requires, and has no build step. `LICENSE.md` is Skeleton's license and stays with the Theme. The other catalog sections are added through the Studio in step 4, which copies only the ones the Theme uses.
@@ -80,7 +81,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    3. Keep `en.default.json` as is: English stays the default, and the storefront shows `<code>.json` to customers once the shop publishes that language.
 5. Run `git init -b main` in `<theme>`, so the Creator can connect it to Shopify's GitHub integration later.
 
-**Done** when `<theme>` holds the Base Theme with the catalog header and footer, the Theme's name, and (when not English) both locale files of the shop language.
+**Done** when `<theme>` holds the Base Theme with the catalog header, footer and contact page, the Theme's name, and (when not English) both locale files of the shop language.
 
 ## 4. Open the Studio, write the Brand, compose the pages
 
@@ -125,7 +126,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 Tell the Creator, in a few lines:
 
 1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Click a section there, or in the list on the left, to change its colors and text on the right, move it or remove it; add sections from the list; the Brand tab holds colors, fonts and logo.
-2. Images, and the header and footer, are edited in Shopify's Theme Editor; products and menus in the Shopify admin.
+2. Images, and the header and footer, are edited in Shopify's Theme Editor; products and menus in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
 5. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
