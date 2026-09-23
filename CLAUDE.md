@@ -21,9 +21,9 @@ The development skills live in `.claude/skills/` (installed with `npx skills add
 | File area | Skill to load |
 | --- | --- |
 | `**/*.liquid` | `shopify-liquid`, `theme-tooling` |
-| `studio/src/**/*.tsx` | `vercel-react-best-practices` (ignore its `server-*` rules: the Studio is a Vite SPA) |
-| `studio/src/components/ui/**` | `shadcn` |
-| `studio/src/**/*.css` | `tailwind-design-system` |
+| `skills/shopify-theme-builder/studio/src/**/*.tsx` | `vercel-react-best-practices` (ignore its `server-*` rules: the Studio is a Vite SPA) |
+| `skills/shopify-theme-builder/studio/src/components/ui/**` | `shadcn` |
+| `skills/shopify-theme-builder/studio/src/**/*.css` | `tailwind-design-system` |
 
 Also available, not enforced: `vite` (Vite config and the Studio's server plugin), `vitest` (tests), `typescript-advanced-types`.
 

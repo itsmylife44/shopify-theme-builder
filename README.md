@@ -40,8 +40,8 @@ The agent checks all of these first, plus the Studio's dependencies in the skill
 
 | Files | License |
 | --- | --- |
-| Everything not listed below | MIT, see [`LICENSE`](LICENSE) |
-| [`base-theme/`](base-theme) | Shopify's Skeleton theme license, see [`base-theme/LICENSE.md`](base-theme/LICENSE.md). It allows use only for themes that work with Shopify. Source and version: [`base-theme/PROVENANCE.md`](base-theme/PROVENANCE.md). |
+| Everything not listed below | MIT, see [`LICENSE`](LICENSE) (the skill folder carries a copy) |
+| [`skills/shopify-theme-builder/base-theme/`](skills/shopify-theme-builder/base-theme) | Shopify's Skeleton theme license, see its [`LICENSE.md`](skills/shopify-theme-builder/base-theme/LICENSE.md). It allows use only for themes that work with Shopify. Source and version: [`PROVENANCE.md`](skills/shopify-theme-builder/base-theme/PROVENANCE.md). |
 | `.claude/skills/<name>/`, except `theme-tooling` | Third-party development skills, each under its own license file in its folder (all MIT), pinned in [`skills-lock.json`](skills-lock.json) |
 
 A theme you build with this skill contains Base Theme files, so those files stay under Shopify's license: the theme can be used only with Shopify. The catalog sections copied into it remain MIT.

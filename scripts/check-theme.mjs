@@ -1,18 +1,18 @@
 // Assembles an example Theme (the Base Theme plus every Section Catalog
 // file) in a temp folder and runs Theme Check on it. Exits 1 on any error.
-// Usage: node scripts/check-theme.mjs [catalogDir]   (default: catalog/)
+// Usage: node scripts/check-theme.mjs [catalogDir]   (default: skills/shopify-theme-builder/catalog/)
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { validate } from '../studio/server/studio.mjs'
+import { validate } from '../skills/shopify-theme-builder/studio/server/studio.mjs'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
-const catalogDir = path.resolve(process.argv[2] ?? path.join(projectDir, 'catalog'))
+const catalogDir = path.resolve(process.argv[2] ?? path.join(projectDir, 'skills/shopify-theme-builder/catalog'))
 
 const theme = mkdtempSync(path.join(tmpdir(), 'example-theme-'))
 try {
-  cpSync(path.join(projectDir, 'base-theme'), theme, { recursive: true })
+  cpSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme'), theme, { recursive: true })
   if (existsSync(catalogDir)) cpSync(catalogDir, theme, { recursive: true })
 
   const offenses = await validate(theme)
