@@ -12,7 +12,7 @@ An agent skill for Claude Code, Codex, Cursor and other coding agents: it turns 
 
 [Quickstart](#quickstart) · [How it works](#how-it-works) · [The Studio](#the-studio) · [Sections](#the-section-catalog) · [FAQ](#faq)
 
-![The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected section's settings on the right](docs/images/studio.png)
+![The Studio: selecting the hero, rewriting its heading and switching its color scheme, while the live Shopify preview updates](docs/images/demo.gif)
 
 </div>
 
@@ -67,6 +67,8 @@ flowchart LR
 ## The Studio
 
 The Studio is a local app that opens next to your agent, in Google Chrome. It shows your real theme, rendered by Shopify through `shopify theme dev`, and saves every change straight into the theme's files, where your agent sees it too.
+
+![The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected section's text on the right](docs/images/studio.png)
 
 - **Click to edit.** Click a section in the preview, or in the list on the left. On the right, pick its color scheme, rewrite its text (and its blocks' text, like each testimonial), move it or remove it.
 - **Add sections** from the Section Catalog, or the Custom Sections your agent wrote.
