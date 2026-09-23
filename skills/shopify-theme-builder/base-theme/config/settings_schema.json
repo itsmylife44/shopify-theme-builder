@@ -41,6 +41,125 @@
         "id": "type_body_font",
         "default": "work_sans_n4",
         "label": "t:labels.body_font"
+      },
+      {
+        "type": "font_picker",
+        "id": "type_accent_font",
+        "default": "work_sans_n4",
+        "label": "t:labels.accent_font",
+        "info": "t:info.type_accent_font"
+      },
+      {
+        "type": "header",
+        "content": "t:general.type_scale"
+      },
+      {
+        "type": "range",
+        "id": "type_body_size",
+        "min": 14,
+        "max": 18,
+        "step": 1,
+        "unit": "px",
+        "label": "t:labels.body_size",
+        "default": 16
+      },
+      {
+        "type": "range",
+        "id": "type_scale_ratio",
+        "min": 120,
+        "max": 160,
+        "step": 5,
+        "unit": "%",
+        "label": "t:labels.scale_ratio",
+        "info": "t:info.type_scale_ratio",
+        "default": 130
+      },
+      {
+        "type": "range",
+        "id": "type_display_size",
+        "min": 40,
+        "max": 120,
+        "step": 4,
+        "unit": "px",
+        "label": "t:labels.display_size",
+        "info": "t:info.type_display_size",
+        "default": 56
+      },
+      {
+        "type": "header",
+        "content": "t:general.headings"
+      },
+      {
+        "type": "select",
+        "id": "type_heading_weight",
+        "label": "t:labels.heading_weight",
+        "options": [
+          {
+            "value": "font",
+            "label": "t:options.heading_weight.font"
+          },
+          {
+            "value": "300",
+            "label": "t:options.heading_weight.light"
+          },
+          {
+            "value": "400",
+            "label": "t:options.heading_weight.regular"
+          },
+          {
+            "value": "500",
+            "label": "t:options.heading_weight.medium"
+          },
+          {
+            "value": "600",
+            "label": "t:options.heading_weight.semibold"
+          },
+          {
+            "value": "700",
+            "label": "t:options.heading_weight.bold"
+          },
+          {
+            "value": "900",
+            "label": "t:options.heading_weight.black"
+          }
+        ],
+        "default": "font"
+      },
+      {
+        "type": "select",
+        "id": "type_heading_case",
+        "label": "t:labels.heading_case",
+        "options": [
+          {
+            "value": "none",
+            "label": "t:options.heading_case.none"
+          },
+          {
+            "value": "uppercase",
+            "label": "t:options.heading_case.uppercase"
+          }
+        ],
+        "default": "none"
+      },
+      {
+        "type": "select",
+        "id": "type_heading_tracking",
+        "label": "t:labels.heading_tracking",
+        "options": [
+          {
+            "value": "tight",
+            "label": "t:options.heading_tracking.tight"
+          },
+          {
+            "value": "normal",
+            "label": "t:options.heading_tracking.normal"
+          },
+          {
+            "value": "wide",
+            "label": "t:options.heading_tracking.wide"
+          }
+        ],
+        "default": "normal"
       }
     ]
   },

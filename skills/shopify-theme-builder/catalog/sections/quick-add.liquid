@@ -41,7 +41,7 @@
           </div>
           <div>
             <h2 id="QuickAddTitle" class="quick-add__title text-h4">{{ product.title | escape }}</h2>
-            <p class="quick-add__price">
+            <p class="quick-add__price price">
               {% if compare_at_price > price %}
                 <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
                 {{ price | money }}

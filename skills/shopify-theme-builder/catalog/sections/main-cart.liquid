@@ -36,7 +36,7 @@
                         <p class="main-cart__muted">{{ property.first | escape }}: {{ property.last | escape }}</p>
                       {% endif %}
                     {% endfor %}
-                    <p>
+                    <p class="price">
                       {% if item.original_price > item.final_price %}
                         <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
                         {{ item.final_price | money }}
@@ -85,7 +85,7 @@
                   aria-label="{{ 'cart.quantity_for' | t: product: item.product.title | escape }}"
                 >
               </td>
-              <td>
+              <td class="price">
                 {% if item.original_line_price > item.final_line_price %}
                   <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
                   <s class="main-cart__muted">{{ item.original_line_price | money }}</s>
@@ -114,7 +114,7 @@
               {% endfor %}
             </ul>
           {% endif %}
-          <p class="main-cart__subtotal text-h4">
+          <p class="main-cart__subtotal price text-h4">
             {{ 'cart.subtotal' | t }}
             {{ cart.total_price | money_with_currency }}
           </p>
