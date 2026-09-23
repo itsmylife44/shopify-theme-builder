@@ -709,6 +709,29 @@ describe('Studio API: Directions', () => {
     await studio.send('PUT', 'api/directions/chosen', { name: 'Quiet' })
     expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toBe('Chosen: Quiet\n')
   }, 30_000)
+
+  it("reads a DIRECTION.md written from the skill's template: the card's thesis and choices, never its sketch or rules", async () => {
+    const template = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/references/design/direction-template.md'), 'utf8')
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+    writeFileSync(path.join(theme, 'DIRECTION.md'), template.replaceAll('<Direction name>', 'Quiet'))
+
+    const { body } = await studio.send('PUT', 'api/directions/chosen', { name: 'Quiet' })
+    const [quiet] = body.directions
+    expect(quiet).toMatchObject({ name: 'Quiet', chosen: true })
+    expect(quiet.thesis).toMatch(/^<Thesis/)
+    // One line per axis of the card, in its order.
+    expect(quiet.choices.map((choice: string) => choice.split(':')[0])).toEqual(['Type', 'Color', 'Shape', 'Spacing', 'Cards', 'Media', 'Motion', 'Signature', 'Rejects'])
+    expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toMatch(/^# .+\n\nChosen: Quiet\n\n/)
+  }, 30_000)
+
+  it('names only reference files the skill has', () => {
+    const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+    const named = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8').match(/references\/[\w/.-]+\.md/g) ?? []
+    expect(named).toContain('references/design/brief.md')
+    for (const file of named) expect(existsSync(path.join(skillDir, file)), file).toBe(true)
+  })
 })
 
 describe('Studio API: logo', () => {
