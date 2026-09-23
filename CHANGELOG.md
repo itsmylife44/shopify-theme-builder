@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Add to cart on the product page and the featured product section opens a cart drawer instead of the cart page, and so does the header's cart icon. The drawer shows the cart page's `main-cart` section, where quantity changes and removals apply at once, and the header's cart count follows. A Cart type theme setting (drawer, the default, or page) keeps the cart page instead; without JavaScript, add to cart still goes to the cart page.
 - Before delivery, the agent runs Lighthouse on the preview's home, product and collection pages, on mobile and desktop, against the Theme Store's bars (performance 60, accessibility 90), reports the scores and fixes the accessibility failures the Theme causes.
 - The Studio lists the header and footer groups' sections with the page's, and edits them like a page's section: click one in the list or the preview to change its color scheme, settings (like the footer's newsletter and menus) and blocks, saved to `sections/header-group.json` and `sections/footer-group.json`.
 - An image gallery section shows a grid of images, each with an optional caption and link, with a column count; Shopify's image placeholder shows until an image is picked.

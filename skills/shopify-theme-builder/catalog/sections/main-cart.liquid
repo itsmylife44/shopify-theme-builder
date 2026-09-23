@@ -66,6 +66,7 @@
                     <p>
                       <a
                         href="{{ item.url_to_remove }}"
+                        data-line="{{ forloop.index }}"
                         aria-label="{{ 'cart.remove_item' | t: product: item.product.title | escape }}"
                       >
                         {{- 'cart.remove' | t -}}
@@ -80,6 +81,7 @@
                   name="updates[]"
                   value="{{ item.quantity }}"
                   min="0"
+                  data-line="{{ forloop.index }}"
                   aria-label="{{ 'cart.quantity_for' | t: product: item.product.title | escape }}"
                 >
               </td>

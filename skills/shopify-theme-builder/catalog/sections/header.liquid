@@ -1,4 +1,4 @@
-{% comment %}The shop's header: the logo or shop name, the menu with dropdowns and a mobile drawer, the country and language selectors, the search box with suggestions, the account link and the cart.{% endcomment %}
+{% comment %}The shop's header: the logo or shop name, the menu with dropdowns and a mobile drawer, the country and language selectors, the search box with suggestions, the account link and the cart, in a drawer or on the cart page.{% endcomment %}
 {% capture menu_items %}
   {% for link in section.settings.menu.links %}
     <li>
@@ -195,12 +195,41 @@
         </shopify-account>
       {% endif %}
 
-      <a class="header__cart" href="{{ routes.cart_url }}" aria-label="{{ 'header.cart' | t: count: cart.item_count }}">
-        {{ 'icon-cart.svg' | inline_asset_content }}
-        {% if cart.item_count > 0 %}
-          <span class="header__cart-count" aria-hidden="true">{{ cart.item_count }}</span>
-        {% endif %}
-      </a>
+      {% capture cart_link %}
+        <a class="header__cart" href="{{ routes.cart_url }}" aria-label="{{ 'header.cart' | t: count: cart.item_count }}">
+          {{ 'icon-cart.svg' | inline_asset_content }}
+          {% if cart.item_count > 0 %}
+            <span class="header__cart-count" aria-hidden="true">{{ cart.item_count }}</span>
+          {% endif %}
+        </a>
+      {% endcapture %}
+      {% if settings.cart_type == 'drawer' and template.name != 'cart' %}
+        <cart-drawer
+          class="header__cart-drawer"
+          data-cart-url="{{ routes.cart_url }}"
+          data-add-url="{{ routes.cart_add_url }}.js"
+          data-change-url="{{ routes.cart_change_url }}.js"
+          data-section="{{ section.id }}"
+          data-sections="main-cart,{{ section.id }}"
+        >
+          {{ cart_link }}
+          <dialog class="header__drawer header__drawer--cart" aria-label="{{ 'cart.title' | t }}">
+            <div class="header__drawer-inner">
+              <form method="dialog">
+                <button class="header__drawer-close" aria-label="{{ 'header.close_cart' | t }}">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m5 5 10 10M15 5 5 15" />
+                  </svg>
+                </button>
+              </form>
+              <p class="header__cart-error" role="alert" hidden></p>
+              <div class="header__cart-content"></div>
+            </div>
+          </dialog>
+        </cart-drawer>
+      {% else %}
+        {{ cart_link }}
+      {% endif %}
     </div>
   </header-menu>
 </header>
@@ -352,6 +381,28 @@
     color: var(--color-foreground);
   }
 
+  .header__drawer--cart {
+    width: min(32rem, 100vw);
+    margin-inline-start: auto;
+  }
+
+  .header__cart-drawer {
+    display: contents;
+  }
+
+  .header__cart-content .main-cart {
+    --content-grid: 0 1fr 0;
+    padding-block: 0;
+  }
+
+  .header__cart-content a {
+    text-decoration: underline;
+  }
+
+  .header__cart-content .main-cart__image {
+    width: 5rem;
+  }
+
   .header__drawer::backdrop {
     background-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
   }
@@ -499,7 +550,7 @@
     connectedCallback() {
       this.controller = new AbortController();
       const { signal } = this.controller;
-      const drawer = this.querySelector('.header__drawer');
+      const drawer = this.querySelector('#HeaderDrawer');
       this.querySelector('.header__menu-button')?.addEventListener('click', () => drawer.showModal(), { signal });
       drawer?.addEventListener('click', (event) => event.target === drawer && drawer.close(), { signal });
       this.addEventListener(
@@ -603,6 +654,88 @@
   }
 
   if (!customElements.get('predictive-search')) customElements.define('predictive-search', PredictiveSearch);
+
+  class CartDrawer extends HTMLElement {
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.dialog = this.querySelector('dialog');
+      this.addEventListener('click', (event) => this.onClick(event), { signal });
+      this.addEventListener('change', (event) => {
+        const input = event.target.closest('input[data-line]');
+        if (input) this.change(input.dataset.line, input.value);
+      }, { signal });
+      this.dialog.addEventListener(
+        'close',
+        () => (this.opener?.isConnected ? this.opener : this.querySelector('.header__cart'))?.focus(),
+        { signal }
+      );
+    }
+
+    disconnectedCallback() {
+      this.controller.abort();
+    }
+
+    async onClick(event) {
+      if (event.target === this.dialog) return this.dialog.close();
+      const remove = event.target.closest('a[data-line]');
+      if (remove) {
+        event.preventDefault();
+        return this.change(remove.dataset.line, 0);
+      }
+      const link = event.target.closest('.header__cart');
+      if (!link) return;
+      event.preventDefault();
+      const html = await fetch(`${this.dataset.cartUrl}?section_id=main-cart`)
+        .then((response) => (response.ok ? response.text() : null))
+        .catch(() => null);
+      if (!html) return location.assign(link.href);
+      this.render({ 'main-cart': html });
+      this.open(link);
+    }
+
+    async add(form, opener) {
+      const body = new FormData(form);
+      body.append('sections', this.dataset.sections);
+      const response = await fetch(this.dataset.addUrl, { method: 'POST', headers: { Accept: 'application/json' }, body }).catch(() => null);
+      if (!response?.ok) return form.submit();
+      this.render((await response.json()).sections);
+      this.open(opener);
+    }
+
+    async change(line, quantity) {
+      const response = await fetch(this.dataset.changeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ line: Number(line), quantity: Number(quantity), sections: this.dataset.sections }),
+      }).catch(() => null);
+      const json = await response?.json().catch(() => null);
+      if (response?.ok) return this.render(json.sections);
+      const error = this.querySelector('.header__cart-error');
+      error.textContent = json?.description ?? json?.message ?? '';
+      error.hidden = false;
+    }
+
+    render(sections) {
+      this.querySelector('.header__cart-error').hidden = true;
+      const parse = (html) => new DOMParser().parseFromString(html ?? '', 'text/html');
+      const line = document.activeElement?.closest('input[data-line]')?.dataset.line;
+      const cart = parse(sections?.['main-cart']).querySelector('.main-cart');
+      if (cart) this.querySelector('.header__cart-content').replaceChildren(cart);
+      const link = parse(sections?.[this.dataset.section]).querySelector('.header__cart');
+      if (link) this.querySelector('.header__cart').replaceWith(link);
+      if (this.dialog.open && !this.dialog.contains(document.activeElement)) {
+        (this.querySelector(`input[data-line="${line}"]`) ?? this.querySelector('.header__drawer-close')).focus();
+      }
+    }
+
+    open(opener) {
+      this.opener = opener;
+      if (!this.dialog.open) this.dialog.showModal();
+    }
+  }
+
+  if (!customElements.get('cart-drawer')) customElements.define('cart-drawer', CartDrawer);
 {% endjavascript %}
 
 {% schema %}

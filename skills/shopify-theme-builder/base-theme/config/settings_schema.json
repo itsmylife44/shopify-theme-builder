@@ -82,6 +82,27 @@
     ]
   },
   {
+    "name": "t:general.cart",
+    "settings": [
+      {
+        "type": "select",
+        "id": "cart_type",
+        "label": "t:labels.cart_type",
+        "options": [
+          {
+            "value": "drawer",
+            "label": "t:options.cart_type.drawer"
+          },
+          {
+            "value": "page",
+            "label": "t:options.cart_type.page"
+          }
+        ],
+        "default": "drawer"
+      }
+    ]
+  },
+  {
     "name": "t:general.colors",
     "settings": [
       {
