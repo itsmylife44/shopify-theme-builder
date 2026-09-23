@@ -706,6 +706,79 @@ describe('Studio API: store resource settings', () => {
   })
 })
 
+describe('Studio API: checkbox, range, number, select and radio settings', () => {
+  const layout =
+    '<div></div>\n{% schema %}{"name": "Layout", "settings": [' +
+    '{"type": "checkbox", "id": "show", "label": "Show", "default": true},' +
+    '{"type": "range", "id": "columns", "label": "Columns", "min": 2, "max": 12, "step": 2, "unit": "px", "default": 4},' +
+    '{"type": "range", "id": "rows", "label": "Rows", "min": 1, "max": 3, "default": 2},' +
+    '{"type": "number", "id": "count", "label": "Count"},' +
+    '{"type": "select", "id": "position", "label": "Position", "options": [{"value": "left", "label": "Left"}, {"value": "right", "label": "Right"}], "default": "left"},' +
+    '{"type": "radio", "id": "size", "label": "Size", "options": [{"value": "s", "label": "Small"}, {"value": "l", "label": "Large"}], "default": "s"}' +
+    '], "presets": [{"name": "Layout"}]}{% endschema %}\n'
+
+  async function withLayout() {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/layout.liquid'), layout)
+    const studio = await openStudio(theme)
+    const id = (await studio.addSection('layout')).body.home.at(-1).id
+    const patch = (settings: object) => studio.send('PATCH', `api/home/sections/${id}`, { settings })
+    const read = async () => (await studio.send('GET', `api/home/sections/${id}`)).body
+    return { theme, id, patch, read }
+  }
+
+  it('lists them with their values, bounds and options', async () => {
+    const { read } = await withLayout()
+    expect((await read()).settings).toEqual([
+      { id: 'show', type: 'checkbox', label: 'Show', value: true },
+      { id: 'columns', type: 'range', label: 'Columns', value: 4, min: 2, max: 12, step: 2, unit: 'px' },
+      { id: 'rows', type: 'range', label: 'Rows', value: 2, min: 1, max: 3, step: 1 },
+      { id: 'count', type: 'number', label: 'Count', value: null },
+      { id: 'position', type: 'select', label: 'Position', value: 'left', options: [{ value: 'left', label: 'Left' }, { value: 'right', label: 'Right' }] },
+      { id: 'size', type: 'radio', label: 'Size', value: 's', options: [{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }] },
+    ])
+  })
+
+  it('writes them into the template with a clean Theme Check, and clears a number with null', async () => {
+    const { theme, id, patch, read } = await withLayout()
+    const { status, body } = await patch({ show: false, columns: 8, count: 3, position: 'right', size: 'l' })
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(readTemplate(theme).sections[id].settings).toMatchObject({ show: false, columns: 8, count: 3, position: 'right', size: 'l' })
+    expect((await read()).settings[0].value).toBe(false)
+    expect((await patch({ count: null })).status).toBe(200)
+    expect(readTemplate(theme).sections[id].settings).not.toHaveProperty('count')
+  })
+
+  it("edits the real featured collection's columns and link toggle", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const id = (await studio.addSection('featured-collection')).body.home.at(-1).id
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${id}`, { settings: { columns: 3, show_view_all: false } })
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(readTemplate(theme).sections[id].settings).toMatchObject({ columns: 3, show_view_all: false })
+  })
+
+  it.each([
+    [{ show: 'yes' }, 'show'],
+    [{ columns: '4' }, 'columns'],
+    [{ columns: 14 }, 'columns'],
+    [{ columns: 0 }, 'columns'],
+    [{ columns: 5 }, 'columns'],
+    [{ count: 'x' }, 'count'],
+    [{ position: 'center' }, 'position'],
+    [{ size: 1 }, 'size'],
+  ])('refuses %j', async (change, named) => {
+    const { theme, patch } = await withLayout()
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const { status, body } = await patch(change)
+    expect(status).toBe(400)
+    expect(body.error).toContain(named)
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+  })
+})
+
 describe('Studio API: section presets', () => {
   it("adds a section with its preset's settings and blocks, as the Theme Editor does", async () => {
     const theme = fixtureTheme()

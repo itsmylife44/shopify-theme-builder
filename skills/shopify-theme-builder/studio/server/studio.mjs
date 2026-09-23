@@ -684,11 +684,11 @@ function reorderSections(theme, file, body) {
 }
 
 /**
- * Changes a page's section: its color scheme, its text settings and its blocks' text settings.
+ * Changes a page's section: its color scheme, its settings and its blocks' settings.
  * @param {string} theme
  * @param {string} file The page's JSON template.
  * @param {string} id
- * @param {unknown} body `{ colorScheme?, settings?: { <setting id>: string }, blocks?: { <block id>: { <setting id>: string } } }`
+ * @param {unknown} body `{ colorScheme?, settings?: { <setting id>: value }, blocks?: { <block id>: { <setting id>: value } } }`
  */
 function updateSection(theme, file, id, body) {
   const { colorScheme, settings, blocks, ...unknown } = /** @type {Record<string, unknown>} */ (body ?? {})
@@ -728,7 +728,9 @@ const textTypes = new Set(['text', 'inline_richtext', 'richtext'])
 // Settings that name a store resource by its handle, and the lists of handles.
 const handleTypes = new Set(['collection', 'product', 'link_list'])
 const listTypes = new Set(['collection_list', 'product_list'])
-const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, 'url'])
+// Settings that pick one of their schema's options.
+const optionTypes = new Set(['select', 'radio'])
+const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, ...optionTypes, 'url', 'checkbox', 'range', 'number'])
 const handle = /^[^\s/]+$/
 // The links a url setting takes: a store path, a web or mail link, or a shopify:// link to a store resource.
 const link = /^(\/|https?:\/\/|mailto:|tel:|shopify:\/\/)\S*$/
@@ -737,17 +739,30 @@ const maxListItems = 50
 
 /**
  * Checks values against a schema's settings, then writes them into a section's or block's settings. An empty
- * link, handle or list removes the setting, as the Theme Editor does.
+ * link, handle or list, or a null number, removes the setting, as the Theme Editor does.
  * @param {{ settings?: Record<string, unknown> }} target
  * @param {object} values
- * @param {{ id?: string, type: string, limit?: number }[] | undefined} schemaSettings
+ * @param {SchemaSetting[] | undefined} schemaSettings
  * @param {string} owner Names the section or block in errors.
  */
 function setValues(target, values, schemaSettings, owner) {
   for (const [key, value] of Object.entries(values)) {
     const setting = schemaSettings?.find((candidate) => candidate.id === key)
     if (!setting || !editableTypes.has(setting.type)) throw new BadRequest(`${key} is not a setting the Studio edits in ${owner}.`)
-    if (listTypes.has(setting.type)) {
+    if (setting.type === 'checkbox') {
+      if (typeof value !== 'boolean') throw new BadRequest(`${key} must be true or false.`)
+    } else if (setting.type === 'number') {
+      if (value !== null && typeof value !== 'number') throw new BadRequest(`${key} must be a number, or null to clear it.`)
+    } else if (setting.type === 'range') {
+      const { min = 0, max = 0, step = 1 } = setting
+      const steps = (Number(value) - min) / step
+      if (typeof value !== 'number' || value < min || value > max || Math.abs(steps - Math.round(steps)) > 1e-9) {
+        throw new BadRequest(`${key} must be a number from ${min} to ${max} in steps of ${step}.`)
+      }
+    } else if (optionTypes.has(setting.type)) {
+      const options = (setting.options ?? []).map((option) => option.value)
+      if (typeof value !== 'string' || !options.includes(value)) throw new BadRequest(`${key} must be one of: ${options.join(', ')}.`)
+    } else if (listTypes.has(setting.type)) {
       const limit = setting.limit ?? maxListItems
       if (!Array.isArray(value) || !value.every((item) => typeof item === 'string' && handle.test(item)) || value.length > limit) {
         throw new BadRequest(`${key} must be a list of at most ${limit} handles, like ["summer-sale"].`)
@@ -763,13 +778,16 @@ function setValues(target, values, schemaSettings, owner) {
       throw new BadRequest(`${key} is rich text: HTML paragraphs like <p>…</p>.`)
     }
     target.settings ??= {}
-    if (!textTypes.has(setting.type) && value.length === 0) delete target.settings[key]
+    if (value === null || (!textTypes.has(setting.type) && value.length === 0)) delete target.settings[key]
     else target.settings[key] = value
   }
 }
 
 /**
- * @typedef {{ id: string, type: string, label: string, value: string | string[] }} Setting A list setting's value is a list of handles.
+ * @typedef {{ id?: string, type: string, label?: string, default?: unknown, limit?: number, min?: number, max?: number, step?: number, unit?: string, options?: { value: string, label: string }[] }} SchemaSetting
+ * @typedef {{ id: string, type: string, label: string, value: string | string[] | boolean | number | null, min?: number, max?: number, step?: number, unit?: string, options?: { value: string, label: string }[] }} Setting
+ *   A list setting's value is a list of handles, a checkbox's a boolean, a range's a number, a number's a number or null. A range
+ *   has its bounds and step, a select or radio its options.
  * @typedef {{ id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[], blocks: { id: string, type: string, name: string, settings: Setting[] }[] }} SectionDetails
  */
 
@@ -784,19 +802,23 @@ function readSection(theme, file, id) {
   const section = findSection(readJSON(theme, file), file, id)
   const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
   const translate = schemaTranslator(theme)
-  /** @param {{ id?: string, type: string, label?: string, default?: unknown }[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values */
+  /** @param {SchemaSetting[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values @returns {Setting[]} */
   const texts = (schemaSettings, values) =>
-    (schemaSettings ?? []).flatMap((setting) => {
+    (schemaSettings ?? []).flatMap(/** @returns {Setting[]} */ (setting) => {
       if (!setting.id || !editableTypes.has(setting.type)) return []
       const value = values?.[setting.id] ?? setting.default
-      return [
-        {
-          id: setting.id,
-          type: setting.type,
-          label: translate(setting.label ?? setting.id),
-          value: listTypes.has(setting.type) ? (Array.isArray(value) ? value.map(String) : []) : String(value ?? ''),
-        },
-      ]
+      const read = { id: setting.id, type: setting.type, label: translate(setting.label ?? setting.id) }
+      if (setting.type === 'checkbox') return [{ ...read, value: value === true }]
+      if (setting.type === 'number') return [{ ...read, value: typeof value === 'number' ? value : null }]
+      if (setting.type === 'range') {
+        const { min = 0, max = 0, step = 1, unit } = setting
+        return [{ ...read, value: Number(value ?? min), min, max, step, ...(unit ? { unit: translate(unit) } : {}) }]
+      }
+      if (optionTypes.has(setting.type)) {
+        const options = (setting.options ?? []).map((option) => ({ value: option.value, label: translate(option.label ?? option.value) }))
+        return [{ ...read, value: String(value ?? ''), options }]
+      }
+      return [{ ...read, value: listTypes.has(setting.type) ? (Array.isArray(value) ? value.map(String) : []) : String(value ?? '') }]
     })
   const color = colorSchemeSetting(theme, section.type)
   const blocks = section.blocks ?? {}

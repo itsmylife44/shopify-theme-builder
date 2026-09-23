@@ -37,6 +37,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Slider } from '@/components/ui/slider'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
@@ -637,20 +639,66 @@ function Inspector({
     const kind = storeKinds[setting.type]
     let control: React.ReactNode
     if (kind && store && !('error' in store)) {
-      control = <StorePicker id={id} value={value} options={store[kind]} onChange={change} />
+      control = <StorePicker id={id} value={value as string | string[]} options={store[kind]} onChange={change} />
+    } else if (setting.type === 'checkbox') {
+      return (
+        <Field key={key} orientation="horizontal">
+          <Switch id={id} checked={value === true} onCheckedChange={change} />
+          <FieldLabel htmlFor={id}>{setting.label}</FieldLabel>
+        </Field>
+      )
+    } else if (setting.type === 'range') {
+      control = (
+        <div className="flex items-center gap-3">
+          <Slider
+            aria-labelledby={`${id}-label`}
+            value={Number(value)}
+            min={setting.min}
+            max={setting.max}
+            step={setting.step}
+            onValueChange={(next) => change(next as number)}
+          />
+          <span className="shrink-0 text-muted-foreground tabular-nums">
+            {String(value)}
+            {setting.unit}
+          </span>
+        </div>
+      )
+    } else if (setting.options) {
+      control = (
+        <Select items={setting.options} value={value as string} onValueChange={(next) => next !== null && change(next)}>
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {setting.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      )
+    } else if (setting.type === 'number') {
+      const number = value === null ? '' : String(value)
+      control = <Input id={id} type="number" value={number} onChange={(event) => change(event.target.value === '' ? null : event.target.valueAsNumber)} />
     } else if (Array.isArray(setting.value)) {
       // Without the store's list, handles are typed, separated by commas.
-      const text = Array.isArray(value) ? value.join(', ') : value
+      const text = Array.isArray(value) ? value.join(', ') : (value as string)
       control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => change(event.target.value)} />
     } else if (setting.type === 'richtext') {
-      control = <Textarea id={id} value={value} rows={3} onChange={(event) => change(event.target.value)} />
+      control = <Textarea id={id} value={value as string} rows={3} onChange={(event) => change(event.target.value)} />
     } else {
       const placeholder = setting.type === 'url' ? '/collections/all or https://…' : kind ? 'handle' : undefined
-      control = <Input id={id} value={value} placeholder={placeholder} onChange={(event) => change(event.target.value)} />
+      control = <Input id={id} value={value as string} placeholder={placeholder} onChange={(event) => change(event.target.value)} />
     }
     return (
       <Field key={key}>
-        <FieldLabel htmlFor={id}>{setting.label}</FieldLabel>
+        <FieldLabel id={`${id}-label`} htmlFor={id}>
+          {setting.label}
+        </FieldLabel>
         {control}
       </Field>
     )
@@ -760,9 +808,9 @@ function StorePicker({
   onChange,
 }: {
   id: string
-  value: Value
+  value: string | string[]
   options: { handle: string; title: string }[]
-  onChange: (value: Value) => void
+  onChange: (value: string | string[]) => void
 }) {
   const anchor = useComboboxAnchor()
   const titles = new Map(options.map((option) => [option.handle, option.title]))
