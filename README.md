@@ -16,6 +16,8 @@ npx skills add itsmylife44/shopify-theme-builder
 
 This installs the skill into the current project for the agents the [skills CLI](https://github.com/vercel-labs/skills) detects (Claude Code, Codex, Cursor and others). Add `-g` to install it for every project.
 
+To update it, run `npx skills update -p` in that project (or `npx skills update -g` for a global install). The update replaces the skill's folder, so the agent reinstalls the Studio's dependencies the next time it runs.
+
 ## Prerequisites
 
 - **Node.js 22.12** or newer, and **Git 2.28** or newer.
