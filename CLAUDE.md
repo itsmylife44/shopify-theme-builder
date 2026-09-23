@@ -27,6 +27,6 @@ The development skills live in `.claude/skills/` (installed with `npx skills add
 
 Also available, not enforced: `vite` (Vite config and the Studio's server plugin), `vitest` (tests), `typescript-advanced-types`.
 
-In Claude Code, `.claude/hooks/skill-gate.mjs` enforces this table: an edit to a mapped file is blocked until the skill was loaded in the session. The rules live in that script; keep this table in sync. On other agents, read `.claude/skills/<name>/SKILL.md` yourself before editing.
+In Claude Code, `.claude/hooks/skill-gate.mjs` enforces this table: an edit to a mapped file is blocked until the skill was loaded in the session. The rules live in that script; keep this table, and its copy in `CONTRIBUTING.md`, in sync. On other agents, read `.claude/skills/<name>/SKILL.md` yourself before editing.
 
 `.claude/settings.json` sets `OPT_OUT_INSTRUMENTATION=true`, which turns off the `shopify-liquid` skill's telemetry (it would otherwise send your prompts to Shopify). On another agent, create `~/.config/shopify-ai-toolkit/opt-out` instead.

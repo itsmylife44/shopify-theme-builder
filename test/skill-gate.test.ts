@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
@@ -94,5 +95,16 @@ describe('skill gate hook', () => {
 
   it('allows a file no rule maps', () => {
     expect(edit(randomUUID(), 'package.json').code).toBe(0)
+  })
+})
+
+describe('skill table', () => {
+  // The rows of the "File area | Skill to load" table, from the header to the first line that isn't a row.
+  const table = (file: string) =>
+    readFileSync(`${projectDir}${file}`, 'utf8').match(/^\| File area \| Skill to load \|\n(?:\|.*\n)+/m)?.[0]
+
+  it('is the same in CONTRIBUTING.md as in CLAUDE.md', () => {
+    expect(table('CLAUDE.md')).toBeDefined()
+    expect(table('CONTRIBUTING.md')).toBe(table('CLAUDE.md'))
   })
 })
