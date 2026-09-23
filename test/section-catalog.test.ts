@@ -1319,6 +1319,73 @@ describe('Shape and button settings', () => {
   })
 })
 
+describe('Density and page width', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const all = parseJSON(read('base-theme/config/settings_schema.json')).flatMap((group: { settings?: object[] }) => group.settings ?? [])
+  const setting = (id: string) => all.find((s: { id?: string }) => s.id === id)
+  const values = (id: string) => setting(id).options.map((o: { value: string }) => o.value)
+  const variables = read('base-theme/snippets/css-variables.liquid')
+  // Sections that aren't a band of the page: bars, the header, fetched dialogs and the Merchant's own Liquid.
+  const unspaced = ['announcement-bar', 'custom-liquid', 'header', 'predictive-search', 'quick-add']
+
+  it('spaces sections 48, 80 or 112px on desktop and half that on mobile, from a density that is normal by default', () => {
+    expect(values('density')).toEqual(['compact', 'normal', 'airy'])
+    expect(setting('density').default).toBe('normal')
+    expect(variables).toMatch(/case settings\.density\s+when 'compact'\s+assign section_spacing = 48\s[\s\S]*when 'airy'\s+assign section_spacing = 112\s[\s\S]*else\s+assign section_spacing = 80\s/)
+    expect(variables).toContain('--section-spacing: {{ section_spacing | divided_by: 32.0 }}rem;')
+    expect(variables).toMatch(/@media \(min-width: 750px\) {\s*:root {[^}]*--section-spacing: {{ section_spacing \| divided_by: 16\.0 }}rem;/)
+  })
+
+  it('widens the grid gaps with the density', () => {
+    expect(variables).toMatch(/when 'compact'\s+assign section_spacing = \d+\s+assign grid_gap = 16\s+when 'airy'\s+assign section_spacing = \d+\s+assign grid_gap = 32\s+else\s+assign section_spacing = \d+\s+assign grid_gap = 24\s/)
+    expect(variables).toMatch(/@media \(min-width: 750px\) {\s*:root {[^@]*--grid-gap: {{ grid_gap \| divided_by: 16\.0 }}rem;/)
+    expect(variables).toContain('--grid-row-gap: calc(var(--grid-gap) * 1.5);')
+  })
+
+  it.each(readdirSync(path.join(skillDir, 'catalog/sections')).filter((file) => file.endsWith('.liquid') && !unspaced.includes(file.slice(0, -7))))(
+    'pads the %s section with the section spacing',
+    (file) => {
+      expect(read(`catalog/sections/${file}`)).toMatch(/var\(--section-spacing\)|class="[^"]*\bbasic-page\b/)
+    },
+  )
+
+  it.each([
+    'catalog/sections/blog-posts.liquid',
+    'catalog/sections/collection-list.liquid',
+    'catalog/sections/featured-collection.liquid',
+    'catalog/sections/image-gallery.liquid',
+    'catalog/sections/main-blog.liquid',
+    'catalog/sections/main-collection.liquid',
+    'catalog/sections/main-list-collections.liquid',
+    'catalog/sections/main-search.liquid',
+    'catalog/sections/multicolumn.liquid',
+    'catalog/sections/related-products.liquid',
+    'catalog/sections/testimonials.liquid',
+    'base-theme/sections/blog.liquid',
+    'base-theme/sections/search.liquid',
+  ])('spaces the grid in %s with the grid gap', (file) => {
+    expect(read(file)).toMatch(/gap: (var\(--grid-row-gap\) )?var\(--grid-gap\);/)
+  })
+
+  it('sets the page width to narrow, normal or wide, normal by default, instead of a width in rem', () => {
+    expect(values('page_width')).toEqual(['narrow', 'normal', 'wide'])
+    expect(setting('page_width').default).toBe('normal')
+    expect(setting('max_page_width')).toBeUndefined()
+    expect(variables).toMatch(/case settings\.page_width/)
+    expect(variables).not.toContain('max_page_width')
+  })
+
+  it('labels the density and page width with translation keys the schema locale has', () => {
+    const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+    const keys = ['density', 'page_width'].flatMap((id) => [setting(id).label, ...setting(id).options.map((o: { label: string }) => o.label)])
+    for (const key of keys) {
+      expect(key).toMatch(/^t:/)
+      expect(key.slice(2).split('.').reduce((node: Record<string, unknown>, part: string) => node?.[part] as Record<string, unknown>, locale), key).toBeTypeOf('string')
+    }
+  })
+})
+
 describe('Buttons', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')

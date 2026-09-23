@@ -1278,7 +1278,7 @@ describe('Studio API: home page', () => {
     expect(mergedGroups.map((group) => group.name)).toEqual([...older.map((group) => group.name), 't:general.layout'])
     const ids = mergedGroups.flatMap((group) => (group.settings ?? []).flatMap((setting) => setting.id ?? []))
     expect(ids).toContain('logo_asset')
-    expect(ids).toContain('max_page_width')
+    expect(ids).toContain('page_width')
     expect(new Set(ids).size).toBe(ids.length)
   })
 
