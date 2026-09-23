@@ -1,0 +1,235 @@
+{% comment %}Milestones of the brand's story, each a year, a heading, a text and an optional image, along a line.{% endcomment %}
+{% liquid
+  assign columns = section.blocks.size | at_most: 4 | at_least: 1
+  assign image_sizes = 100 | divided_by: columns | prepend: '(min-width: 750px) ' | append: 'vw, 100vw'
+%}
+<div class="timeline full-width color-{{ section.settings.color_scheme }}">
+  <div class="timeline__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="timeline__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ol class="timeline__list" style="--columns: {{ columns }};">
+      {% for block in section.blocks %}
+        <li class="timeline__item" {{ block.shopify_attributes }}>
+          {% if block.settings.year != blank %}
+            <p class="timeline__year text-h2">{{ block.settings.year | escape }}</p>
+          {% endif %}
+          {% if block.settings.image != blank %}
+            <div class="timeline__media">
+              {{
+                block.settings.image
+                | image_url: width: 1100
+                | image_tag: widths: '375, 550, 750, 1100', sizes: image_sizes, loading: 'lazy'
+              }}
+            </div>
+          {% endif %}
+          {% if block.settings.heading != blank %}
+            <h3 class="timeline__title text-h5">{{ block.settings.heading | escape }}</h3>
+          {% endif %}
+          {% if block.settings.text != blank %}
+            <div class="timeline__text rte">{{ block.settings.text }}</div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+
+{% stylesheet %}
+  .timeline {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .timeline__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+  }
+
+  .timeline__heading {
+    margin: 0;
+  }
+
+  .timeline__list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .timeline__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding-inline-start: var(--space-xl);
+    padding-block-end: var(--space-xl);
+    border-inline-start: var(--border-width) solid var(--color-border);
+  }
+
+  .timeline__item:last-child {
+    padding-block-end: 0;
+  }
+
+  .timeline__item::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: var(--space-sm);
+    block-size: var(--space-sm);
+    margin-inline-start: calc(var(--space-sm) / -2 - var(--border-width) / 2);
+    border-radius: var(--style-border-radius-badges);
+    background-color: var(--color-foreground);
+  }
+
+  @media (min-width: 750px) {
+    .timeline__list {
+      grid-template-columns: repeat(var(--columns), 1fr);
+      row-gap: var(--grid-row-gap);
+    }
+
+    .timeline__item {
+      padding-inline: 0 var(--grid-gap);
+      padding-block: var(--space-xl) 0;
+      border-inline-start: 0;
+      border-block-start: var(--border-width) solid var(--color-border);
+    }
+
+    .timeline__item::before {
+      margin-inline-start: 0;
+      margin-block-start: calc(var(--space-sm) / -2 - var(--border-width) / 2);
+    }
+  }
+
+  .timeline__year,
+  .timeline__title {
+    margin: 0;
+    overflow-wrap: break-word;
+  }
+
+  .timeline__year {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    text-transform: var(--font-heading--case);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timeline__media {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
+  .timeline__media img {
+    width: 100%;
+    height: 100%;
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
+  }
+
+  .timeline__text {
+    max-width: var(--width-prose);
+    opacity: var(--opacity-muted);
+  }
+
+  .timeline__text > * {
+    margin: 0;
+  }
+
+  .timeline__text > * + * {
+    margin-block-start: var(--space-xs);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.timeline",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Our story"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "milestone",
+      "name": "t:general.milestone",
+      "settings": [
+        {
+          "type": "text",
+          "id": "year",
+          "label": "t:labels.year",
+          "default": "2015"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:labels.heading",
+          "default": "The first batch"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "t:labels.text",
+          "default": "<p>Tell the moment in a sentence or two.</p>"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.timeline",
+      "blocks": [
+        {
+          "type": "milestone",
+          "settings": {
+            "year": "2015",
+            "heading": "The first batch",
+            "text": "<p>Made by hand in a small kitchen, sold at the Saturday market.</p>"
+          }
+        },
+        {
+          "type": "milestone",
+          "settings": {
+            "year": "2018",
+            "heading": "Our own workshop",
+            "text": "<p>A studio of our own, and the first shop online.</p>"
+          }
+        },
+        {
+          "type": "milestone",
+          "settings": {
+            "year": "2024",
+            "heading": "Shipped worldwide",
+            "text": "<p>The same recipe, now on its way to customers in 30 countries.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

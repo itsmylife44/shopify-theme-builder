@@ -1206,6 +1206,53 @@ describe('Lookbook', () => {
   })
 })
 
+describe('Timeline', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/timeline.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const milestone = schema.blocks[0]
+  const blockSettings = Object.fromEntries(milestone.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a heading, a color scheme and a preset with a few milestones', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="timeline full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(schema.presets[0].name).toBe('t:general.timeline')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(2)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('lists milestones in order, each with a year, a heading, a text and an optional image', () => {
+    expect(milestone).toEqual(expect.objectContaining({ type: 'milestone', name: 't:general.milestone' }))
+    expect(blockSettings.year.type).toBe('text')
+    expect(blockSettings.heading.type).toBe('text')
+    expect(blockSettings.text.type).toBe('richtext')
+    expect(blockSettings.image.type).toBe('image_picker')
+    expect(source).toMatch(/<ol class="timeline__list"[^>]*>\s*{% for block in section\.blocks %}\s*<li class="timeline__item" {{ block\.shopify_attributes }}>/)
+    expect(source).toContain('<div class="timeline__text rte">')
+    // No placeholder: the image is optional, a milestone without one shows only its text.
+    expect(source).toMatch(/{% if block\.settings\.image != blank %}\s*<div class="timeline__media">/)
+    expect(source).not.toContain('placeholder_svg_tag')
+  })
+
+  it('draws a vertical line on mobile and a horizontal one on desktop, from the style system', () => {
+    expect(css).toMatch(/\.timeline__item {[^}]*border-inline-start: var\(--border-width\) solid var\(--color-border\);/)
+    expect(css).toMatch(
+      /@media \(min-width: 750px\) {\s*\.timeline__list {\s*grid-template-columns: repeat\(var\(--columns\), 1fr\);[^}]*}\s*\.timeline__item {[^}]*border-inline-start: 0;[^}]*border-block-start: var\(--border-width\) solid var\(--color-border\);/,
+    )
+    expect(source).toContain('assign columns = section.blocks.size | at_most: 4 | at_least: 1')
+    expect(source).toContain('style="--columns: {{ columns }};"')
+    expect(css).toMatch(/\.timeline__item::before {[^}]*border-radius: var\(--style-border-radius-badges\);/)
+  })
+
+  it('shows each image in the media treatment of the style system', () => {
+    expect(css).toMatch(/\.timeline__media {[^}]*border-radius: var\(--style-border-radius-media\);[^}]*background-color: var\(--media-background\);/)
+    expect(css).toMatch(/\.timeline__media img {[^}]*padding: var\(--media-inset\);[^}]*object-fit: var\(--media-fit\);[^}]*mix-blend-mode: var\(--media-blend\);/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

@@ -87,7 +87,9 @@
     "spec_tiles": "Spec tiles",
     "tile": "Tile",
     "lookbook": "Lookbook",
-    "hotspot": "Hotspot"
+    "hotspot": "Hotspot",
+    "timeline": "Timeline",
+    "milestone": "Milestone"
   },
   "labels": {
     "accent": "Accent",
@@ -196,7 +198,8 @@
     "value": "Value",
     "label": "Label",
     "horizontal_position": "Horizontal position",
-    "vertical_position": "Vertical position"
+    "vertical_position": "Vertical position",
+    "year": "Year"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
