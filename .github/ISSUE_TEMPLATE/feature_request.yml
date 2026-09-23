@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest something the skill or the Studio should do
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you're trying to do as a Creator or Merchant, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What you'd like
+      description: How the skill or the Studio should behave.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds or other approaches you considered.

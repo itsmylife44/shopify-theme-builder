@@ -1,0 +1,32 @@
+name: New catalog section
+description: Propose a section for the Section Catalog
+labels: [enhancement, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Catalog sections are the ready-made sections every Theme can use. Anything one shop needs can already be a Custom Section written by the agent; propose a catalog section when many shops would want it.
+  - type: input
+    id: name
+    attributes:
+      label: Section name
+      placeholder: Image gallery
+    validations:
+      required: true
+  - type: textarea
+    id: purpose
+    attributes:
+      label: What it's for
+      description: What a Merchant uses it for, and on which pages (home, product, collection, any page …).
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings and blocks
+      description: What the Merchant should be able to edit in the Theme Editor and the Studio.
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links or screenshots of stores or themes that do it well.
