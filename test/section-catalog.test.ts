@@ -877,3 +877,20 @@ describe('Right-to-left languages', () => {
     )
   })
 })
+
+describe('Catalog updates', () => {
+  const skill = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/SKILL.md'), 'utf8')
+  const step = skill.match(/^## 7\. Update the catalog sections\n([\s\S]*?)^## /m)?.[1] ?? ''
+
+  it('has a skill step after Custom Sections that brings catalog fixes into a Theme', () => {
+    expect(skill.match(/^## \d+\. .+$/gm)?.slice(5)).toEqual(['## 6. Custom Sections', '## 7. Update the catalog sections', '## 8. Delivery'])
+    expect(step).toContain('npx skills update')
+    expect(step).toContain('<skill-dir>/catalog/sections/<name>.liquid')
+    expect(step).toContain('git merge-file')
+    expect(step).toContain('shopify theme check --path <theme>')
+  })
+
+  it('is mentioned in the README', () => {
+    expect(readFileSync(path.join(projectDir, 'README.md'), 'utf8')).toMatch(/catalog fixes/i)
+  })
+})
