@@ -263,6 +263,51 @@ describe('Blog page', () => {
   })
 })
 
+describe('Article page', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-article.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('ships an article template with the main article, a catalog section only for article templates', () => {
+    const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/article.json'), 'utf8'))
+    expect(order.map((id: string) => sections[id].type)).toEqual(['main-article'])
+    expect(schema.enabled_on).toEqual({ templates: ['article'] })
+    expect(schema.limit).toBe(1)
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('color-{{ section.settings.color_scheme }}')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.main_article' }])
+  })
+
+  it('shows the image, title, date, author, content and tags', () => {
+    expect(source).toContain('article.image')
+    expect(source).toContain("'image' | placeholder_svg_tag")
+    expect(source).toContain('{{ article.title | escape }}')
+    expect(source).toContain("article.published_at | time_tag: format: 'date'")
+    expect(source).toContain('{% if section.settings.show_author %}')
+    expect(source).toContain('{{ article.content }}')
+    expect(source).toContain('{% for tag in article.tags %}')
+    expect(source).toContain('{{ blog.url }}/tagged/{{ tag | handle }}')
+  })
+
+  it('shows paginated comments and a labelled comment form when the blog allows comments', () => {
+    const comments = source.slice(source.indexOf('{% if blog.comments_enabled? %}'))
+    expect(comments).toContain('{% paginate article.comments by')
+    expect(comments).toContain("paginate | default_pagination: anchor: 'comments'")
+    expect(comments).toContain("{% form 'new_comment', article")
+    for (const field of ['author', 'email', 'body']) {
+      expect(comments).toContain(`<label for="Comment-${field}-{{ section.id }}">`)
+      expect(comments).toContain(`name="comment[${field}]" id="Comment-${field}-{{ section.id }}"`)
+    }
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/main-article.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/templates/article.json')
+  })
+})
+
 describe('Unit prices', () => {
   const sections = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
   const read = (name: string) => readFileSync(path.join(sections, `${name}.liquid`), 'utf8')

@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The article page shows the article's image, title, date, author (behind a setting), content and tag links, and, when the blog allows comments, its comments with pagination and a comment form that says when a comment was posted or awaits approval; new Themes use it.
 - The blog page shows its articles as cards (image or placeholder, title, date, excerpt, and the author behind a setting), with links to filter by tag and pagination; new Themes use it.
 - When the Creator asks to update their Theme's sections, the agent brings the catalog's fixes into a Theme made earlier (a new step 7; Delivery is now step 8): it updates the skill, merges each catalog section's changes into the Theme's copy with `git merge-file` against the version the Theme started from, keeping the Creator's edits, adds the locale keys, blocks and theme settings they need, runs Theme Check, lists the changes per section and commits. Custom Sections stay as they are.
 - The Studio can undo and redo its writes: Undo and Redo buttons in the top bar, Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z, and `POST /api/undo` and `POST /api/redo` for the agent. The last 50 steps are kept in memory until the Studio stops, and Theme Check runs after each. Undo never reverts an edit made outside the Studio: when a file changed since the Studio wrote it, it refuses and says which.
