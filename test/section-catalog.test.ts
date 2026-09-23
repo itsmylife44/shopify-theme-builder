@@ -553,6 +553,27 @@ describe('Slideshow', () => {
   })
 })
 
+describe('Multicolumn', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/multicolumn.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset with columns', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="multicolumn full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.multicolumn', blocks: [{ type: 'column' }, { type: 'column' }, { type: 'column' }] }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows columns, each with an icon or image, a heading and text, and a placeholder without an image', () => {
+    const ids = schema.blocks[0].settings.map((setting: { id?: string }) => setting.id)
+    expect(ids).toEqual(expect.arrayContaining(['image', 'heading', 'text']))
+    expect(source).toContain('{% for block in section.blocks %}')
+    expect(source).toContain('{{ block.shopify_attributes }}')
+    expect(source).toContain("{{ 'image' | placeholder_svg_tag")
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
