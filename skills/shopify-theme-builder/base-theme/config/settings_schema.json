@@ -399,6 +399,106 @@
     ]
   },
   {
+    "name": "t:general.product_cards",
+    "settings": [
+      {
+        "type": "select",
+        "id": "card_image_ratio",
+        "label": "t:labels.image_ratio",
+        "options": [
+          {
+            "value": "1 / 1",
+            "label": "t:options.card_image_ratio.square"
+          },
+          {
+            "value": "4 / 5",
+            "label": "t:options.card_image_ratio.portrait"
+          },
+          {
+            "value": "2 / 3",
+            "label": "t:options.card_image_ratio.tall"
+          }
+        ],
+        "default": "1 / 1"
+      },
+      {
+        "type": "select",
+        "id": "card_style",
+        "label": "t:labels.card_style",
+        "options": [
+          {
+            "value": "plain",
+            "label": "t:options.card_style.plain"
+          },
+          {
+            "value": "bordered",
+            "label": "t:options.card_style.bordered"
+          },
+          {
+            "value": "surface",
+            "label": "t:options.card_style.surface"
+          }
+        ],
+        "default": "plain"
+      },
+      {
+        "type": "text_alignment",
+        "id": "card_text_alignment",
+        "label": "t:labels.text_alignment",
+        "default": "left"
+      },
+      {
+        "type": "select",
+        "id": "card_hover",
+        "label": "t:labels.card_hover",
+        "info": "t:info.card_hover",
+        "options": [
+          {
+            "value": "none",
+            "label": "t:options.card_hover.none"
+          },
+          {
+            "value": "second_image",
+            "label": "t:options.card_hover.second_image"
+          },
+          {
+            "value": "zoom",
+            "label": "t:options.card_hover.zoom"
+          }
+        ],
+        "default": "none"
+      }
+    ]
+  },
+  {
+    "name": "t:general.media",
+    "settings": [
+      {
+        "type": "select",
+        "id": "media_treatment",
+        "label": "t:labels.media_treatment",
+        "info": "t:info.media_treatment",
+        "options": [
+          {
+            "value": "full_bleed",
+            "label": "t:options.media_treatment.full_bleed"
+          },
+          {
+            "value": "framed",
+            "label": "t:options.media_treatment.framed"
+          }
+        ],
+        "default": "full_bleed"
+      },
+      {
+        "type": "color",
+        "id": "media_tint",
+        "label": "t:labels.media_tint",
+        "info": "t:info.media_tint"
+      }
+    ]
+  },
+  {
     "name": "t:general.social_media",
     "settings": [
       {

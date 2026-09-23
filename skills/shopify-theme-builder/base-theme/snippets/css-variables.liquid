@@ -61,6 +61,11 @@
       assign grid_gap = 24
   endcase
 
+  assign framed = false
+  if settings.media_treatment == 'framed'
+    assign framed = true
+  endif
+
   case settings.page_width
     when 'narrow'
       assign page_width = '75rem'
@@ -151,12 +156,24 @@
     --button-radius: {{ radius_buttons }};
     --button-text-transform: {{ settings.button_text_case }};
     --button-font-weight: {{ button_weight }};
-    {% # Product cards: the shared .product-card in critical.css. A bordered card sets a border width, a card on a surface a background; both pad it. %}
-    --card-image-ratio: 1;
-    --card-text-align: start;
-    --card-border-width: 0;
-    --card-padding: 0;
-    --card-background: transparent;
+    {% comment %}
+      Product cards: the shared .product-card in critical.css. A bordered card sets a border width, a card on a
+      surface a background (with the color scheme, below); both pad it. The hover zooms the image by a scale.
+    {% endcomment %}
+    --card-image-ratio: {{ settings.card_image_ratio }};
+    --card-text-align: {{ settings.card_text_alignment | replace: 'left', 'start' | replace: 'right', 'end' }};
+    --card-border-width: {% if settings.card_style == 'bordered' %}var(--border-width){% else %}0{% endif %};
+    --card-padding: {% if settings.card_style == 'plain' %}0{% else %}var(--space-sm){% endif %};
+    --card-hover-scale: {% if settings.card_hover == 'zoom' %}1.05{% else %}1{% endif %};
+    {% comment %}
+      Media: every contained image and video sits in a box with the tint behind it. Full-bleed crops the image to
+      fill the box; framed shows all of it, inset. An image over the tint multiplies with it, so the white of a
+      cut-out product photo takes the tint.
+    {% endcomment %}
+    --media-fit: {% if framed %}contain{% else %}cover{% endif %};
+    --media-inset: {% if framed %}5%{% else %}0{% endif %};
+    --media-background: {{ settings.media_tint | default: 'transparent' }};
+    --media-blend: {% if settings.media_tint != blank %}multiply{% else %}normal{% endif %};
     {% comment %}
       The breakpoint is 750px: layouts switch at @media (min-width: 750px) and (max-width: 749px), and image sizes
       at (min-width: 750px). CSS variables don't work in media queries, so it is this constant instead of a variable.
@@ -190,6 +207,7 @@
       --color-secondary-button-border: {{ scheme.settings.text }};
       --color-border: rgb(from var(--color-foreground) r g b / 0.3);
       --color-border-subtle: rgb(from var(--color-foreground) r g b / 0.15);
+      --card-background: {% if settings.card_style == 'surface' %}rgb(from var(--color-foreground) r g b / 0.05){% else %}transparent{% endif %};
     }
     .color-{{ scheme.id }} {
       background-color: var(--color-background);

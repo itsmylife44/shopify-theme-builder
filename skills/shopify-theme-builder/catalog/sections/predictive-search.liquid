@@ -139,8 +139,12 @@
     flex: none;
     width: 3rem;
     height: 3rem;
-    object-fit: cover;
+    object-fit: var(--media-fit);
     border-radius: var(--style-border-radius-media);
+  }
+
+  img.predictive-search__image {
+    background-color: var(--media-background);
   }
 
   .predictive-search__price {

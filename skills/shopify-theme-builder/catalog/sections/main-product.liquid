@@ -478,6 +478,9 @@
   }
 
   .main-product__media-item {
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
     scroll-snap-align: start;
   }
 
@@ -525,8 +528,14 @@
     width: 100%;
     height: auto;
     aspect-ratio: 1;
-    object-fit: cover;
+    object-fit: var(--media-fit);
     border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
+  .main-product__media-item img {
+    padding: var(--media-inset);
+    mix-blend-mode: var(--media-blend);
   }
 
   .main-product__media-item img,

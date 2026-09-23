@@ -140,12 +140,19 @@
     }
   }
 
+  .featured-product__media {
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
   .featured-product__media img,
   .featured-product__placeholder {
     display: block;
     width: 100%;
     height: auto;
-    border-radius: var(--style-border-radius-media);
+    padding: var(--media-inset);
+    mix-blend-mode: var(--media-blend);
   }
 
   .featured-product__placeholder {

@@ -1455,6 +1455,110 @@ describe('Density and page width', () => {
   })
 })
 
+describe('Card and media settings', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const all = parseJSON(read('base-theme/config/settings_schema.json')).flatMap((group: { settings?: object[] }) => group.settings ?? [])
+  const setting = (id: string) => all.find((s: { id?: string }) => s.id === id)
+  const values = (id: string) => setting(id).options.map((o: { value: string }) => o.value)
+  const variables = read('base-theme/snippets/css-variables.liquid')
+  const critical = read('base-theme/assets/critical.css')
+  const card = read('base-theme/snippets/product-card.liquid')
+
+  it('sets the card image ratio to 1:1, 4:5 or 2:3, square by default', () => {
+    expect(values('card_image_ratio')).toEqual(['1 / 1', '4 / 5', '2 / 3'])
+    expect(setting('card_image_ratio').default).toBe('1 / 1')
+    expect(variables).toContain('--card-image-ratio: {{ settings.card_image_ratio }};')
+  })
+
+  it('makes the card plain, bordered or on a surface, plain by default', () => {
+    expect(values('card_style')).toEqual(['plain', 'bordered', 'surface'])
+    expect(setting('card_style').default).toBe('plain')
+    expect(variables).toMatch(/--card-border-width: {% if settings\.card_style == 'bordered' %}var\(--border-width\){% else %}0{% endif %};/)
+    expect(variables).toMatch(/--card-padding: {% if settings\.card_style == 'plain' %}0{% else %}var\(--space-sm\){% endif %};/)
+    // The surface follows each color scheme's text color, so it is set with the scheme.
+    expect(variables.slice(variables.indexOf('{% for scheme in settings.color_schemes %}'))).toContain(
+      "--card-background: {% if settings.card_style == 'surface' %}rgb(from var(--color-foreground) r g b / 0.05){% else %}transparent{% endif %};",
+    )
+  })
+
+  it('aligns the card text to the start, center or end', () => {
+    expect(setting('card_text_alignment')).toMatchObject({ type: 'text_alignment', default: 'left' })
+    expect(variables).toContain("--card-text-align: {{ settings.card_text_alignment | replace: 'left', 'start' | replace: 'right', 'end' }};")
+  })
+
+  it('shows the second image or zooms the image on hover, only on devices that hover', () => {
+    expect(values('card_hover')).toEqual(['none', 'second_image', 'zoom'])
+    expect(setting('card_hover').default).toBe('none')
+    expect(variables).toMatch(/--card-hover-scale: {% if settings\.card_hover == 'zoom' %}1\.05{% else %}1{% endif %};/)
+    expect(critical).toMatch(/@media \(hover: hover\) {[^@]*\.product-card:hover \.product-card__image img {[^}]*transform: scale\(var\(--card-hover-scale\)\)/)
+    expect(critical).toMatch(/@media \(hover: hover\) {[^@]*\.product-card:hover \.product-card__image-secondary {[^}]*opacity: 1/)
+  })
+
+  it("stacks the product's second media over the first, with no layout shift, when the hover shows it", () => {
+    expect(card).toMatch(/{% if settings\.card_hover == 'second_image' and product\.media\.size > 1 %}\s*{{\s*product\.media\[1\]\.preview_image\s*\| image_url: width: 1200\s*\| image_tag:[^}]*class: 'product-card__image-secondary'[^}]*alt: ''/)
+    expect(critical).toMatch(/\.product-card__image {[^}]*position: relative/)
+    expect(critical).toMatch(/\.product-card__image \.product-card__image-secondary {[^}]*position: absolute;[^}]*inset: 0;[^}]*opacity: 0/)
+  })
+
+  it('fills each media box edge to edge or frames the whole photo in it, full-bleed by default', () => {
+    expect(values('media_treatment')).toEqual(['full_bleed', 'framed'])
+    expect(setting('media_treatment').default).toBe('full_bleed')
+    expect(variables).toMatch(/--media-fit: {% if framed %}contain{% else %}cover{% endif %};/)
+    expect(variables).toMatch(/--media-inset: {% if framed %}5%{% else %}0{% endif %};/)
+  })
+
+  it('puts an optional tint behind the media, which the white of cut-out photos takes', () => {
+    expect(setting('media_tint')).toMatchObject({ type: 'color' })
+    expect(setting('media_tint').default).toBeUndefined()
+    expect(variables).toContain("--media-background: {{ settings.media_tint | default: 'transparent' }};")
+    expect(variables).toMatch(/--media-blend: {% if settings\.media_tint != blank %}multiply{% else %}normal{% endif %};/)
+  })
+
+  it('shapes the product card image from the media settings', () => {
+    expect(critical).toMatch(/\.product-card__image {[^}]*background-color: var\(--media-background\)/)
+    expect(critical).toMatch(/\.product-card__image img,\s*\.product-card__placeholder {[^}]*padding: var\(--media-inset\);[^}]*object-fit: var\(--media-fit\);[^}]*mix-blend-mode: var\(--media-blend\)/)
+  })
+
+  // Every contained image and video: a box with the tint behind the media, which fits and insets it.
+  it.each([
+    'base-theme/snippets/image.liquid',
+    'base-theme/sections/blog.liquid',
+    ...[
+      'blog-posts',
+      'collection-list',
+      'featured-product',
+      'header',
+      'image-gallery',
+      'image-with-text',
+      'main-blog',
+      'main-list-collections',
+      'main-product',
+      'main-search',
+      'multicolumn',
+      'predictive-search',
+      'video',
+    ].map((name) => `catalog/sections/${name}.liquid`),
+  ])('takes the media settings in %s', (file) => {
+    const source = read(file)
+    expect(source).toContain('background-color: var(--media-background);')
+    // Only the product page's swatches still crop to fill: they aren't media.
+    expect(source.match(/object-fit: cover/g) ?? []).toHaveLength(file.endsWith('main-product.liquid') ? 1 : 0)
+    // Thumbnails and video posters take the tint and the fit, not the inset.
+    if (!/predictive-search|video/.test(file)) expect(source).toContain('padding: var(--media-inset);')
+  })
+
+  it('labels the card and media settings with translation keys the schema locale has', () => {
+    const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+    const ids = ['card_image_ratio', 'card_style', 'card_text_alignment', 'card_hover', 'media_treatment', 'media_tint']
+    const keys = ids.flatMap((id) => [setting(id).label, ...(setting(id).info ? [setting(id).info] : []), ...(setting(id).options ?? []).map((o: { label: string }) => o.label)])
+    for (const key of keys) {
+      expect(key).toMatch(/^t:/)
+      expect(key.slice(2).split('.').reduce((node: Record<string, unknown>, part: string) => node?.[part] as Record<string, unknown>, locale), key).toBeTypeOf('string')
+    }
+  })
+})
+
 describe('Buttons', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
@@ -1604,7 +1708,8 @@ describe('Image loading', () => {
     (name) => {
       const css = stylesheet(read(`catalog/sections/${name}.liquid`))
       expect(css).toMatch(/aspect-ratio:/)
-      expect(css).toMatch(/object-fit: cover/)
+      // Cropped to fill or framed whole, as the media treatment says: either way the box keeps its ratio.
+      expect(css).toMatch(/object-fit: var\(--media-fit\)/)
     },
   )
 })
