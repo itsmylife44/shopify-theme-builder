@@ -657,6 +657,21 @@ describe('Country and language selector', () => {
     expect(header).toMatch(/{%-? if section\.settings\.show_localization -?%}\s*{%-? if localization\.available_countries\.size > 1 or localization\.available_languages\.size > 1 -?%}\s*{% form 'localization'/)
     expect(headerSchema.settings).toContainEqual(expect.objectContaining({ id: 'show_localization', type: 'checkbox', default: false }))
   })
+
+  it('moves the header selector into the menu drawer on mobile, with its own ids', () => {
+    const drawer = header.slice(header.indexOf('<dialog id="HeaderDrawer"'), header.indexOf('</dialog>', header.indexOf('<dialog id="HeaderDrawer"')))
+    expect(drawer).toContain("{{ header_localization | replace: 'Header', 'HeaderDrawer' }}")
+    expect(header).toMatch(/\.header__menu-button ~ \.header__icons \.header__localization {\s*display: none;/)
+  })
+
+  it.each([
+    ['footer', 'footer-localization'],
+    ['header', 'header-menu'],
+  ])('submits the %s selector on change with JavaScript and shows its Update button only without it', (name, element) => {
+    const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
+    expect(source).toMatch(/\.form\??\.requestSubmit\(\)/)
+    expect(source).toMatch(new RegExp(`${element}:defined \\.${name}__localization button {\\s*display: none;`))
+  })
 })
 
 describe('Announcement bar', () => {
