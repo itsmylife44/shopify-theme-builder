@@ -1,0 +1,274 @@
+{% comment %}A strip of short texts or badges that scrolls sideways, paused on hover and under reduced motion.{% endcomment %}
+{% liquid
+  assign animated = false
+  if settings.motion != 'none' and section.blocks.size > 0
+    assign animated = true
+  endif
+
+  assign item_class = 'text-h3'
+  if section.settings.item_style == 'badge'
+    assign item_class = 'text-label'
+  endif
+
+  # The loop moves by half the track, so each half repeats the items to at least 10, about 2000px of short texts.
+  assign copies = 1
+  assign duration = 0
+  if animated
+    assign repeat = 10 | plus: section.blocks.size | minus: 1 | divided_by: section.blocks.size
+    assign copies = repeat | times: 2
+    assign seconds_per_item = 4
+    case section.settings.speed
+      when 'slow'
+        assign seconds_per_item = 6
+      when 'fast'
+        assign seconds_per_item = 2
+    endcase
+    assign duration = section.blocks.size | times: repeat | times: seconds_per_item
+  endif
+%}
+
+<div class="marquee full-width marquee--{{ section.settings.item_style }} color-{{ section.settings.color_scheme }}{% if animated %} marquee--animated{% endif %}">
+  <div class="marquee__viewport">
+    <div class="marquee__track" style="--marquee-duration: {{ duration }}s;">
+      {% for copy in (1..copies) %}
+        <ul class="marquee__list" role="list"{% unless forloop.first %} aria-hidden="true"{% endunless %}>
+          {% for block in section.blocks %}
+            <li
+              class="marquee__item {{ item_class }}"
+              {% if forloop.parentloop.first %}
+                {{ block.shopify_attributes }}
+              {% endif %}
+            >
+              {{ block.settings.text | escape }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    </div>
+  </div>
+  {% if animated %}
+    <div class="marquee__controls">
+      <input type="checkbox" id="MarqueePause-{{ section.id }}" class="marquee__pause-input visually-hidden">
+      <label for="MarqueePause-{{ section.id }}" class="marquee__pause">
+        <span class="visually-hidden">{{ 'marquee.pause' | t }}</span>
+        <svg class="marquee__icon-pause" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+          <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10m6-10v10" />
+        </svg>
+        <svg class="marquee__icon-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+          <path stroke="currentColor" stroke-linejoin="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10l8-5z" />
+        </svg>
+      </label>
+    </div>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .marquee {
+    --marquee-gap: var(--space-2xl);
+    display: grid;
+    grid-template-columns: var(--content-grid);
+    row-gap: var(--space-sm);
+    padding-block: var(--section-spacing);
+  }
+
+  .marquee--badge {
+    --marquee-gap: var(--space-sm);
+  }
+
+  .marquee__viewport {
+    grid-column: 2;
+    overflow: hidden;
+  }
+
+  .marquee__track {
+    --marquee-shift: -50%;
+  }
+
+  .marquee__track:dir(rtl) {
+    --marquee-shift: 50%;
+  }
+
+  .marquee__list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-sm) var(--marquee-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .marquee__list[aria-hidden] {
+    display: none;
+  }
+
+  .marquee__item {
+    white-space: nowrap;
+  }
+
+  .marquee--text .marquee__item {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    text-transform: var(--font-heading--case);
+  }
+
+  .marquee--badge .marquee__item {
+    padding: var(--space-2xs) var(--space-sm);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-badges);
+  }
+
+  .marquee__controls {
+    display: none;
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .marquee__pause {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    cursor: pointer;
+  }
+
+  .marquee__pause svg {
+    width: 1.5rem;
+  }
+
+  .marquee__pause-input:checked + .marquee__pause .marquee__icon-pause,
+  .marquee__pause-input:not(:checked) + .marquee__pause .marquee__icon-play {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee--animated .marquee__viewport {
+      grid-column: 1 / -1;
+    }
+
+    .marquee--animated .marquee__track {
+      display: flex;
+      width: max-content;
+      animation: marquee var(--marquee-duration) linear infinite;
+    }
+
+    .marquee:is(:hover, :focus-within, :has(.marquee__pause-input:checked)) .marquee__track {
+      animation-play-state: paused;
+    }
+
+    .marquee--animated .marquee__list {
+      flex-wrap: nowrap;
+      padding-inline-end: var(--marquee-gap);
+    }
+
+    .marquee--animated .marquee__list[aria-hidden] {
+      display: flex;
+    }
+
+    .marquee--animated .marquee__controls {
+      display: block;
+    }
+
+    @keyframes marquee {
+      to {
+        translate: var(--marquee-shift);
+      }
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.marquee",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "item_style",
+      "label": "t:labels.item_style",
+      "options": [
+        {
+          "value": "text",
+          "label": "t:options.item_style.text"
+        },
+        {
+          "value": "badge",
+          "label": "t:options.item_style.badge"
+        }
+      ],
+      "default": "text"
+    },
+    {
+      "type": "select",
+      "id": "speed",
+      "label": "t:labels.speed",
+      "info": "t:info.marquee_speed",
+      "options": [
+        {
+          "value": "slow",
+          "label": "t:options.speed.slow"
+        },
+        {
+          "value": "medium",
+          "label": "t:options.speed.medium"
+        },
+        {
+          "value": "fast",
+          "label": "t:options.speed.fast"
+        }
+      ],
+      "default": "medium"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "t:general.item",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:labels.text",
+          "default": "Free shipping over $50"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.marquee",
+      "blocks": [
+        {
+          "type": "item",
+          "settings": {
+            "text": "Free shipping over $50"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "text": "Made to last"
+          }
+        },
+        {
+          "type": "item",
+          "settings": {
+            "text": "Free returns for 30 days"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -175,6 +175,9 @@
     "pause": "Pause slideshow",
     "play": "Play slideshow"
   },
+  "marquee": {
+    "pause": "Pause scrolling text"
+  },
   "video": {
     "play": "Play video",
     "title": "Video"

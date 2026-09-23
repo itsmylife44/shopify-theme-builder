@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A marquee section: a strip of short texts (in the heading font) or badges that scrolls sideways at a slow, medium or fast speed, repeated to fill wide screens and read once to screen readers. It pauses on hover, on focus and with a pause control, and stays still, wrapped and centered, when a customer's device asks for reduced motion or the Merchant sets Motion to None. Every size, gap, border and radius comes from the style system, and it mirrors in right-to-left shops.
+
 - An editorial split section for brand stories: a tall image beside a long text column, the image on either side on desktop and held in view while the text scrolls past it. The first paragraph can open with a drop cap (three lines tall, set with `initial-letter` in the heading font) and an optional pull quote follows the text at a heading size between two thin rules. Every size, gap, width, radius and media treatment comes from the style system.
 
 - A type banner section for Directions that make type the hero: a line or two of oversized type at the display size (or a step below, h1 or h2), broken where the Merchant presses Enter, with optional small text and a link under it, a color scheme and an alignment. Every size, gap and width comes from the style system, so it follows the Merchant's type scale and density.
