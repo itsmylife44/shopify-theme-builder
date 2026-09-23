@@ -103,7 +103,7 @@
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
-    "footer_show_newsletter": "Subscribers are added to your customer list with email marketing consent.",
+    "footer_show_newsletter": "Subscribers are added to your customer list with email marketing consent. Hidden on pages that have a newsletter section.",
     "social_links_setting": "Social links come from the theme settings, under Social media.",
     "logo_setting": "The logo comes from the theme settings, under Logo.",
     "hero_video": "Plays muted on a loop in place of the image, with controls to pause it.",
