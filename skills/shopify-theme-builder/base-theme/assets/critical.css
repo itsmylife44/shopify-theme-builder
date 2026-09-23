@@ -92,6 +92,8 @@ h6 {
   font-style: var(--font-heading--style);
   font-weight: var(--font-heading--weight);
   line-height: var(--line-height-heading);
+  letter-spacing: var(--font-heading--tracking);
+  text-transform: var(--font-heading--case);
 }
 
 /* Text styles: the type scale from css-variables.liquid. Headings take their size by
@@ -146,6 +148,14 @@ h6,
 
 .text-label {
   font-size: var(--font-size-label);
+}
+
+/* The accent font: labels and prices. */
+.text-label,
+.price {
+  font-family: var(--font-accent--family);
+  font-style: var(--font-accent--style);
+  font-weight: var(--font-accent--weight);
 }
 
 /* Every focused control shows a ring in its color scheme's text color. A visually hidden

@@ -55,7 +55,7 @@
             </option>
           {% endfor %}
         {% endcapture %}
-        <p class="featured-product__price text-h4">{{ current_price }}</p>
+        <p class="featured-product__price price text-h4">{{ current_price }}</p>
 
         {% form 'product', product, class: 'featured-product__form' %}
           {% if product.has_only_default_variant %}
@@ -91,7 +91,7 @@
         {% endform %}
       {% else %}
         <h2 class="featured-product__title">{{ 'featured_collection.product_title' | t }}</h2>
-        <p class="featured-product__price text-h4">{{ 1999 | money }}</p>
+        <p class="featured-product__price price text-h4">{{ 1999 | money }}</p>
         <button type="button" class="button featured-product__add" disabled>{{ 'product.add_to_cart' | t }}</button>
       {% endif %}
 

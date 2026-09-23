@@ -1,29 +1,61 @@
+{%- liquid
+  # A heading weight other than the font's own loads that weight of the heading font when the family has it.
+  assign heading_font = settings.type_heading_font
+  assign heading_weight = settings.type_heading_font.weight
+  if settings.type_heading_weight != 'font'
+    assign heading_weight = settings.type_heading_weight
+    assign heading_font = settings.type_heading_font | font_modify: 'weight', heading_weight | default: settings.type_heading_font
+  endif
+  case settings.type_heading_tracking
+    when 'tight'
+      assign heading_tracking = '-0.02em'
+    when 'wide'
+      assign heading_tracking = '0.06em'
+    else
+      assign heading_tracking = 'normal'
+  endcase
+-%}
 {% style %}
   {% # Loads all font variantions with display: swap %}
-  {{ settings.type_heading_font | font_face: font_display: 'swap' }}
+  {{ heading_font | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
+  {{ settings.type_accent_font | font_face: font_display: 'swap' }}
 
   :root {
     --font-heading--family: {{ settings.type_heading_font.family }}, {{ settings.type_heading_font.fallback_families }};
     --font-heading--style: {{ settings.type_heading_font.style }};
-    --font-heading--weight: {{ settings.type_heading_font.weight }};
+    --font-heading--weight: {{ heading_weight }};
+    --font-heading--case: {{ settings.type_heading_case }};
+    --font-heading--tracking: {{ heading_tracking }};
     --font-body--family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
     --font-body--style: {{ settings.type_body_font.style }};
     --font-body--weight: {{ settings.type_body_font.weight }};
-    {% # The type scale: fluid sizes whose minimums keep the same order on mobile. %}
-    --font-size-display: clamp(2.25rem, 5vw, 3.5rem);
-    --font-size-h1: clamp(2rem, 4vw, 3rem);
-    --font-size-h2: clamp(1.5rem, 3vw, 2.25rem);
-    --font-size-h3: clamp(1.375rem, 2.5vw, 1.75rem);
-    --font-size-h4: 1.25rem;
-    --font-size-h5: 1.125rem;
-    --font-size-h6: 1rem;
-    --font-size-body: 1rem;
-    --font-size-small: 0.875rem;
-    --font-size-label: 0.75rem;
+    {% # The accent font: labels and prices. %}
+    --font-accent--family: {{ settings.type_accent_font.family }}, {{ settings.type_accent_font.fallback_families }};
+    --font-accent--style: {{ settings.type_accent_font.style }};
+    --font-accent--weight: {{ settings.type_accent_font.weight }};
+    {% comment %}
+      The type scale. Each heading level is the body size times the scale ratio to the power of its step (h4 1, h3 2,
+      h2 3, h1 4; h5 halfway between body and h4). h1 to h3 and display are fluid: they reach their size at a 1200px
+      viewport (--font-size-fluid is the body size there) and shrink to a ratio half as steep on mobile, which keeps
+      their order. Display is its own size, never below h1.
+    {% endcomment %}
+    --font-scale: {{ settings.type_scale_ratio | divided_by: 100.0 }};
+    --font-scale-mobile: calc(1 + (var(--font-scale) - 1) / 2);
+    --font-size-body: {{ settings.type_body_size | divided_by: 16.0 }}rem;
+    --font-size-fluid: {{ settings.type_body_size | divided_by: 12.0 | round: 4 }}vw;
+    --font-size-display: max(var(--font-size-h1), clamp({{ settings.type_display_size | times: 0.64 | divided_by: 16 }}rem, {{ settings.type_display_size | divided_by: 12.0 | round: 4 }}vw, {{ settings.type_display_size | divided_by: 16.0 }}rem));
+    --font-size-h1: clamp(calc(var(--font-size-body) * pow(var(--font-scale-mobile), 4)), calc(var(--font-size-fluid) * pow(var(--font-scale), 4)), calc(var(--font-size-body) * pow(var(--font-scale), 4)));
+    --font-size-h2: clamp(calc(var(--font-size-body) * pow(var(--font-scale-mobile), 3)), calc(var(--font-size-fluid) * pow(var(--font-scale), 3)), calc(var(--font-size-body) * pow(var(--font-scale), 3)));
+    --font-size-h3: clamp(calc(var(--font-size-body) * pow(var(--font-scale-mobile), 2)), calc(var(--font-size-fluid) * pow(var(--font-scale), 2)), calc(var(--font-size-body) * pow(var(--font-scale), 2)));
+    --font-size-h4: calc(var(--font-size-body) * var(--font-scale));
+    --font-size-h5: calc(var(--font-size-body) * (1 + var(--font-scale)) / 2);
+    --font-size-h6: var(--font-size-body);
+    --font-size-small: calc(var(--font-size-body) * 0.875);
+    --font-size-label: calc(var(--font-size-body) * 0.75);
     --line-height-display: 1.1;
     --line-height-heading: 1.2;
     --line-height-body: 1.5;

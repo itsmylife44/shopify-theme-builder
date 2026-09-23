@@ -28,7 +28,7 @@
       {% endif %}
     </a>
     <a class="product-card__title" href="{{ product.url }}">{{ product.title | escape }}</a>
-    <p>{{ product.price | money }}</p>
+    <p class="price">{{ product.price | money }}</p>
     {% assign unit_variant = product.selected_or_first_available_variant %}
     {% if unit_variant.unit_price_measurement %}
       <p class="product-card__unit-price text-small">
@@ -69,6 +69,6 @@
       {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
     </div>
     <p class="product-card__title">{{ 'product_card.product_title' | t }}</p>
-    <p>{{ 1999 | money }}</p>
+    <p class="price">{{ 1999 | money }}</p>
   {% endif %}
 </div>

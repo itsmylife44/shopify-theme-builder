@@ -71,7 +71,9 @@
     "blog_posts": "Blog posts",
     "image_gallery": "Image gallery",
     "image": "Image",
-    "quick_add": "Quick add"
+    "quick_add": "Quick add",
+    "type_scale": "Type scale",
+    "headings": "Headings"
   },
   "labels": {
     "alignment": "Alignment",
@@ -148,7 +150,14 @@
     "blog": "Blog",
     "posts_to_show": "Posts to show",
     "caption": "Caption",
-    "show_quick_add": "Show quick add"
+    "show_quick_add": "Show quick add",
+    "accent_font": "Accent font",
+    "body_size": "Body size",
+    "scale_ratio": "Heading scale ratio",
+    "display_size": "Display size",
+    "heading_weight": "Heading weight",
+    "heading_case": "Heading case",
+    "heading_tracking": "Heading letter spacing"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
@@ -166,7 +175,10 @@
     "slideshow_autoplay": "Customers can pause it. It doesn't play when a customer's device asks for reduced motion.",
     "multicolumn_image_size": "Small suits icons. Large fills the column's width.",
     "video_video": "Takes precedence over a YouTube or Vimeo URL.",
-    "video_cover_image": "Shown until a customer plays the video."
+    "video_cover_image": "Shown until a customer plays the video.",
+    "type_accent_font": "Used for labels and prices.",
+    "type_scale_ratio": "How much larger each heading level is than the one below it, from the body size up. Smaller on mobile.",
+    "type_display_size": "The size of the largest headings, like the hero heading, on desktop. Never smaller than a main heading."
   },
   "options": {
     "alignment": {
@@ -207,6 +219,24 @@
       "alphabetical": "Alphabetically, A-Z",
       "date_reversed": "Date, new to old",
       "date": "Date, old to new"
+    },
+    "heading_weight": {
+      "font": "Font's own",
+      "light": "Light",
+      "regular": "Regular",
+      "medium": "Medium",
+      "semibold": "Semibold",
+      "bold": "Bold",
+      "black": "Black"
+    },
+    "heading_case": {
+      "none": "Default",
+      "uppercase": "Uppercase"
+    },
+    "heading_tracking": {
+      "tight": "Tight",
+      "normal": "Normal",
+      "wide": "Wide"
     }
   }
 }

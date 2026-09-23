@@ -1156,6 +1156,78 @@ describe('Style system', () => {
   })
 })
 
+describe('Type settings', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const typography = parseJSON(read('base-theme/config/settings_schema.json')).find(
+    (group: { name: string }) => group.name === 't:general.typography',
+  )
+  const setting = (id: string) => typography.settings.find((s: { id?: string }) => s.id === id)
+  const variables = read('base-theme/snippets/css-variables.liquid')
+  const critical = read('base-theme/assets/critical.css')
+
+  it('has an accent font next to the heading and body fonts, Work Sans like them by default', () => {
+    for (const id of ['type_heading_font', 'type_body_font', 'type_accent_font']) {
+      expect(setting(id)).toMatchObject({ type: 'font_picker', default: 'work_sans_n4' })
+    }
+  })
+
+  it('sizes the type from a scale ratio, a body size and a display size, defaulting to the old scale', () => {
+    expect(setting('type_scale_ratio')).toMatchObject({ type: 'range', min: 120, max: 160, unit: '%', default: 130 })
+    expect(setting('type_body_size')).toMatchObject({ type: 'range', min: 14, max: 18, unit: 'px', default: 16 })
+    expect(setting('type_display_size')).toMatchObject({ type: 'range', unit: 'px', default: 56 })
+  })
+
+  it('styles headings with a weight, a case and a tracking, the heading font as it is by default', () => {
+    expect(setting('type_heading_weight')).toMatchObject({ type: 'select', default: 'font' })
+    expect(setting('type_heading_case').options.map((o: { value: string }) => o.value)).toEqual(['none', 'uppercase'])
+    expect(setting('type_heading_case').default).toBe('none')
+    expect(setting('type_heading_tracking').options.map((o: { value: string }) => o.value)).toEqual(['tight', 'normal', 'wide'])
+    expect(setting('type_heading_tracking').default).toBe('normal')
+  })
+
+  it('labels every setting with a translation key the schema locale has', () => {
+    const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+    const keys = typography.settings.flatMap((s: { label?: string; content?: string; info?: string; options?: { label: string }[] }) => [
+      s.label ?? s.content,
+      ...(s.info ? [s.info] : []),
+      ...(s.options ?? []).map((o) => o.label),
+    ])
+    for (const key of keys) {
+      expect(key).toMatch(/^t:/)
+      expect(key.slice(2).split('.').reduce((node: Record<string, unknown>, part: string) => node?.[part] as Record<string, unknown>, locale), key).toBeTypeOf('string')
+    }
+  })
+
+  it('wires every type setting into the CSS variables', () => {
+    for (const { id } of typography.settings.filter((s: { id?: string }) => s.id)) {
+      expect(variables).toContain(`settings.${id}`)
+    }
+    for (const name of ['--font-accent--family', '--font-heading--case', '--font-heading--tracking', '--font-scale']) {
+      expect(variables).toMatch(new RegExp(`${name}:`))
+    }
+    expect(variables).toMatch(/--font-size-display: max\(var\(--font-size-h1\)/)
+  })
+
+  it('gives headings their case and tracking, and labels and prices the accent font, in critical.css', () => {
+    expect(critical).toMatch(/h6 {[^}]*text-transform: var\(--font-heading--case\)/)
+    expect(critical).toMatch(/h6 {[^}]*letter-spacing: var\(--font-heading--tracking\)/)
+    expect(critical).toMatch(/\.text-label,\s*\.price {[^}]*font-family: var\(--font-accent--family\)/)
+  })
+
+  it.each([
+    'base-theme/snippets/product-card.liquid',
+    'catalog/sections/featured-product.liquid',
+    'catalog/sections/main-product.liquid',
+    'catalog/sections/quick-add.liquid',
+    'catalog/sections/predictive-search.liquid',
+    'catalog/sections/main-cart.liquid',
+  ])('marks every price in %s with the shared price class', (file) => {
+    expect(read(file)).toMatch(/class="([^"]* )?price[ "]/)
+    expect(read(file)).not.toMatch(/<(p|td)>\s*{{[^}]*\| money/)
+  })
+})
+
 describe('Buttons', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
