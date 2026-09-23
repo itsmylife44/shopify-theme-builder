@@ -110,7 +110,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
    Alternate the color schemes down the home page (`PATCH`) so neighbouring sections don't share one background.
 4. Check `GET /api/theme`: `validation` must hold no offense with `"severity": "error"`. Fix any error in the file and line it names, then check again.
-5. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password (Shopify admin › Online Store › Preferences › Password protection; development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
+5. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password, under Password protection at `https://admin.shopify.com/store/<shop>/online_store/preferences` (development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
 6. Commit the Theme in `<theme>` (`git add -A && git commit -m "Create the Theme"`).
 
 **Done** when the Brand and the three pages are written, `validation` has zero errors, the preview is `running`, and the Theme is committed.
