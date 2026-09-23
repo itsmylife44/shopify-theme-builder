@@ -465,6 +465,37 @@ const pages = [
   { page: 'collection', file: 'templates/collection.json', main: 'collection' },
 ]
 
+describe('Studio API: section presets', () => {
+  it("adds a section with its preset's settings and blocks, as the Theme Editor does", async () => {
+    const theme = fixtureTheme()
+    const catalog = fixtureCatalog()
+    writeFileSync(
+      path.join(catalog, 'sections/quotes.liquid'),
+      `{% for block in section.blocks %}<p {{ block.shopify_attributes }}>{{ block.settings.quote }}</p>{% endfor %}
+{% schema %}
+{
+  "name": "Quotes",
+  "settings": [{ "type": "text", "id": "heading", "label": "Heading", "default": "Quotes" }],
+  "blocks": [{ "type": "quote", "name": "Quote", "settings": [{ "type": "text", "id": "quote", "label": "Quote" }] }],
+  "presets": [{ "name": "Quotes", "settings": { "heading": "Kind words" }, "blocks": [{ "type": "quote" }, { "type": "quote", "settings": { "quote": "Lovely" } }] }]
+}
+{% endschema %}
+`,
+    )
+    const { status, body } = await (await openStudio(theme, { catalog })).addSection('quotes', 'home')
+    expect(status).toBe(200)
+    const template = readTemplate(theme, 'templates/index.json')
+    const section = template.sections[template.order[1]]
+    expect(section.settings).toEqual({ heading: 'Kind words' })
+    expect(section.block_order).toHaveLength(2)
+    expect(section.block_order.map((id: string) => section.blocks[id])).toEqual([
+      { type: 'quote', settings: {} },
+      { type: 'quote', settings: { quote: 'Lovely' } },
+    ])
+    expect(errors(body.validation)).toEqual([])
+  })
+})
+
 describe.each(pages)('Studio API: compose the $page page', ({ page, file, main }) => {
   const other = pages.find((candidate) => candidate.page !== page)!.file
 
