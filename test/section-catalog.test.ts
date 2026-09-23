@@ -1228,6 +1228,97 @@ describe('Type settings', () => {
   })
 })
 
+describe('Shape and button settings', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const groups = parseJSON(read('base-theme/config/settings_schema.json'))
+  const all = groups.flatMap((group: { settings?: object[] }) => group.settings ?? [])
+  const setting = (id: string) => all.find((s: { id?: string }) => s.id === id)
+  const values = (id: string) => setting(id).options.map((o: { value: string }) => o.value)
+  const variables = read('base-theme/snippets/css-variables.liquid')
+  const critical = read('base-theme/assets/critical.css')
+  const liquidFiles = ['base-theme', 'catalog'].flatMap((dir) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => path.join(dir, file)),
+  )
+  const radii = ['--button-radius', '--style-border-radius-inputs', '--style-border-radius-cards', '--style-border-radius-media', '--style-border-radius-badges']
+
+  it('picks every radius from one shape family, soft by default, instead of an input corner radius', () => {
+    expect(values('shape_family')).toEqual(['square', 'soft', 'round'])
+    expect(setting('shape_family').default).toBe('soft')
+    expect(setting('input_corner_radius')).toBeUndefined()
+    expect(variables).not.toContain('input_corner_radius')
+  })
+
+  it('sets a radius for buttons, inputs, cards, media and badges for each family', () => {
+    expect(variables).toMatch(/case settings\.shape_family\s+when 'square'[\s\S]*when 'round'[\s\S]*endcase/)
+    for (const name of radii) expect(variables).toMatch(new RegExp(`${name}: {{ [a-z_]+ }};`))
+  })
+
+  it('shapes every rounded element in the Base Theme and the Section Catalog from the family', () => {
+    const sources = [{ file: 'base-theme/assets/critical.css', css: critical }, ...liquidFiles.map((file) => ({ file, css: read(file) }))]
+    for (const { file, css } of sources) {
+      for (const [, value] of css.matchAll(/border-radius\s*:\s*([^;]+);/g)) {
+        expect(radii.map((name) => `var(${name})`), `${file}: border-radius: ${value}`).toContain(value.trim())
+      }
+    }
+  })
+
+  it.each([
+    ['base-theme/assets/critical.css', 'media'],
+    ['base-theme/assets/critical.css', 'cards'],
+    ['catalog/sections/testimonials.liquid', 'cards'],
+    ...[
+      'blog-posts',
+      'collection-list',
+      'featured-product',
+      'header',
+      'image-gallery',
+      'image-with-text',
+      'main-blog',
+      'main-cart',
+      'main-list-collections',
+      'main-product',
+      'main-search',
+      'multicolumn',
+      'predictive-search',
+      'video',
+    ].map((name) => [`catalog/sections/${name}.liquid`, 'media']),
+    ...['header', 'main-blog', 'main-article', 'main-collection', 'main-search'].map((name) => [`catalog/sections/${name}.liquid`, 'badges']),
+  ])('rounds the %s %s with the family', (file, family) => {
+    expect(read(file)).toContain(`border-radius: var(--style-border-radius-${family});`)
+  })
+
+  it('sets the border width', () => {
+    expect(setting('border_width')).toMatchObject({ type: 'range', min: 1, unit: 'px', default: 1 })
+    expect(variables).toContain('--border-width: {{ settings.border_width }}px;')
+  })
+
+  it('styles the primary button as filled or outline, with a case and a weight', () => {
+    expect(values('button_primary_style')).toEqual(['filled', 'outline'])
+    expect(setting('button_primary_style').default).toBe('filled')
+    expect(values('button_text_case')).toEqual(['none', 'uppercase'])
+    expect(setting('button_text_case').default).toBe('none')
+    expect(setting('button_font_weight')).toMatchObject({ type: 'select', default: 'font' })
+    expect(variables).toContain('--button-text-transform: {{ settings.button_text_case }};')
+    expect(variables).toContain('settings.button_font_weight')
+    expect(variables).toMatch(/--color-primary-button: {% if outline_button %}transparent{% else %}{{ scheme\.settings\.button }}{% endif %}/)
+    expect(variables).toMatch(/--color-primary-button-label: {% if outline_button %}{{ scheme\.settings\.button }}{% else %}{{ scheme\.settings\.button_label }}{% endif %}/)
+    expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*background-color: var\(--color-primary-button\);[^}]*color: var\(--color-primary-button-label\)/)
+  })
+
+  it('labels every new setting with a translation key the schema locale has', () => {
+    const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+    const ids = ['shape_family', 'border_width', 'button_primary_style', 'button_text_case', 'button_font_weight']
+    const keys = ids.flatMap((id) => [setting(id).label, ...(setting(id).options ?? []).map((o: { label: string }) => o.label)])
+    for (const key of keys) {
+      expect(key).toMatch(/^t:/)
+      expect(key.slice(2).split('.').reduce((node: Record<string, unknown>, part: string) => node?.[part] as Record<string, unknown>, locale), key).toBeTypeOf('string')
+    }
+  })
+})
+
 describe('Buttons', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
@@ -1253,7 +1344,7 @@ describe('Buttons', () => {
   it('shares a primary and a secondary button in critical.css', () => {
     const critical = read('base-theme/assets/critical.css')
     expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*padding: var\(--button-padding-block\) var\(--button-padding-inline\)/)
-    expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*background-color: var\(--color-button\)/)
+    expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*background-color: var\(--color-primary-button\)/)
     expect(critical).toMatch(/\.button--secondary {[^}]*background-color: var\(--color-secondary-button\)/)
   })
 
@@ -1275,7 +1366,7 @@ describe('Buttons', () => {
     const allowed = new Set(['.header__cart-count'])
     for (const file of files) {
       for (const [, selector, body] of stylesheet(file).matchAll(/([^{}]+){([^{}]*)}/g)) {
-        if (/var\(--color-(secondary-)?button/.test(body)) expect(allowed, `${file}: ${selector.trim()}`).toContain(selector.trim())
+        if (/var\(--color-(primary-|secondary-)?button/.test(body)) expect(allowed, `${file}: ${selector.trim()}`).toContain(selector.trim())
       }
       expect(read(file), file).not.toMatch(/basic-page__button/)
     }

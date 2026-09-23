@@ -14,6 +14,39 @@
     else
       assign heading_tracking = 'normal'
   endcase
+
+  # A button weight other than the body font's own loads that weight of the body font when the family has it.
+  assign button_weight = 'var(--font-body--weight)'
+  if settings.button_font_weight != 'font'
+    assign button_weight = settings.button_font_weight
+    assign button_font = settings.type_body_font | font_modify: 'weight', button_weight
+  endif
+  assign outline_button = false
+  if settings.button_primary_style == 'outline'
+    assign outline_button = true
+  endif
+
+  # The shape family: one radius each for buttons, inputs, cards, media and badges.
+  case settings.shape_family
+    when 'square'
+      assign radius_buttons = '0'
+      assign radius_inputs = '0'
+      assign radius_cards = '0'
+      assign radius_media = '0'
+      assign radius_badges = '0'
+    when 'round'
+      assign radius_buttons = 'var(--style-border-radius-pill)'
+      assign radius_inputs = '1.5rem'
+      assign radius_cards = '1rem'
+      assign radius_media = '1rem'
+      assign radius_badges = 'var(--style-border-radius-pill)'
+    else
+      assign radius_buttons = '0.25rem'
+      assign radius_inputs = '0.25rem'
+      assign radius_cards = '0.5rem'
+      assign radius_media = '0.5rem'
+      assign radius_badges = '0.25rem'
+  endcase
 -%}
 {% style %}
   {% # Loads all font variantions with display: swap %}
@@ -23,6 +56,7 @@
   {{ settings.type_body_font | font_modify: 'weight', 'bold' | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
   {{ settings.type_body_font | font_modify: 'style', 'italic' | font_face: font_display: 'swap' }}
   {{ settings.type_accent_font | font_face: font_display: 'swap' }}
+  {% if button_font %}{{ button_font | font_face: font_display: 'swap' }}{% endif %}
 
   :root {
     --font-heading--family: {{ settings.type_heading_font.family }}, {{ settings.type_heading_font.fallback_families }};
@@ -72,8 +106,12 @@
     --width-narrow: 30rem;
     --width-text: 40rem;
     --width-prose: 45rem;
-    --border-width: 1px;
+    --border-width: {{ settings.border_width }}px;
     --style-border-radius-pill: 999px;
+    --style-border-radius-inputs: {{ radius_inputs }};
+    --style-border-radius-cards: {{ radius_cards }};
+    --style-border-radius-media: {{ radius_media }};
+    --style-border-radius-badges: {{ radius_badges }};
     --focus-ring-width: 2px;
     --focus-ring-offset: 2px;
     --opacity-muted: 0.7;
@@ -82,9 +120,9 @@
     --button-padding-block: var(--space-sm);
     --button-padding-inline: var(--space-lg);
     --button-border-width: var(--border-width);
-    --button-radius: var(--style-border-radius-inputs);
-    --button-text-transform: none;
-    --button-font-weight: var(--font-body--weight);
+    --button-radius: {{ radius_buttons }};
+    --button-text-transform: {{ settings.button_text_case }};
+    --button-font-weight: {{ button_weight }};
     {% # Product cards: the shared .product-card in critical.css. A bordered card sets a border width, a card on a surface a background; both pad it. %}
     --card-image-ratio: 1;
     --card-text-align: start;
@@ -97,7 +135,6 @@
     {% endcomment %}
     --page-width: {{ settings.max_page_width }};
     --page-margin: {{ settings.min_page_margin }}px;
-    --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
   }
 
   {% # The first color scheme is the page default; sections opt into others with a color-<scheme id> class. %}
@@ -110,6 +147,9 @@
       --color-button: {{ scheme.settings.button }};
       --color-button-label: {{ scheme.settings.button_label }};
       --color-button-border: {{ scheme.settings.button }};
+      {% # The primary button: filled with the button color, or an outline in it. %}
+      --color-primary-button: {% if outline_button %}transparent{% else %}{{ scheme.settings.button }}{% endif %};
+      --color-primary-button-label: {% if outline_button %}{{ scheme.settings.button }}{% else %}{{ scheme.settings.button_label }}{% endif %};
       --color-secondary-button: {{ scheme.settings.background }};
       --color-secondary-button-label: {{ scheme.settings.text }};
       --color-secondary-button-border: {{ scheme.settings.text }};

@@ -73,7 +73,9 @@
     "image": "Image",
     "quick_add": "Quick add",
     "type_scale": "Type scale",
-    "headings": "Headings"
+    "headings": "Headings",
+    "shape": "Shape",
+    "buttons": "Buttons"
   },
   "labels": {
     "alignment": "Alignment",
@@ -86,7 +88,6 @@
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
     "heading_font": "Heading font",
-    "input_corner_radius": "Input corner radius",
     "layout_direction": "Layout direction",
     "logo_asset": "Logo file in theme assets",
     "menu": "Menu",
@@ -157,7 +158,12 @@
     "display_size": "Display size",
     "heading_weight": "Heading weight",
     "heading_case": "Heading case",
-    "heading_tracking": "Heading letter spacing"
+    "heading_tracking": "Heading letter spacing",
+    "shape_family": "Shape",
+    "border_width": "Border width",
+    "button_primary_style": "Primary button",
+    "button_text_case": "Text case",
+    "button_font_weight": "Weight"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
@@ -178,7 +184,8 @@
     "video_cover_image": "Shown until a customer plays the video.",
     "type_accent_font": "Used for labels and prices.",
     "type_scale_ratio": "How much larger each heading level is than the one below it, from the body size up. Smaller on mobile.",
-    "type_display_size": "The size of the largest headings, like the hero heading, on desktop. Never smaller than a main heading."
+    "type_display_size": "The size of the largest headings, like the hero heading, on desktop. Never smaller than a main heading.",
+    "shape_family": "Rounds buttons, inputs, cards, images and badges together. Round makes buttons and badges pills."
   },
   "options": {
     "alignment": {
@@ -237,6 +244,18 @@
       "tight": "Tight",
       "normal": "Normal",
       "wide": "Wide"
+    },
+    "shape_family": {
+      "square": "Square",
+      "soft": "Soft",
+      "round": "Round"
+    },
+    "button_primary_style": {
+      "filled": "Filled",
+      "outline": "Outline"
+    },
+    "button_font_weight": {
+      "font": "Body font's own"
     }
   }
 }
