@@ -29,7 +29,7 @@
                   | image_tag: widths: '400, 600, 800, 1200', sizes: '(min-width: 750px) 33vw, 100vw', loading: 'lazy'
                 }}
               {% else %}
-                {{ 'image' | placeholder_svg_tag: 'blog-posts__placeholder' }}
+                {{ 'image' | placeholder_svg_tag: 'placeholder blog-posts__placeholder' }}
               {% endif %}
             </a>
             <h3 class="blog-posts__title text-h4">
@@ -43,7 +43,7 @@
         {% for i in (1..section.settings.posts_to_show) %}
           <li class="blog-posts__card">
             <div class="blog-posts__image">
-              {{ 'image' | placeholder_svg_tag: 'blog-posts__placeholder' }}
+              {{ 'image' | placeholder_svg_tag: 'placeholder blog-posts__placeholder' }}
             </div>
             <h3 class="blog-posts__title text-h4">{{ 'blog_posts.article_title' | t }}</h3>
           </li>
@@ -64,14 +64,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   .blog-posts__grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 2rem 1.5rem;
+    gap: var(--space-xl) var(--space-lg);
     width: 100%;
     margin: 0;
     padding: 0;
@@ -87,7 +87,7 @@
   .blog-posts__card {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .blog-posts__image {
@@ -101,11 +101,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-
-  .blog-posts__placeholder {
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
   }
 
   .blog-posts__title {
@@ -124,16 +119,11 @@
 
   .blog-posts__date {
     margin: 0;
-    opacity: 0.7;
+    opacity: var(--opacity-muted);
   }
 
   .blog-posts__excerpt {
     margin: 0;
-  }
-
-  .blog-posts a:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
   }
 {% endstylesheet %}
 

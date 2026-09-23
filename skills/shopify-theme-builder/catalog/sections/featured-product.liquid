@@ -15,7 +15,7 @@
           | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: 'lazy'
         }}
       {% else %}
-        {{ 'product-1' | placeholder_svg_tag: 'featured-product__placeholder' }}
+        {{ 'product-1' | placeholder_svg_tag: 'placeholder featured-product__placeholder' }}
       {% endif %}
     </div>
 
@@ -128,15 +128,15 @@
   .featured-product__inner {
     grid-column: 2;
     display: grid;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   @media (min-width: 750px) {
     .featured-product__inner {
       grid-template-columns: 1fr 1fr;
       align-items: center;
-      gap: 3rem;
+      gap: var(--space-2xl);
     }
   }
 
@@ -149,15 +149,13 @@
 
   .featured-product__placeholder {
     aspect-ratio: 1;
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
   }
 
   .featured-product__details,
   .featured-product__form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-md);
   }
 
   .featured-product__title a {
@@ -171,19 +169,19 @@
   }
 
   .featured-product__compare-at {
-    margin-inline-start: 0.5rem;
-    opacity: 0.6;
+    margin-inline-start: var(--space-xs);
+    opacity: var(--opacity-muted);
   }
 
   .featured-product__field {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .featured-product__field :is(select, input) {
-    padding: 0.5rem;
-    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
+    padding: var(--space-xs);
+    border: var(--border-width) solid var(--color-border);
     background-color: transparent;
     color: inherit;
     font: inherit;
@@ -194,7 +192,7 @@
   }
 
   .featured-product__add {
-    padding: 0.875rem 1.5rem;
+    padding: var(--space-sm) var(--space-lg);
     border: 0;
     background-color: var(--color-button);
     color: var(--color-button-label);
@@ -203,22 +201,8 @@
   }
 
   .featured-product__add:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: not-allowed;
-  }
-
-  .featured-product :is(a, button, input, select):focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
-  }
-
-  .featured-product .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 {% endstylesheet %}
 

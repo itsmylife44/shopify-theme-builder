@@ -27,8 +27,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   .faq__heading {
@@ -37,26 +37,21 @@
 
   .faq__list {
     width: 100%;
-    max-width: 45rem;
+    max-width: var(--width-prose);
   }
 
   .faq__item {
-    border-bottom: 1px solid rgb(from var(--color-foreground) r g b / 0.15);
+    border-bottom: var(--border-width) solid var(--color-border-subtle);
   }
 
   .faq__question {
-    padding-block: 1rem;
+    padding-block: var(--space-md);
     font-weight: 600;
     cursor: pointer;
   }
 
-  .faq__question:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
-  }
-
   .faq__answer {
-    padding-block-end: 1rem;
+    padding-block-end: var(--space-md);
   }
 {% endstylesheet %}
 

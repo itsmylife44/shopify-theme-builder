@@ -537,7 +537,7 @@ describe('Keyboard navigation', () => {
   it('hides the skip link until it has focus and rings every focused control in the color scheme text color', () => {
     const css = readFileSync(path.join(baseTheme, 'assets/critical.css'), 'utf8')
     expect(css).toMatch(/\n\.skip-to-content:not\(:focus\) {[^}]*clip-path: inset\(50%\)/)
-    expect(css).toMatch(/\n:focus-visible {\s*outline: 2px solid var\(--color-foreground\);\s*outline-offset: 2px;\s*}/)
+    expect(css).toMatch(/\n:focus-visible,[^{]*{\s*outline: var\(--focus-ring-width\) solid var\(--color-foreground\);\s*outline-offset: var\(--focus-ring-offset\);\s*}/)
   })
 })
 
@@ -1078,6 +1078,78 @@ describe('Type scale', () => {
   it('leaves font sizes and line heights to the shared text styles in every section, block and snippet', () => {
     for (const file of [...files('base-theme'), ...files('catalog')]) {
       expect(read(file), file).not.toMatch(/[\s;{"'](font-size|line-height)\s*:/)
+    }
+  })
+})
+
+describe('Style system', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const stylesheets = ['base-theme', 'catalog'].flatMap((dir) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => path.join(dir, file))
+      .map((file) => ({ file, css: [...read(file).matchAll(/{%-? stylesheet -?%}([\s\S]*?){%-? endstylesheet -?%}/g)].map((m) => m[1]).join('\n') }))
+      .filter(({ css }) => css),
+  )
+  // Raw values a stylesheet may still use for these properties: sizes of one component, not of the design.
+  const allowed = new Set(['max-width: 10rem'])
+
+  it('defines spacing, widths, borders, the focus ring and muted text as variables', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    for (const name of ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl']) expect(variables).toMatch(new RegExp(`--space-${name}:`))
+    for (const name of [
+      '--section-spacing',
+      '--width-narrow',
+      '--width-text',
+      '--width-prose',
+      '--border-width',
+      '--color-border',
+      '--color-border-subtle',
+      '--style-border-radius-pill',
+      '--focus-ring-width',
+      '--focus-ring-offset',
+      '--opacity-muted',
+      '--opacity-disabled',
+    ]) {
+      expect(variables).toMatch(new RegExp(`${name}:`))
+    }
+    expect(variables).toMatch(/750px/)
+  })
+
+  it('shares the focus ring, visually hidden text and placeholders in critical.css', () => {
+    const critical = read('base-theme/assets/critical.css')
+    expect(critical).toMatch(/:focus-visible[^{]*{[^}]*outline: var\(--focus-ring-width\)/)
+    expect(critical).toMatch(/\.visually-hidden\b[^{]*{[^}]*clip-path/)
+    expect(critical).toMatch(/\.placeholder {[^}]*fill:/)
+  })
+
+  it('leaves the focus ring, visually hidden text and placeholder colors out of every section, block and snippet', () => {
+    for (const { file, css } of stylesheets) {
+      expect(css, file).not.toMatch(/:focus-visible[^{]*{[^}]*[\s;{]outline\s*:/)
+      expect(css, file).not.toMatch(/\.visually-hidden\s*{/)
+      expect(css, file).not.toMatch(/\.placeholder[^{]*{[^}]*(fill|background-color)\s*:/)
+    }
+  })
+
+  it('rejects raw spacing, gaps, radii, borders, widths and opacities in every stylesheet', () => {
+    for (const { file, css } of stylesheets) {
+      for (const [declaration, property, value] of css.matchAll(/([a-z-]+)\s*:\s*([^;{}]+);/g)) {
+        const checked = /^(padding|margin|gap|row-gap|column-gap|border|outline|max-width)/.test(property)
+        if (checked && /\d(rem|px)\b|clamp\(/.test(value) && !allowed.has(`${property}: ${value.trim()}`)) {
+          expect.fail(`${file}: ${declaration.trim()} uses a raw value; use a style system variable`)
+        }
+        if (property === 'opacity' && /^0?\.\d/.test(value.trim())) expect.fail(`${file}: ${declaration.trim()}`)
+        if (/rgb\(from var\(--color-foreground\)|color-mix\(in srgb, currentcolor 15%/.test(value)) expect.fail(`${file}: ${declaration.trim()}`)
+      }
+    }
+  })
+
+  it('switches layouts at the one 750px breakpoint', () => {
+    for (const { file, css } of stylesheets) {
+      for (const [query] of css.matchAll(/\((min|max)-width:[^)]*\)/g)) {
+        expect(['(min-width: 750px)', '(max-width: 749px)'], file).toContain(query)
+      }
     }
   })
 })

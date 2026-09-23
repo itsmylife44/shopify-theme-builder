@@ -148,22 +148,16 @@ h6,
   font-size: var(--font-size-label);
 }
 
-/* Every focused control shows a ring in its color scheme's text color. */
-:focus-visible {
-  outline: 2px solid var(--color-foreground);
-  outline-offset: 2px;
+/* Every focused control shows a ring in its color scheme's text color. A visually hidden
+   input, like a variant option's radio button, shows it on the label that follows it. */
+:focus-visible,
+.visually-hidden:focus-visible + label {
+  outline: var(--focus-ring-width) solid var(--color-foreground);
+  outline-offset: var(--focus-ring-offset);
 }
 
-.skip-to-content {
-  position: fixed;
-  top: 1rem;
-  inset-inline-start: 1rem;
-  z-index: 100;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-}
-
+/* Text for screen readers only, and inputs whose label is the visible control. */
+.visually-hidden,
 .skip-to-content:not(:focus) {
   position: absolute;
   width: 1px;
@@ -171,6 +165,22 @@ h6,
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.skip-to-content {
+  position: fixed;
+  top: var(--space-md);
+  inset-inline-start: var(--space-md);
+  z-index: 100;
+  padding: var(--space-sm) var(--space-lg);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* Shopify's placeholder images for a blank image, product or collection, tinted by the color scheme. */
+.placeholder {
+  background-color: rgb(from var(--color-foreground) r g b / 0.08);
+  fill: rgb(from var(--color-foreground) r g b / 0.4);
 }
 
 /** Section layout utilities */
@@ -220,8 +230,8 @@ h6,
   display: grid;
   grid-template-columns: var(--content-grid);
   align-content: start;
-  row-gap: 1.5rem;
-  padding-block: 3rem;
+  row-gap: var(--space-lg);
+  padding-block: var(--section-spacing);
 }
 
 .basic-page > * {
@@ -251,7 +261,7 @@ h6,
 
 .basic-page :is(button, input[type='submit'], .basic-page__button) {
   width: fit-content;
-  padding: 0.75rem 1.5rem;
+  padding: var(--space-sm) var(--space-lg);
   border: 0;
   border-radius: var(--style-border-radius-inputs);
   background-color: var(--color-button);
@@ -262,32 +272,27 @@ h6,
 }
 
 .basic-page :is(input:not([type='submit'], [type='hidden']), textarea) {
-  padding: 0.75rem;
-  border: 1px solid currentcolor;
+  padding: var(--space-sm);
+  border: var(--border-width) solid currentcolor;
   background: transparent;
   color: inherit;
 }
 
 .basic-page__text {
-  max-width: 45rem;
+  max-width: var(--width-prose);
 }
 
 .basic-page__text > * + * {
-  margin-top: 1rem;
+  margin-block-start: var(--space-md);
 }
 
 .basic-page__form {
   display: grid;
-  gap: 1rem;
-  max-width: 30rem;
+  gap: var(--space-md);
+  max-width: var(--width-narrow);
 }
 
 .basic-page__field {
   display: grid;
-  gap: 0.25rem;
-}
-
-.basic-page .placeholder {
-  background-color: rgb(from var(--color-foreground) r g b / 0.08);
-  fill: rgb(from var(--color-foreground) r g b / 0.4);
+  gap: var(--space-2xs);
 }

@@ -9,7 +9,7 @@
           | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: 'lazy'
         }}
       {% else %}
-        {{ 'image' | placeholder_svg_tag: 'image-with-text__placeholder' }}
+        {{ 'image' | placeholder_svg_tag: 'placeholder image-with-text__placeholder' }}
       {% endif %}
     </div>
 
@@ -42,14 +42,14 @@
     grid-column: 2;
     display: grid;
     align-items: center;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   @media (min-width: 750px) {
     .image-with-text__inner {
       grid-template-columns: 1fr 1fr;
-      gap: 3rem;
+      gap: var(--space-2xl);
     }
 
     .image-with-text--image-right .image-with-text__media {
@@ -69,28 +69,18 @@
     object-fit: cover;
   }
 
-  .image-with-text__placeholder {
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
-  }
-
   .image-with-text__content {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: var(--space-md);
   }
 
   .image-with-text__button {
-    padding: 0.75rem 1.5rem;
+    padding: var(--space-sm) var(--space-lg);
     background-color: var(--color-button);
     color: var(--color-button-label);
     text-decoration: none;
-  }
-
-  .image-with-text__button:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
   }
 {% endstylesheet %}
 

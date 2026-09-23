@@ -29,7 +29,7 @@
               {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
               <li class="related-products__card">
                 <div class="related-products__image">
-                  {{ 'product-' | append: placeholder | placeholder_svg_tag: 'related-products__placeholder' }}
+                  {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder related-products__placeholder' }}
                 </div>
                 <p class="related-products__title">{{ 'related_products.product_title' | t }}</p>
                 <p class="related-products__price">{{ 1999 | money }}</p>
@@ -46,7 +46,7 @@
                       | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
                     }}
                   {% else %}
-                    {{ 'product-1' | placeholder_svg_tag: 'related-products__placeholder' }}
+                    {{ 'product-1' | placeholder_svg_tag: 'placeholder related-products__placeholder' }}
                   {% endif %}
                 </a>
                 <a class="related-products__title" href="{{ recommendation.url }}">{{ recommendation.title | escape }}</a>
@@ -127,14 +127,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   .related-products__grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem 1rem;
+    gap: var(--space-lg) var(--space-md);
     width: 100%;
     margin: 0;
     padding: 0;
@@ -150,7 +150,7 @@
   .related-products__card {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .related-products__image {
@@ -166,11 +166,6 @@
     object-fit: cover;
   }
 
-  .related-products__placeholder {
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
-  }
-
   .related-products__title {
     margin: 0;
     color: inherit;
@@ -182,27 +177,13 @@
     text-underline-offset: 0.3em;
   }
 
-  a.related-products__title:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
-  }
-
   .related-products__price {
     margin: 0;
   }
 
   .related-products__unit-price {
     margin: 0;
-    opacity: 0.7;
-  }
-
-  .related-products .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    opacity: var(--opacity-muted);
   }
 
   .related-products__quick-add {
@@ -212,8 +193,8 @@
   .related-products__quick-add-button {
     align-self: start;
     margin-block-start: auto;
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--color-button);
+    padding: var(--space-xs) var(--space-md);
+    border: var(--border-width) solid var(--color-button);
     background-color: var(--color-button);
     color: var(--color-button-label);
     font: inherit;
@@ -222,7 +203,7 @@
   }
 
   .related-products__quick-add-button:disabled {
-    opacity: 0.5;
+    opacity: var(--opacity-disabled);
     cursor: not-allowed;
   }
 {% endstylesheet %}

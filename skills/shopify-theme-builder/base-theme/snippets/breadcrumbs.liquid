@@ -80,20 +80,20 @@
   .breadcrumbs {
     width: min(calc(var(--page-width) - var(--page-margin) * 2), calc(100% - var(--page-margin) * 2));
     margin-inline: auto;
-    padding-block-start: 1rem;
+    padding-block-start: var(--space-md);
   }
 
   .breadcrumbs__list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     padding: 0;
     list-style: none;
   }
 
   .breadcrumbs__list li + li::before {
     content: '/' / '';
-    margin-inline-end: 0.5rem;
+    margin-inline-end: var(--space-xs);
   }
 
   .breadcrumbs a {

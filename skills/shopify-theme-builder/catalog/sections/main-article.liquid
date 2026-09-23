@@ -7,7 +7,7 @@
       | image_tag: class: 'main-article__image', widths: '750, 1100, 1500, 2000', sizes: '100vw'
     }}
   {% elsif request.design_mode %}
-    {{ 'image' | placeholder_svg_tag: 'main-article__image main-article__placeholder' }}
+    {{ 'image' | placeholder_svg_tag: 'placeholder main-article__image main-article__placeholder' }}
   {% endif %}
 
   <header class="main-article__header">
@@ -109,15 +109,13 @@
 
   .main-article__placeholder {
     height: 32rem;
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
   }
 
   .main-article__header,
   .main-article__comments {
     display: grid;
-    gap: 1rem;
-    max-width: 45rem;
+    gap: var(--space-md);
+    max-width: var(--width-prose);
   }
 
   .main-article__header h1,
@@ -127,7 +125,7 @@
 
   .main-article__meta {
     margin: 0;
-    opacity: 0.7;
+    opacity: var(--opacity-muted);
   }
 
   .main-article .basic-page__text img {
@@ -145,41 +143,36 @@
   .main-article__tags ul {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .main-article__tags a {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
-    border-radius: 999px;
+    padding: var(--space-2xs) var(--space-sm);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-pill);
     text-decoration: none;
   }
 
   .main-article__comment {
     display: grid;
-    gap: 0.5rem;
-    padding-block: 1rem;
-    border-top: 1px solid rgb(from var(--color-foreground) r g b / 0.2);
+    gap: var(--space-xs);
+    padding-block: var(--space-md);
+    border-top: var(--border-width) solid var(--color-border-subtle);
   }
 
   .main-article__pagination {
     display: flex;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .main-article__pagination :is(a, span) {
-    padding: 0.25rem 0.75rem;
+    padding: var(--space-2xs) var(--space-sm);
   }
 
   .main-article__pagination .current {
     font-weight: bold;
-  }
-
-  .main-article a:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
   }
 {% endstylesheet %}
 
