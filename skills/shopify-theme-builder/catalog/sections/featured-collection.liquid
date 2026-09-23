@@ -34,6 +34,13 @@
             </a>
             <a class="featured-collection__title" href="{{ product.url }}">{{ product.title | escape }}</a>
             <p class="featured-collection__price">{{ product.price | money }}</p>
+            {% assign unit_variant = product.selected_or_first_available_variant %}
+            {% if unit_variant.unit_price_measurement %}
+              <p class="featured-collection__unit-price">
+                <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
+                {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
+              </p>
+            {% endif %}
           </li>
         {% endfor %}
       {% else %}
@@ -130,6 +137,21 @@
 
   .featured-collection__price {
     margin: 0;
+  }
+
+  .featured-collection__unit-price {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.7;
+  }
+
+  .featured-collection .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .featured-collection__view-all {

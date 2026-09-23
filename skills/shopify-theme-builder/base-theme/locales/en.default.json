@@ -113,7 +113,8 @@
     "regular_price": "Regular price",
     "sale_price": "Sale price",
     "sold_out": "Sold out",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "unit_price": "Unit price"
   },
   "related_products": {
     "product_title": "Example product"

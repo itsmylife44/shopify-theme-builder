@@ -96,6 +96,26 @@ describe('Cart page', () => {
   })
 })
 
+describe('Unit prices', () => {
+  const sections = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
+  const read = (name: string) => readFileSync(path.join(sections, `${name}.liquid`), 'utf8')
+
+  it('shows the variant unit price inside the product info, so it updates with the variant', () => {
+    const source = read('main-product')
+    const info = source.slice(source.indexOf('<product-info'), source.indexOf('</product-info>'))
+    expect(info).toContain('{% if current_variant.unit_price_measurement %}')
+    expect(info).toContain('current_variant.unit_price | unit_price_with_measurement: current_variant.unit_price_measurement')
+    expect(info).toContain("'product.unit_price' | t")
+  })
+
+  it.each(['featured-collection', 'main-collection', 'related-products'])('shows the unit price on %s cards', (name) => {
+    const source = read(name)
+    expect(source).toContain('.selected_or_first_available_variant %}')
+    expect(source).toContain('unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement')
+    expect(source).toContain("'product.unit_price' | t")
+  })
+})
+
 describe('Base Theme templates', () => {
   const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
   // The pages the Studio doesn't compose: each ships a basic layout that takes a Brand color scheme.
