@@ -51,6 +51,7 @@
     "main_blog": "Main blog",
     "main_article": "Main article",
     "main_404": "Main 404",
+    "main_list_collections": "Main collections list",
     "predictive_search": "Predictive search",
     "main_product": "Main product",
     "main_cart": "Main cart",
@@ -119,6 +120,8 @@
     "products_per_page": "Products per page",
     "results_per_page": "Results per page",
     "articles_per_page": "Articles per page",
+    "collections_per_page": "Collections per page",
+    "sort_collections_by": "Sort collections by",
     "show_dynamic_checkout_buttons": "Show dynamic checkout buttons",
     "show_vendor": "Show vendor",
     "show_author": "Show author",
@@ -199,6 +202,11 @@
     "cart_type": {
       "drawer": "Drawer",
       "page": "Page"
+    },
+    "sort_collections": {
+      "alphabetical": "Alphabetically, A-Z",
+      "date_reversed": "Date, new to old",
+      "date": "Date, old to new"
     }
   }
 }

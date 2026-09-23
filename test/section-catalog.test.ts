@@ -341,6 +341,40 @@ describe('404 page', () => {
   })
 })
 
+describe('Collections list page', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-list-collections.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('ships a list-collections template with the main collections list, a catalog section only for list-collections templates', () => {
+    const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/list-collections.json'), 'utf8'))
+    expect(order.map((id: string) => sections[id].type)).toEqual(['main-list-collections'])
+    expect(schema.enabled_on).toEqual({ templates: ['list-collections'] })
+    expect(schema.limit).toBe(1)
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('color-{{ section.settings.color_scheme }}')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.main_list_collections' }])
+  })
+
+  it('shows every collection as a card with image and title, sorted by a setting, paginated', () => {
+    expect(source).toContain("assign sorted = collections | sort: 'published_at'")
+    expect(source).toContain('{% paginate sorted by section.settings.collections_per_page %}')
+    expect(source).toContain('collection.featured_image')
+    expect(source).toContain("'collection-' | append: placeholder | placeholder_svg_tag")
+    expect(source).toContain('{{ collection.title | escape }}')
+    expect(source).toContain('paginate | default_pagination')
+    const sort = schema.settings.find((setting: { id: string }) => setting.id === 'sort')
+    expect(sort.options.map((option: { value: string }) => option.value)).toEqual(['alphabetical', 'date_reversed', 'date'])
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/main-list-collections.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/templates/list-collections.json')
+  })
+})
+
 describe('Unit prices', () => {
   const sections = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
   const read = (name: string) => readFileSync(path.join(sections, `${name}.liquid`), 'utf8')
