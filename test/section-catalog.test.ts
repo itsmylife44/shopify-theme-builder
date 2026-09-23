@@ -1027,6 +1027,40 @@ describe('Type banner', () => {
   })
 })
 
+describe('Editorial split', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a color scheme and a preset', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toMatch(/class="editorial-split full-width editorial-split--image-{{ section\.settings\.image_position }} color-{{ section\.settings\.color_scheme }}"/)
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.editorial_split' }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('sets a tall image beside a long text column, on either side on desktop', () => {
+    expect(settings.image.type).toBe('image_picker')
+    expect(settings.image_position.options.map((option: { value: string }) => option.value)).toEqual(['left', 'right'])
+    expect(css).toMatch(/\.editorial-split__media {[^}]*aspect-ratio: 2 \/ 3;/)
+    expect(settings.text.type).toBe('richtext')
+    expect(css).toMatch(/\.editorial-split__content {[^}]*max-width: var\(--width-prose\);/)
+  })
+
+  it('offers a drop cap on the first paragraph, sized in lines rather than a font size', () => {
+    expect(settings.drop_cap).toMatchObject({ type: 'checkbox', default: true })
+    expect(source).toContain("{% if section.settings.drop_cap %} editorial-split__text--drop-cap{% endif %}")
+    expect(css).toMatch(/\.editorial-split__text--drop-cap > p:first-child::first-letter {[^}]*initial-letter: 3;/)
+  })
+
+  it('shows an optional pull quote at a heading size from the type scale', () => {
+    expect(settings.quote.type).toBe('inline_richtext')
+    expect(source).toMatch(/{% if section\.settings\.quote != blank %}\s*<blockquote class="editorial-split__quote text-h3">/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
