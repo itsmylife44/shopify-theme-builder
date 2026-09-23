@@ -475,6 +475,26 @@ describe('Announcement bar', () => {
   })
 })
 
+describe('Collection list', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/collection-list.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="collection-list full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.collection_list' }])
+  })
+
+  it('shows the picked collections with their image and title, and native placeholders when there are none', () => {
+    expect(schema.settings).toContainEqual(expect.objectContaining({ type: 'collection_list', id: 'collections' }))
+    expect(source).toContain('{% for collection in section.settings.collections %}')
+    expect(source).toContain('collection.featured_image')
+    expect(source).toContain('{{ collection.title | escape }}')
+    expect(source).toContain("{{ 'collection-' | append: placeholder | placeholder_svg_tag")
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
