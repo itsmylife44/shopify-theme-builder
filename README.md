@@ -152,6 +152,12 @@ Yes. The agent adds the theme's translation files for every language the shop se
 </details>
 
 <details>
+<summary><b>Can a theme I built earlier get the catalog fixes?</b></summary>
+
+Yes. Ask your agent to update your theme's sections: it updates the skill, merges each catalog section's fixes into your theme while keeping your own edits (text, settings, custom CSS), tells you what changed section by section, checks the theme with Theme Check and commits it. Custom sections stay as they are.
+</details>
+
+<details>
 <summary><b>Does my data go anywhere?</b></summary>
 
 The skill has no server of its own. Your agent talks to its model provider as usual, and the Shopify CLI talks to your store.

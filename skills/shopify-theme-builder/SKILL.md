@@ -13,7 +13,7 @@ You build a **Theme** for one Shopify shop with the **Creator** (the person you'
 
 `<skill-dir>` below is the folder holding this `SKILL.md`. It holds `base-theme/`, `catalog/sections/` and `studio/`. The Theme lives in its own folder outside it; the Theme's files never go in `<skill-dir>`.
 
-Talk with the Creator in their language. Work through steps 1 to 5 in order; steps 6 and 7 run when the Creator asks. Each ends on its **done** line.
+Talk with the Creator in their language. Work through steps 1 to 5 in order; steps 6 to 8 run when the Creator asks. Each ends on its **done** line.
 
 Never publish a theme: no `shopify theme publish`, no `--publish`, `--live` or `--allow-live` flag, no Publish button in the admin. Publishing changes the Merchant's live shop, and only the Merchant decides that.
 
@@ -143,8 +143,8 @@ Tell the Creator, in a few lines:
 2. Images and videos are picked in Shopify's Theme Editor: the selected section in the Studio shows each image and video setting, whether it's set, and a "Choose in the Theme Editor" link that opens the page in the Theme Editor on the preview's development theme, where they select that section. Products and menus are edited in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
-5. When the shop sells in more than one language: the Theme's own text (buttons, labels, messages) comes in each language from its locale files, and the page text is written in the default language. Translate the page text into the other languages with Shopify's free Translate & Adapt app: install it from the Shopify App Store, make sure each language is added in Shopify admin › Settings › Languages, then in the app pick the language and the theme and translate its sections' text (Auto-translate fills it in to review). Translations belong to one theme on the store, so translate the theme delivered in step 7; text changed later in the Studio or Theme Editor needs translating again.
-6. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
+5. When the shop sells in more than one language: the Theme's own text (buttons, labels, messages) comes in each language from its locale files, and the page text is written in the default language. Translate the page text into the other languages with Shopify's free Translate & Adapt app: install it from the Shopify App Store, make sure each language is added in Shopify admin › Settings › Languages, then in the app pick the language and the theme and translate its sections' text (Auto-translate fills it in to review). Translations belong to one theme on the store, so translate the theme delivered in step 8; text changed later in the Studio or Theme Editor needs translating again.
+6. Ask you for a section the catalog doesn't have (step 6), to bring a newer catalog's fixes into the Theme's sections (step 7), and to deliver the Theme to the store when it's ready (step 8).
 
 ## 6. Custom Sections
 
@@ -166,7 +166,28 @@ When the Creator wants something no catalog section does, write a **Custom Secti
 
 **Done** when the section file passes Theme Check with zero errors, shows in the Studio, and is committed.
 
-## 7. Delivery
+## 7. Update the catalog sections
+
+When the Creator asks to update their Theme's sections, bring the catalog's fixes into a Theme made earlier, keeping the Creator's own edits. Only a Theme section with a catalog counterpart changes; Custom Sections are never touched.
+
+1. Stop the Studio when it runs (the `pkill` of step 4.1), and commit any open change in `<theme>`, so the update is one commit the Creator can revert.
+2. Pull the latest skill: `npx skills update -p` in the project that installed it (`npx skills update -g` for a global install). It replaces `<skill-dir>`: read this `SKILL.md` again and go on with this step as it now reads, and reinstall the Studio's dependencies as in step 1.
+3. Go through each `<theme>/sections/<name>.liquid` that has a `<skill-dir>/catalog/sections/<name>.liquid`; the Theme's templates and `sections/*-group.json` hold the Creator's content and stay as they are:
+   1. Find the version the Theme started from: the file as the commit that added it holds it, `git -C <theme> show $(git -C <theme> log --diff-filter=A --format=%H -- sections/<name>.liquid | tail -1):sections/<name>.liquid`, saved to a file outside the Theme. When its schema's `name` differs from the catalog file's, it is a Custom Section that shares the name by chance: skip it and tell the Creator.
+   2. When the Theme's file equals the catalog's, it is up to date. Otherwise merge the catalog's changes into it:
+
+      ```sh
+      git merge-file -L theme -L original -L catalog <theme>/sections/<name>.liquid <original-file> <skill-dir>/catalog/sections/<name>.liquid
+      ```
+
+      It keeps the Creator's edits (settings, text, custom CSS) and adds the catalog's. It exits with the number of conflicts, each between `<<<<<<< theme` and `>>>>>>> catalog` in the file: resolve each by hand, keeping what the Creator meant and the catalog's fix.
+4. Add what the merged sections need the way the Studio does when it copies a catalog section: every key of `<skill-dir>/base-theme/locales/en.default.json` and `en.default.schema.json` that the Theme's locale files lack, at any depth, never changing a value the Theme has (in each other shop language's files, translated as in step 3.4); every `<skill-dir>/base-theme/blocks/` file the Theme lacks; and every setting of `<skill-dir>/base-theme/config/settings_schema.json` whose `id` the Theme's lacks, in the group of the same name.
+5. Run `shopify theme check --path <theme>`: it must exit 0. Fix each error and run it again.
+6. Tell the Creator what changed, section by section: what the catalog fixed or added, each conflict and how you resolved it, and each section you skipped. Then commit in `<theme>` (`git add -A && git commit -m "Update the catalog sections"`), and start the Studio again as in step 4.1 when it ran.
+
+**Done** when every catalog section of the Theme holds the catalog's changes and the Creator's edits, Theme Check passes, the Creator has the list of changes, and the update is committed.
+
+## 8. Delivery
 
 When the Creator says the Theme is ready, deliver it. Delivery uploads a copy; it never publishes.
 
