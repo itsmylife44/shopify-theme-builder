@@ -178,6 +178,9 @@
   "marquee": {
     "pause": "Pause scrolling text"
   },
+  "comparison_table": {
+    "label": "Comparison table"
+  },
   "lookbook": {
     "hotspot": "Show {{ product }}"
   },

@@ -1,0 +1,228 @@
+{% comment %}A table comparing products or options by rows of attributes.{% endcomment %}
+<div class="comparison-table full-width color-{{ section.settings.color_scheme }}">
+  <div class="comparison-table__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="comparison-table__heading" id="ComparisonTable-{{ section.id }}">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <div
+      class="comparison-table__scroll"
+      role="region"
+      tabindex="0"
+      {% if section.settings.heading != blank %}
+        aria-labelledby="ComparisonTable-{{ section.id }}"
+      {% else %}
+        aria-label="{{ 'comparison_table.label' | t }}"
+      {% endif %}
+    >
+      <table class="comparison-table__table">
+        <thead>
+          <tr>
+            <td class="comparison-table__corner"></td>
+            {% for i in (1..4) %}
+              {% assign option_key = 'option_' | append: i %}
+              {% if section.settings[option_key] != blank %}
+                <th class="comparison-table__option text-h6" scope="col">{{ section.settings[option_key] | escape }}</th>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for block in section.blocks %}
+            <tr class="comparison-table__row" {{ block.shopify_attributes }}>
+              <th class="comparison-table__label text-label" scope="row">{{ block.settings.label | escape }}</th>
+              {% for i in (1..4) %}
+                {% assign option_key = 'option_' | append: i %}
+                {% assign value_key = 'value_' | append: i %}
+                {% if section.settings[option_key] != blank %}
+                  <td class="comparison-table__value">{{ block.settings[value_key] | escape }}</td>
+                {% endif %}
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .comparison-table {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .comparison-table__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    min-width: 0;
+    padding-block: var(--section-spacing);
+  }
+
+  .comparison-table__heading {
+    margin: 0;
+  }
+
+  .comparison-table__scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .comparison-table__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .comparison-table__table th,
+  .comparison-table__table td {
+    min-inline-size: 8rem;
+    padding: var(--space-sm) var(--space-md);
+    border-block-end: var(--border-width) solid var(--color-border-subtle);
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: break-word;
+  }
+
+  .comparison-table__option {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    text-transform: var(--font-heading--case);
+  }
+
+  .comparison-table__label,
+  .comparison-table__corner {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background-color: var(--color-background);
+  }
+
+  .comparison-table__value {
+    opacity: var(--opacity-muted);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.comparison_table",
+  "tag": "section",
+  "max_blocks": 20,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "How we compare"
+    },
+    {
+      "type": "text",
+      "id": "option_1",
+      "label": "t:labels.option_1",
+      "info": "t:info.comparison_table_options",
+      "default": "Ours"
+    },
+    {
+      "type": "text",
+      "id": "option_2",
+      "label": "t:labels.option_2",
+      "default": "Others"
+    },
+    {
+      "type": "text",
+      "id": "option_3",
+      "label": "t:labels.option_3"
+    },
+    {
+      "type": "text",
+      "id": "option_4",
+      "label": "t:labels.option_4"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "row",
+      "name": "t:general.row",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "t:labels.label",
+          "default": "Attribute"
+        },
+        {
+          "type": "text",
+          "id": "value_1",
+          "label": "t:labels.option_1",
+          "default": "Yes"
+        },
+        {
+          "type": "text",
+          "id": "value_2",
+          "label": "t:labels.option_2",
+          "default": "No"
+        },
+        {
+          "type": "text",
+          "id": "value_3",
+          "label": "t:labels.option_3"
+        },
+        {
+          "type": "text",
+          "id": "value_4",
+          "label": "t:labels.option_4"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.comparison_table",
+      "blocks": [
+        {
+          "type": "row",
+          "settings": {
+            "label": "Materials",
+            "value_1": "Organic cotton",
+            "value_2": "Cotton blend"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Made in",
+            "value_1": "Our own workshop",
+            "value_2": "Outsourced"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Warranty",
+            "value_1": "Lifetime",
+            "value_2": "1 year"
+          }
+        },
+        {
+          "type": "row",
+          "settings": {
+            "label": "Free returns",
+            "value_1": "Yes",
+            "value_2": "No"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

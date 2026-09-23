@@ -10,6 +10,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - A Style tab in the Studio for the global style settings: the type scale and headings, shape and border width, buttons, density and page width, product cards, media and motion, each change saved as one undo step. The Brand tab also picks the accent font now. An agent reads the settings under `style` in `GET /api/theme` and writes them with `PUT /api/style`, which checks each value against the Theme's settings schema; `PUT /api/brand` takes an `accentFont`.
 
+- A comparison table section: up to four products or options, a column each, compared by rows of attributes. On narrow screens the table scrolls sideways, with the attribute column held in place, and the keyboard can scroll it too; screen readers hear it as a table named by its heading. Every gap, border and type style comes from the style system, and it mirrors in right-to-left shops.
+
 - A process steps section for how a product is made: numbered steps, each an image (or Shopify's placeholder), a number in the heading font, a heading and a text, stacked on mobile and up to four in a row on desktop. The numbers come from the steps' order, and screen readers hear them once, from the ordered list; every size, gap, radius and the media treatment come from the style system.
 
 - A timeline section for the brand story: milestones, each a year in the heading font, a heading, a text and an optional image, along a line that runs down the page on mobile and across it on desktop, up to four in a row, with a marker for each milestone in the shape the Merchant picks. Every size, gap, border and radius comes from the style system, and it mirrors in right-to-left shops.
