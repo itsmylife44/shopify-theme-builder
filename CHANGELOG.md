@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A Directions tab in the Studio: it lists the Theme's Directions with the thesis and key choices `DIRECTION.md` gives each, switches the preview between them in one click, and chooses one, then opens the Style tab to tune it. The agent reads them under `directions` in `GET /api/theme`; `PUT /api/directions/chosen` switches to one and marks it on `DIRECTION.md`'s `Chosen:` line, in one undo step.
+
 - Directions as Shopify presets: `PUT /api/directions/<name>` writes a Direction, the Theme's settings with its own style settings, as a preset in `config/settings_data.json` and its home template in `listings/<name>/templates/index.json`, the way the Theme Store installs a preset. `PUT /api/directions/current` switches the preview to one: `current` names it, the logo and other non-presentational settings stay, and its home template becomes `templates/index.json`. Both are checked like the other writes and undo in one step.
 
 - A Style tab in the Studio for the global style settings: the type scale and headings, shape and border width, buttons, density and page width, product cards, media and motion, each change saved as one undo step. The Brand tab also picks the accent font now. An agent reads the settings under `style` in `GET /api/theme` and writes them with `PUT /api/style`, which checks each value against the Theme's settings schema; `PUT /api/brand` takes an `accentFont`.

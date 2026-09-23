@@ -195,10 +195,14 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         const change = await readBody(req)
         return write(() => setStyle(theme, change))
       })
-      // Before the Direction route, which would take current as a name.
+      // Before the Direction route, which would take current and chosen as names.
       route('/api/directions/current', 'PUT', async (req) => {
         const body = await readBody(req)
         return write(() => switchDirection(theme, body))
+      })
+      route('/api/directions/chosen', 'PUT', async (req) => {
+        const body = await readBody(req)
+        return write(() => chooseDirection(theme, body))
       })
       route('/api/directions/:name', 'PUT', async (req, name) => {
         const body = await readBody(req)
@@ -403,7 +407,8 @@ function history(theme) {
  * @typedef {keyof typeof pages} Page
  * @typedef {keyof typeof groups} Group
  * @typedef {{ name: string, settings: Setting[] }} StyleGroup A group of the global style settings; a color's value is a hex color or empty.
- * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, style: StyleGroup[], validation: Offense[] }} ThemeFiles
+ * @typedef {{ name: string, thesis: string, choices: string[], showing: boolean, chosen: boolean }} Direction A Direction; showing when the preview shows its preset untuned.
+ * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, style: StyleGroup[], directions: Direction[], validation: Offense[] }} ThemeFiles
  * @typedef {ThemeFiles & { history: { undo: boolean, redo: boolean } }} ThemeState The Theme's files, and whether the Studio can undo or redo a write.
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'accentFont' | 'logo'>>} BrandChange
  */
@@ -424,6 +429,7 @@ async function readThemeState(theme, catalog, validation) {
     sectionInfo: readSectionInfo(theme, catalog),
     brand: readBrand(theme),
     style: readStyle(theme),
+    directions: readDirections(theme),
     validation: await validation,
   }
 }
@@ -969,6 +975,49 @@ function switchDirection(theme, body) {
   const listing = path.join(theme, listingHome(/** @type {string} */ (name)))
   // ponytail: the home template edited since the last switch is replaced, as Shopify's install does; undo brings it back.
   if (existsSync(listing)) writeFile(path.join(theme, pages.home), readFileSync(listing))
+}
+
+const directionFile = 'DIRECTION.md'
+const chosenLine = /^Chosen: *(.*?) *$/m
+
+/**
+ * Chooses a Direction: switches the preview to it, unless it shows it already, and names it on DIRECTION.md's
+ * `Chosen:` line, under the title, writing the file if the Theme has none.
+ * @param {string} theme
+ * @param {unknown} body `{ name }`
+ */
+function chooseDirection(theme, body) {
+  const { name } = /** @type {{ name?: unknown }} */ (isObject(body) ? body : {})
+  if (readJSON(theme, settingsData).current !== name) switchDirection(theme, body)
+  const file = path.join(theme, directionFile)
+  const text = readIfExists(file)?.toString('utf8') ?? ''
+  const line = `Chosen: ${name}`
+  writeFile(file, chosenLine.test(text) ? text.replace(chosenLine, () => line) : text.replace(/^(# .*\n+)?/, (title) => `${title}${line}\n${text ? '\n' : ''}`))
+}
+
+/**
+ * The Theme's Directions, its presets, each with the thesis (its first paragraph) and key choices (its list) under
+ * its `## <name>` heading in DIRECTION.md, up to a subheading; `Chosen: <name>` there marks the one the Creator chose.
+ * @param {string} theme
+ * @returns {Direction[]}
+ */
+function readDirections(theme) {
+  const data = readJSON(theme, settingsData)
+  const text = readIfExists(path.join(theme, directionFile))?.toString('utf8') ?? ''
+  const chosen = text.match(chosenLine)?.[1]
+  const parts = text.split(/^## /m).slice(1)
+  return Object.keys(data.presets ?? {}).map((name) => {
+    const part = parts.find((other) => other.split('\n')[0].trim().toLowerCase() === name.toLowerCase()) ?? ''
+    const body = part.split('\n').slice(1).join('\n').split(/^#/m)[0]
+    const blocks = body.split(/\n\s*\n/).map((block) => block.trim())
+    return {
+      name,
+      thesis: (blocks.find((block) => block && !block.startsWith('- ')) ?? '').replace(/\s+/g, ' '),
+      choices: (body.match(/^- .+$/gm) ?? []).map((line) => line.slice(2).trim()),
+      showing: data.current === name,
+      chosen: chosen?.toLowerCase() === name.toLowerCase(),
+    }
+  })
 }
 
 /**

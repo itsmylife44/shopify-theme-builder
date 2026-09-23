@@ -2,6 +2,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CircleCheckIcon,
+  CompassIcon,
   ExternalLinkIcon,
   LayoutListIcon,
   MonitorIcon,
@@ -19,6 +20,7 @@ import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
 import type {
   Brand,
+  Direction,
   Group,
   MediaSetting,
   Offense,
@@ -33,6 +35,7 @@ import type {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Combobox,
   ComboboxChip,
@@ -58,7 +61,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
 type Frame = { url: string; paths: Record<Page, string>; editor: Record<Page, string> | null }
-type Tab = 'sections' | 'brand' | 'style' | 'checks'
+type Tab = 'sections' | 'brand' | 'directions' | 'style' | 'checks'
 type Device = 'desktop' | 'mobile'
 
 // In the page switcher's order; a Record would list 404 first.
@@ -181,9 +184,10 @@ export function App() {
       </header>
       <div className="flex min-h-0 flex-1">
         <aside className="flex w-76 shrink-0 flex-col border-r">
-          <div role="tablist" className="grid grid-cols-4 gap-1 border-b p-2">
+          <div role="tablist" className="flex gap-1 border-b p-2">
             <TabButton tab="sections" current={tab} onSelect={setTab} icon={<LayoutListIcon />} label="Sections" />
             <TabButton tab="brand" current={tab} onSelect={setTab} icon={<PaletteIcon />} label="Brand" />
+            <TabButton tab="directions" current={tab} onSelect={setTab} icon={<CompassIcon />} label="Directions" />
             <TabButton tab="style" current={tab} onSelect={setTab} icon={<SlidersHorizontalIcon />} label="Style" />
             <TabButton tab="checks" current={tab} onSelect={setTab} icon={<CircleCheckIcon />} label="Checks" />
           </div>
@@ -193,6 +197,8 @@ export function App() {
             ) : tab === 'brand' ? (
               // Keyed by the saved Brand, so the form restarts from what was written.
               <BrandPanel key={JSON.stringify(state.brand)} brand={state.brand} onSaved={showState} />
+            ) : tab === 'directions' ? (
+              <DirectionsPanel directions={state.directions} onSaved={showState} onChosen={() => setTab('style')} />
             ) : tab === 'style' ? (
               <StylePanel key={JSON.stringify(state.style)} style={state.style} onSaved={showState} />
             ) : (
@@ -253,8 +259,8 @@ function TabButton({
       aria-selected={tab === current}
       size="sm"
       variant={tab === current ? 'secondary' : 'ghost'}
-      // Icon over label, so four tabs fit the sidebar.
-      className="h-auto flex-col gap-0.5 py-1.5 text-xs"
+      // Icon over label, each as wide as it needs, so five tabs fit the sidebar.
+      className="h-auto flex-auto flex-col gap-0.5 px-1 py-1.5 text-xs"
       onClick={() => onSelect(tab)}
     >
       {icon}
@@ -1356,6 +1362,74 @@ function StylePanel({ style, onSaved }: { style: StyleGroup[]; onSaved: (state: 
         ) : null}
       </div>
     </form>
+  )
+}
+
+/** The Theme's Directions: switch the preview between them, and choose one to tune in the Style tab. */
+function DirectionsPanel({
+  directions,
+  onSaved,
+  onChosen,
+}: {
+  directions: Direction[]
+  onSaved: (state: ThemeState) => void
+  onChosen: () => void
+}) {
+  const { saving, error, write } = useWrite(onSaved)
+
+  async function choose(name: string) {
+    if (await write('/api/directions/chosen', jsonRequest('PUT', { name }))) onChosen()
+  }
+
+  if (directions.length === 0) {
+    return <EmptyState title="No Directions yet" description="The agent writes up to three Directions for the Theme; compare them and choose one here." />
+  }
+  return (
+    <div className="flex flex-col gap-3 p-3">
+      {directions.map((direction) => (
+        <Card key={direction.name} size="sm" className={direction.showing ? 'ring-2 ring-primary' : undefined}>
+          <CardHeader>
+            <CardTitle>{direction.name}</CardTitle>
+            {direction.thesis ? <CardDescription>{direction.thesis}</CardDescription> : null}
+            {direction.chosen ? (
+              <CardAction>
+                <Badge>Chosen</Badge>
+              </CardAction>
+            ) : null}
+          </CardHeader>
+          {direction.choices.length > 0 ? (
+            <CardContent>
+              <ul className="flex list-disc flex-col gap-1 pl-4 text-muted-foreground">
+                {direction.choices.map((choice, index) => (
+                  <li key={index}>{choice}</li>
+                ))}
+              </ul>
+            </CardContent>
+          ) : null}
+          <CardFooter className="gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={saving || direction.showing}
+              onClick={() => write('/api/directions/current', jsonRequest('PUT', { name: direction.name }))}
+            >
+              {direction.showing ? 'In preview' : 'Preview'}
+            </Button>
+            {direction.chosen ? null : (
+              <Button size="sm" disabled={saving} onClick={() => choose(direction.name)}>
+                Choose
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      ))}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>The Direction was not changed</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
   )
 }
 
