@@ -110,6 +110,9 @@
                   name="{{ section.id }}-option-{{ option.position }}"
                   value="{{ option_value | escape }}"
                   data-option-value-id="{{ option_value.id }}"
+                  {% if option_value.product_url %}
+                    data-product-url="{{ option_value.product_url }}"
+                  {% endif %}
                   {% if option_value.selected %}
                     checked
                   {% endif %}
@@ -250,6 +253,11 @@
         const optionValues = [...this.querySelectorAll('[data-option-value-id]:checked')]
           .map((input) => input.dataset.optionValueId)
           .join(',');
+        const { productUrl } = event.target.dataset;
+        if (productUrl && productUrl !== this.dataset.url) {
+          location.assign(`${productUrl}?option_values=${optionValues}`);
+          return;
+        }
         params.set('option_values', optionValues);
       } else {
         params.set('variant', this.querySelector('input[name="id"]').value);
