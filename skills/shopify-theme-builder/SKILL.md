@@ -51,7 +51,7 @@ Recommend, without requiring it, Shopify's AI Toolkit (https://github.com/Shopif
 
 ## 2. Brand capture
 
-Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language**, the **shop name**, and the **author** (the Creator's name or business, shown as the Theme's author).
+Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop languages**, the **shop name**, and the **author** (the Creator's name or business, shown as the Theme's author).
 
 1. Ask for a reference first: the Creator's current website, a screenshot, or a moodboard.
    - A website: open it and read the colors (background, text, buttons, accent), font families and logo file from its pages and CSS.
@@ -62,7 +62,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    - **Fonts.** A heading font and a body font, each a handle from `<skill-dir>/studio/server/shopify-fonts.json` (Shopify's font library), like `work_sans_n4` (`n4` is regular 400, `n7` bold, `i4` italic). When the reference's font isn't there, pick the closest family and tell the Creator.
    - **Logo.** A PNG, JPEG, WebP or SVG file, at most 2 MB. Take the file the Creator gives, or download it from their website when that site is their own brand. None is fine: the header shows the shop name.
    - **Style** (like minimal, bold, playful, luxurious) guides the fonts, the schemes and which home sections you pick in step 4.
-   - **Shop language**: the language the shop's customers read, as the ISO code Shopify admin › Settings › Languages shows (`it`, `de`, `pt-BR`).
+   - **Shop languages**: every language the shop sells in, each as the ISO code Shopify admin › Settings › Languages shows (`it`, `de`, `pt-BR`), and which of them is the shop's **default language** (the one customers see first). Ask whether it sells in more than one.
 
 **Done** when every Brand value above has a concrete value (or "no logo") and the Creator has confirmed them.
 
@@ -79,13 +79,13 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
    Then delete `<theme>/PROVENANCE.md`: it describes the skill's own copy of Skeleton. The Theme keeps Shopify's folder layout at its root (`layout/`, `sections/`, `templates/` …), which Shopify's GitHub integration requires, and has no build step. `LICENSE.md` is Skeleton's license and stays with the Theme. The other catalog sections are added through the Studio in step 4, which copies only the ones the Theme uses.
 3. In `<theme>/config/settings_schema.json`, set the first entry's `theme_name` to the shop's name (at most 50 characters) and `theme_author` to the author.
-4. When the shop language isn't English, add it:
+4. Add the locale files of each shop language other than English:
    1. Copy `locales/en.default.json` to `locales/<code>.json` and translate every value. Keep every key, and keep `{{ variables }}` and the HTML of `_html` keys as they are. Plural keys (`one`, `other`) get the forms the language needs (`zero`, `two`, `few`, `many`).
    2. Copy `locales/en.default.schema.json` to `locales/<code>.schema.json` and translate it the same way, so the Merchant sees the Theme Editor in that language.
-   3. Keep `en.default.json` as is: English stays the default, and the storefront shows `<code>.json` to customers once the shop publishes that language.
+   3. Keep `en.default.json` as is: English stays the Theme's default locale, and the storefront shows `<code>.json` to customers reading that language once the shop publishes it.
 5. Run `git init -b main` in `<theme>`, so the Creator can connect it to Shopify's GitHub integration later.
 
-**Done** when `<theme>` holds the Base Theme with the catalog header, announcement bar, footer, contact page, cart page and search page, the Theme's name, and (when not English) both locale files of the shop language.
+**Done** when `<theme>` holds the Base Theme with the catalog header, announcement bar, footer, contact page, cart page and search page, the Theme's name, and both locale files of every shop language other than English.
 
 ## 4. Open the Studio, write the Brand, compose the pages
 
@@ -126,7 +126,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    Alternate the color schemes down the home page (`PATCH`) so neighbouring sections don't share one background.
 
    Point the sections at the store: a `collection` setting (like the featured collection's) takes a collection's handle, `product` a product's, `link_list` a menu's, and `collection_list` or `product_list` a list of handles like `["summer-sale"]`. Pick them from `GET /api/store`. A `url` setting (a button link) takes a store path like `/collections/summer-sale`, an `https://` link, or `shopify://collections/<handle>`. An empty value clears a setting. Layout options take their own values: a `checkbox` `true` or `false`, a `range` a number within its `min`, `max` and `step`, a `number` a number (`null` clears it), a `select` or `radio` one of its `options`' values; `GET` the section to see them. When `GET /api/store` answers an error, run `shopify store auth --store <shop>.myshopify.com --scopes read_products,read_online_store_navigation` as a background process and give the Creator the login link it prints; the Studio lists the store once they approve.
-4. Write the text of every section you added, in the shop's language: the catalog's defaults are English placeholders ("Welcome to our store"). For each section, `GET` it and `PATCH` its `settings` and `blocks` with text written for the shop, from what you learned in step 2. Sections with blocks (testimonials, FAQ) start with three: add or remove blocks so their number fits what the shop has to say. A `text` or `inline_richtext` value is a line of text; a `richtext` value is HTML paragraphs (`<p>…</p>`). Leave product and collection names to Shopify.
+4. Write the text of every section you added, in the shop's default language: the catalog's defaults are English placeholders ("Welcome to our store"). For each section, `GET` it and `PATCH` its `settings` and `blocks` with text written for the shop, from what you learned in step 2. Sections with blocks (testimonials, FAQ) start with three: add or remove blocks so their number fits what the shop has to say. A `text` or `inline_richtext` value is a line of text; a `richtext` value is HTML paragraphs (`<p>…</p>`). Leave product and collection names to Shopify. Shopify shows this text in every language until it's translated; the other shop languages get it through Translate & Adapt (the hand-off, step 5).
 5. Check `GET /api/theme`: `validation` must hold no offense with `"severity": "error"`. Fix any error in the file and line it names, then check again.
 6. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password, under Password protection at `https://admin.shopify.com/store/<shop>/online_store/preferences` (development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
 7. Commit the Theme in `<theme>` (`git add -A && git commit -m "Create the Theme"`).
@@ -141,7 +141,8 @@ Tell the Creator, in a few lines:
 2. Images are edited in Shopify's Theme Editor; products and menus in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
-5. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
+5. When the shop sells in more than one language: the Theme's own text (buttons, labels, messages) comes in each language from its locale files, and the page text is written in the default language. Translate the page text into the other languages with Shopify's free Translate & Adapt app: install it from the Shopify App Store, make sure each language is added in Shopify admin › Settings › Languages, then in the app pick the language and the theme and translate its sections' text (Auto-translate fills it in to review). Translations belong to one theme on the store, so translate the theme delivered in step 7; text changed later in the Studio or Theme Editor needs translating again.
+6. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
 
 ## 6. Custom Sections
 
@@ -155,11 +156,11 @@ When the Creator wants something no catalog section does, write a **Custom Secti
    - **Direction.** Logical CSS properties (`margin-inline`, `padding-inline`, `inset-inline-start`, `text-align: start`), never `left` or `right`, so the layout mirrors in right-to-left languages like Arabic and Hebrew.
    - **Presets.** The schema has a `presets` entry, so the Merchant can add the section in the Theme Editor.
    - **Pages.** A section that needs the product or collection sets `"enabled_on": {"templates": ["product"]}` (or `["collection"]`); `"limit": 1` when a page shows it once.
-   - **Text.** Text the Creator writes is a setting with a default. Fixed storefront text uses `{{ 'key' | t }}`, and every `name`, `label`, `info` and `content` in the schema is a `t:` key. Add each new key to `locales/en.default.json` (or `locales/en.default.schema.json`) and, translated, to the shop language's files.
+   - **Text.** Text the Creator writes is a setting with a default. Fixed storefront text uses `{{ 'key' | t }}`, and every `name`, `label`, `info` and `content` in the schema is a `t:` key. Add each new key to `locales/en.default.json` (or `locales/en.default.schema.json`) and, translated, to each shop language's files.
    - **Limits.** At most 50 blocks (`max_blocks`) and 256 KB per file.
 3. Check Theme Check: `validation` in `GET /api/theme` (or `shopify theme check --path <theme>` when the Studio isn't running) must hold no error. Fix each one and check again. Don't tell the Creator the section is done before this passes.
 4. When the Creator said which page it goes on, add it with `POST /api/<page>/sections` and `{"type": "<name>"}`. Either way, the Studio lists it under Custom Sections in the section picker of each page it can go on, where the Creator can add it.
-5. Write its text in the shop's language (`PATCH`, like step 4.4), and ask the Creator to check it in the Studio; its images are edited in the Theme Editor. Then commit it in `<theme>`.
+5. Write its text in the shop's default language (`PATCH`, like step 4.4), and ask the Creator to check it in the Studio; its images are edited in the Theme Editor. Then commit it in `<theme>`.
 
 **Done** when the section file passes Theme Check with zero errors, shows in the Studio, and is committed.
 

@@ -300,11 +300,13 @@ describe('Base Theme templates', () => {
     }
   })
 
-  it('passes with the shop\'s language added as a copy of the English locale', () => {
+  it('passes with several shop languages added as copies of the English locale', () => {
     const extra = mkdtempSync(path.join(tmpdir(), 'catalog-'))
     mkdirSync(path.join(extra, 'locales'))
-    copyFileSync(path.join(baseTheme, 'locales/en.default.json'), path.join(extra, 'locales/it.json'))
-    copyFileSync(path.join(baseTheme, 'locales/en.default.schema.json'), path.join(extra, 'locales/it.schema.json'))
+    for (const code of ['it', 'de']) {
+      copyFileSync(path.join(baseTheme, 'locales/en.default.json'), path.join(extra, `locales/${code}.json`))
+      copyFileSync(path.join(baseTheme, 'locales/en.default.schema.json'), path.join(extra, `locales/${code}.schema.json`))
+    }
     const result = checkTheme(extra)
     rmSync(extra, { recursive: true })
     expect(result.output).toContain('0 errors')
