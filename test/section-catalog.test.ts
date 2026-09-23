@@ -739,6 +739,82 @@ describe('Product recommendations', () => {
   })
 })
 
+describe('Quick add', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const parse = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const cards = { 'featured-collection': 'product', 'main-collection': 'product', 'main-search': 'result', 'related-products': 'recommendation' }
+
+  it.each(Object.entries(cards))('has a setting to show quick add on %s cards', (name, item) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(parse(source).settings).toContainEqual({ type: 'checkbox', id: 'show_quick_add', label: 't:labels.show_quick_add', default: true })
+    expect(source).toContain('{% if section.settings.show_quick_add %}')
+    expect(source).toContain(`{% if ${item}.has_only_default_variant and ${item}.requires_selling_plan == false %}`)
+  })
+
+  it.each(Object.entries(cards))('adds a single-variant product from %s cards with a form the cart drawer takes, or a post to /cart without it', (name, item) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(source).toMatch(/<form[^>]*action="{{ routes\.cart_add_url }}" method="post"[^>]*data-quick-add-form/)
+    expect(source).toContain(`<input type="hidden" name="id" value="{{ ${item}.selected_or_first_available_variant.id }}">`)
+    expect(source).toContain(`'quick_add.add_label' | t: product: ${item}.title`)
+    const quickAdd = read('catalog/sections/quick-add.liquid')
+    expect(quickAdd).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);/)
+    expect(quickAdd).toContain("event.target.closest('[data-quick-add-form]')")
+  })
+
+  it.each(Object.entries(cards))('links a product with variants on %s cards to its page, which quick add opens in a dialog instead', (name, item) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(source).toMatch(new RegExp(`<a\\s+class="[\\w-]+__quick-add-button"\\s+href="{{ ${item}\\.url }}"\\s+aria-haspopup="dialog"`))
+    expect(source).toContain(`'quick_add.choose_options_label' | t: product: ${item}.title`)
+    expect(source).toMatch(/\s+data-quick-add\s/)
+  })
+
+  describe('dialog', () => {
+    const source = read('catalog/sections/quick-add.liquid')
+    const schema = parse(source)
+    const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+
+    it('renders the variant picker and the product form of the product in a dialog, with a close button', () => {
+      expect(source).toMatch(/<quick-add-dialog>\s*<dialog class="quick-add color-{{ section\.settings\.color_scheme }}"/)
+      expect(source).toMatch(/<form method="dialog">\s*<button[^>]*aria-label="{{ 'quick_add\.close' \| t }}"/)
+      expect(source).toContain('{% for option in product.options_with_values %}')
+      expect(source).toContain('data-option-value-id="{{ option_value.id }}"')
+      expect(source).toContain("{% form 'product', product")
+      expect(source).toContain('<input type="hidden" name="id" value="{{ current_variant.id }}">')
+      for (const key of ['add', 'add_label', 'choose_options', 'choose_options_label', 'close', 'view_details']) expect(locale.quick_add[key], key).toBeTruthy()
+    })
+
+    it('loads through the Section Rendering API, re-renders when an option changes and falls back to the product page', () => {
+      expect(source).toContain("searchParams.set('section_id', 'quick-add')")
+      expect(source).toContain("searchParams.set('option_values', optionValues)")
+      expect(source).toContain("event.target.closest('[data-quick-add]')")
+      expect(source).toContain('location.assign(trigger.href)')
+    })
+
+    it('handles focus like the cart drawer: modal, closes on the backdrop, returns focus to the card', () => {
+      expect(source).toContain('this.dialog.showModal()')
+      expect(source).toContain('event.target === this.dialog && this.dialog.close()')
+      expect(source).toMatch(/addEventListener\(\s*'close'/)
+      expect(source).toContain('this.opener?.focus()')
+      expect(source).toContain("customElements.define('quick-add-dialog'")
+    })
+
+    it('hands the add to the cart drawer, which opens with focus returning to the card', () => {
+      expect(source).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);\s*this\.dialog\.close\(\);\s*drawer\.add\(event\.target, this\.opener\)/)
+    })
+
+    it('is rendered only through the Section Rendering API, so neither the Studio nor the Theme Editor offers it', () => {
+      expect(schema.enabled_on).toEqual({ groups: ['header'] })
+      expect(schema.presets).toBeUndefined()
+      expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    })
+
+    it('is copied into every new Theme by the skill', () => {
+      expect(read('SKILL.md')).toContain('<skill-dir>/catalog/sections/quick-add.liquid')
+    })
+  })
+})
+
 describe('Structured data', () => {
   const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
 
