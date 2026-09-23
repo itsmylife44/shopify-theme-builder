@@ -154,7 +154,7 @@
 {% stylesheet %}
   .main-cart__form {
     display: grid;
-    gap: 2rem;
+    gap: var(--space-xl);
   }
 
   .main-cart__items {
@@ -165,13 +165,13 @@
   .main-cart__items th {
     font-weight: inherit;
     text-align: start;
-    opacity: 0.7;
+    opacity: var(--opacity-muted);
   }
 
   .main-cart__items :is(th, td) {
-    padding-block: 1rem;
-    padding-inline: 0 1rem;
-    border-bottom: 1px solid currentcolor;
+    padding-block: var(--space-md);
+    padding-inline: 0 var(--space-md);
+    border-bottom: var(--border-width) solid currentcolor;
     vertical-align: top;
   }
 
@@ -182,11 +182,11 @@
 
   .main-cart__product {
     display: flex;
-    gap: 1rem;
+    gap: var(--space-md);
   }
 
   .main-cart__product > div > * + * {
-    margin-top: 0.25rem;
+    margin-top: var(--space-2xs);
   }
 
   .main-cart__image {
@@ -200,7 +200,7 @@
   }
 
   .main-cart__muted {
-    opacity: 0.7;
+    opacity: var(--opacity-muted);
   }
 
   .main-cart__discounts {
@@ -214,18 +214,18 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: start;
-    gap: 2rem;
+    gap: var(--space-xl);
   }
 
   .main-cart__note {
     flex: 1 1 18rem;
-    max-width: 30rem;
+    max-width: var(--width-narrow);
   }
 
   .main-cart__summary {
     display: grid;
     justify-items: end;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     margin-inline-start: auto;
     text-align: end;
   }
@@ -234,11 +234,11 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: end;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
-  .basic-page .main-cart__actions .main-cart__update {
-    border: 1px solid currentcolor;
+  .main-cart .main-cart__actions .main-cart__update {
+    border: var(--border-width) solid currentcolor;
     background: transparent;
     color: inherit;
   }
@@ -246,15 +246,6 @@
   .main-cart__additional-checkout {
     justify-self: end;
     width: min(100%, 20rem);
-  }
-
-  .main-cart .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 {% endstylesheet %}
 

@@ -50,7 +50,7 @@
               }}
             {% else %}
               {% assign placeholder = forloop.index0 | modulo: 2 | plus: 1 | prepend: 'lifestyle-' %}
-              {{ placeholder | placeholder_svg_tag: 'slideshow__image slideshow__placeholder' }}
+              {{ placeholder | placeholder_svg_tag: 'placeholder slideshow__image slideshow__placeholder' }}
             {% endif %}
           </div>
 
@@ -131,8 +131,7 @@
   }
 
   .slideshow__track:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: -2px;
+    outline-offset: calc(var(--focus-ring-offset) * -1);
   }
 
   .slideshow__slide {
@@ -142,7 +141,7 @@
     grid-template-columns: var(--content-grid);
     align-items: center;
     min-height: clamp(28rem, 75vh, 48rem);
-    padding-block: 3rem;
+    padding-block: var(--section-spacing);
     scroll-snap-align: start;
     scroll-snap-stop: always;
     overflow: hidden;
@@ -159,48 +158,37 @@
     object-fit: cover;
   }
 
-  .slideshow__placeholder {
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
-  }
-
   .slideshow__content {
     position: relative;
     grid-column: 2;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
-    max-width: 40rem;
-    padding: 2rem;
+    gap: var(--space-md);
+    max-width: var(--width-text);
+    padding: var(--space-xl);
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
 
   .slideshow__button {
     display: inline-block;
-    padding: 0.75rem 1.5rem;
+    padding: var(--space-sm) var(--space-lg);
     background-color: var(--color-button);
     color: var(--color-button-label);
     text-decoration: none;
   }
 
-  .slideshow__button:focus-visible,
-  .slideshow__control:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
-  }
-
   .slideshow__controls {
     display: flex;
     justify-content: center;
-    gap: 0.5rem;
-    padding-block: 0.75rem;
+    gap: var(--space-xs);
+    padding-block: var(--space-sm);
   }
 
   .slideshow__control {
     display: flex;
-    padding: 0.5rem;
+    padding: var(--space-xs);
     border: 0;
     background: none;
     color: inherit;

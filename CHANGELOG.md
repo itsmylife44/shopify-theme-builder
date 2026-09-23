@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A style system for spacing, widths and borders: a spacing scale (`--space-2xs` to `--space-2xl`), `--section-spacing`, content widths (`--width-narrow`, `--width-text`, `--width-prose`), `--border-width`, border colors per color scheme (`--color-border`, `--color-border-subtle`), a pill radius, the focus ring's width and offset and muted and disabled opacities, in `snippets/css-variables.liquid`. The focus ring, the `visually-hidden` class and the placeholder tint are shared in `assets/critical.css` instead of copied into sections, and every section, block and snippet uses the variables. The breakpoint stays 750px, documented as a constant. A few odd sizes moved to the nearest step.
+
 - A type scale sizes the text of every section: display, h1 to h6, body, small and label sizes that keep their order on mobile, with line heights for headings and body, in `snippets/css-variables.liquid`, and shared `text-display`, `text-h1` to `text-h6`, `text-body`, `text-small` and `text-label` classes in `assets/critical.css`. Sections no longer set font sizes of their own, and headings in rich text (h3 to h6) follow the scale. Sizes stay within a step of before.
 
 - When the Theme has no logo and the store's name in Shopify admin differs from the shop name the Creator gave, the agent tells the Creator to change it under Settings › General › Store name, in step 4 and again in the hand-off, since the header and footer show it.

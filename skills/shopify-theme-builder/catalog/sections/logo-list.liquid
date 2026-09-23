@@ -11,7 +11,7 @@
           {% if block.settings.image != blank %}
             {{ block.settings.image | image_url: width: 320 | image_tag: widths: '160, 320', sizes: '160px', loading: 'lazy' }}
           {% else %}
-            {{ 'image' | placeholder_svg_tag: 'logo-list__placeholder' }}
+            {{ 'image' | placeholder_svg_tag: 'placeholder logo-list__placeholder' }}
           {% endif %}
         </li>
       {% endfor %}
@@ -30,8 +30,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   .logo-list__heading {
@@ -43,7 +43,7 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 2rem 3rem;
+    gap: var(--space-xl) var(--space-2xl);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -55,11 +55,6 @@
     width: 8rem;
     height: 4rem;
     object-fit: contain;
-  }
-
-  .logo-list__placeholder {
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
   }
 {% endstylesheet %}
 

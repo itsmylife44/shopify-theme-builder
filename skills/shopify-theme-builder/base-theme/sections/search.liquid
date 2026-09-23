@@ -62,8 +62,8 @@
   .search__form {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    max-width: 40rem;
+    gap: var(--space-xs);
+    max-width: var(--width-text);
   }
 
   .search__form input {
@@ -73,13 +73,13 @@
   .search-results {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
-    gap: 2rem 1rem;
+    gap: var(--space-xl) var(--space-md);
   }
 
   .search-result {
     display: grid;
     align-content: start;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .search-results .prev,

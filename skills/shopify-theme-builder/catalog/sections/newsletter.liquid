@@ -40,47 +40,41 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    padding-block: 3rem;
+    gap: var(--space-md);
+    padding-block: var(--section-spacing);
     text-align: center;
   }
 
   .newsletter__text {
-    max-width: 40rem;
+    max-width: var(--width-text);
   }
 
   .newsletter__form {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
     width: 100%;
-    max-width: 30rem;
+    max-width: var(--width-narrow);
   }
 
   .newsletter__form input[type='email'] {
     flex: 1 1 14rem;
-    padding: 0.75rem;
-    border: 1px solid currentcolor;
+    padding: var(--space-sm);
+    border: var(--border-width) solid currentcolor;
     background: transparent;
     color: inherit;
     font: inherit;
   }
 
   .newsletter__form button {
-    padding: 0.75rem 1.5rem;
+    padding: var(--space-sm) var(--space-lg);
     border: 0;
     border-radius: var(--style-border-radius-inputs);
     background-color: var(--color-button);
     color: var(--color-button-label);
     font: inherit;
     cursor: pointer;
-  }
-
-  .newsletter__form input:focus-visible,
-  .newsletter__form button:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
   }
 
   .newsletter__message {

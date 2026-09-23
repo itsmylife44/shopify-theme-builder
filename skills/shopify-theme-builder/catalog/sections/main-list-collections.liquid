@@ -30,7 +30,7 @@
                     }}
                   {% else %}
                     {% assign placeholder = forloop.index0 | modulo: 6 | plus: 1 %}
-                    {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'main-list-collections__placeholder' }}
+                    {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'placeholder main-list-collections__placeholder' }}
                   {% endif %}
                 </span>
                 <span class="main-list-collections__title text-h5">{{ collection.title | escape }}</span>
@@ -50,7 +50,7 @@
             {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
             <li class="main-list-collections__card">
               <span class="main-list-collections__image">
-                {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'main-list-collections__placeholder' }}
+                {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'placeholder main-list-collections__placeholder' }}
               </span>
               <span class="main-list-collections__title text-h5">{{ 'collection_list.collection_title' | t }}</span>
             </li>
@@ -71,8 +71,8 @@
     grid-column: 2;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
-    padding-block: 3rem;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
   }
 
   .main-list-collections__heading {
@@ -82,7 +82,7 @@
   .main-list-collections__grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem 1rem;
+    gap: var(--space-lg) var(--space-md);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -97,7 +97,7 @@
   .main-list-collections__card {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-sm);
     color: inherit;
     text-decoration: none;
   }
@@ -115,14 +115,6 @@
     object-fit: cover;
   }
 
-  .main-list-collections__placeholder {
-    background-color: rgb(from var(--color-foreground) r g b / 0.08);
-    fill: rgb(from var(--color-foreground) r g b / 0.4);
-  }
-
-  .main-list-collections__title {
-  }
-
   a.main-list-collections__card:hover .main-list-collections__title {
     text-decoration: underline;
     text-underline-offset: 0.3em;
@@ -131,21 +123,16 @@
   .main-list-collections__pagination {
     display: flex;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-xs);
   }
 
   .main-list-collections__pagination :is(a, span) {
-    padding: 0.25rem 0.75rem;
+    padding: var(--space-2xs) var(--space-sm);
     color: inherit;
   }
 
   .main-list-collections__pagination .current {
     font-weight: bold;
-  }
-
-  .main-list-collections a:focus-visible {
-    outline: 2px solid var(--color-foreground);
-    outline-offset: 2px;
   }
 {% endstylesheet %}
 

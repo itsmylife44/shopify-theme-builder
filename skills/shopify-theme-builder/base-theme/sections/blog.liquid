@@ -44,13 +44,13 @@
   .blog__articles {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
-    gap: 2rem;
+    gap: var(--space-xl);
   }
 
   .blog__article {
     display: grid;
     align-content: start;
-    gap: 0.75rem;
+    gap: var(--space-sm);
   }
 
   .blog__article :is(img, .placeholder) {

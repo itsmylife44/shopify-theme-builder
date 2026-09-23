@@ -27,6 +27,29 @@
     --line-height-display: 1.1;
     --line-height-heading: 1.2;
     --line-height-body: 1.5;
+    {% # Spacing: padding, margins and gaps take a step of this scale; sections pad their top and bottom with --section-spacing. %}
+    --space-2xs: 0.25rem;
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --section-spacing: 3rem;
+    {% # Content widths: forms, a text column beside media, a column of running text. %}
+    --width-narrow: 30rem;
+    --width-text: 40rem;
+    --width-prose: 45rem;
+    --border-width: 1px;
+    --style-border-radius-pill: 999px;
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+    --opacity-muted: 0.7;
+    --opacity-disabled: 0.5;
+    {% comment %}
+      The breakpoint is 750px: layouts switch at @media (min-width: 750px) and (max-width: 749px), and image sizes
+      at (min-width: 750px). CSS variables don't work in media queries, so it is this constant instead of a variable.
+    {% endcomment %}
     --page-width: {{ settings.max_page_width }};
     --page-margin: {{ settings.min_page_margin }}px;
     --style-border-radius-inputs: {{ settings.input_corner_radius }}px;
@@ -41,6 +64,8 @@
       --color-foreground: {{ scheme.settings.text }};
       --color-button: {{ scheme.settings.button }};
       --color-button-label: {{ scheme.settings.button_label }};
+      --color-border: rgb(from var(--color-foreground) r g b / 0.3);
+      --color-border-subtle: rgb(from var(--color-foreground) r g b / 0.15);
     }
     .color-{{ scheme.id }} {
       background-color: var(--color-background);

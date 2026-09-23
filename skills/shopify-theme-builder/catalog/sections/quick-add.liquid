@@ -36,7 +36,7 @@
                 | image_tag: widths: '200, 400', sizes: '8rem', loading: 'lazy'
               }}
             {% else %}
-              {{ 'product-1' | placeholder_svg_tag: 'quick-add__placeholder' }}
+              {{ 'product-1' | placeholder_svg_tag: 'placeholder quick-add__placeholder' }}
             {% endif %}
           </div>
           <div>
@@ -65,7 +65,7 @@
                 {% capture input_id %}QuickAdd-{{ option.position }}-{{ forloop.index0 }}{% endcapture %}
                 <input
                   id="{{ input_id }}"
-                  class="quick-add__option-input"
+                  class="quick-add__option-input visually-hidden"
                   type="radio"
                   name="QuickAdd-option-{{ option.position }}"
                   value="{{ option_value | escape }}"
