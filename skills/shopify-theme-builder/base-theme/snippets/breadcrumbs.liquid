@@ -1,0 +1,103 @@
+{% doc %}
+  Renders the breadcrumbs of product, collection, article and page templates,
+  with their BreadcrumbList structured data. Renders nothing on other templates,
+  or when the `show_breadcrumbs` theme setting is off.
+
+  @example
+  {% render 'breadcrumbs' %}
+{% enddoc %}
+
+{%- liquid
+  assign parent_title = ''
+  assign parent_url = ''
+  assign current_title = ''
+
+  case request.page_type
+    when 'product'
+      if collection
+        assign parent_title = collection.title
+        assign parent_url = collection.url
+      endif
+      assign current_title = product.title
+    when 'collection'
+      assign current_title = collection.title
+    when 'article'
+      assign parent_title = blog.title
+      assign parent_url = blog.url
+      assign current_title = article.title
+    when 'page'
+      assign current_title = page.title
+  endcase
+
+  assign current_position = 2
+  if parent_title != blank
+    assign current_position = 3
+  endif
+-%}
+
+{%- if settings.show_breadcrumbs and current_title != blank -%}
+  <nav class="breadcrumbs" aria-label="{{ 'breadcrumbs.label' | t }}">
+    <ol class="breadcrumbs__list" role="list">
+      <li><a href="{{ routes.root_url }}">{{ 'breadcrumbs.home' | t }}</a></li>
+      {%- if parent_title != blank -%}
+        <li><a href="{{ parent_url }}">{{ parent_title | escape }}</a></li>
+      {%- endif -%}
+      <li><a href="{{ request.path }}" aria-current="page">{{ current_title | escape }}</a></li>
+    </ol>
+  </nav>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": {{ 'breadcrumbs.home' | t | json }},
+          "item": {{ request.origin | append: routes.root_url | json }}
+        },
+        {%- if parent_title != blank %}
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": {{ parent_title | json }},
+            "item": {{ request.origin | append: parent_url | json }}
+          },
+        {%- endif %}
+        {
+          "@type": "ListItem",
+          "position": {{ current_position }},
+          "name": {{ current_title | json }},
+          "item": {{ canonical_url | json }}
+        }
+      ]
+    }
+  </script>
+{%- endif -%}
+
+{% stylesheet %}
+  .breadcrumbs {
+    width: min(calc(var(--page-width) - var(--page-margin) * 2), calc(100% - var(--page-margin) * 2));
+    margin-inline: auto;
+    padding-block-start: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .breadcrumbs__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .breadcrumbs__list li + li::before {
+    content: '/' / '';
+    margin-inline-end: 0.5rem;
+  }
+
+  .breadcrumbs a {
+    color: inherit;
+  }
+{% endstylesheet %}

@@ -14,6 +14,10 @@
     "comment_form_title": "Add a comment",
     "empty": "This blog has no articles yet."
   },
+  "breadcrumbs": {
+    "home": "Home",
+    "label": "Breadcrumbs"
+  },
   "cart": {
     "checkout": "Checkout",
     "continue_shopping": "Continue shopping",

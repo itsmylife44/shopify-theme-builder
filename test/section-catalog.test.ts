@@ -460,3 +460,35 @@ describe('Product recommendations', () => {
     expect(source).toMatch(/recommendations\.products_count == 0 and request\.design_mode/)
   })
 })
+
+describe('Structured data', () => {
+  const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
+
+  it('describes the shop as an Organization with its name, logo and social links on every page', () => {
+    const meta = readFileSync(path.join(baseTheme, 'snippets/meta-tags.liquid'), 'utf8')
+    const organization = meta.slice(meta.indexOf('"@type": "Organization"'))
+    expect(organization).toContain('"name": {{ shop.name | json }}')
+    expect(organization).toMatch(/"logo": {{ logo_url \| json }}/)
+    expect(organization).toMatch(/"sameAs": \[{{ same_as }}\]/)
+    for (const network of ['instagram', 'facebook', 'tiktok', 'x', 'youtube', 'pinterest']) {
+      expect(meta).toContain(network)
+    }
+  })
+
+  it('shows breadcrumbs with BreadcrumbList data on product, collection, article and page templates, with a setting to hide them', () => {
+    const layout = readFileSync(path.join(baseTheme, 'layout/theme.liquid'), 'utf8')
+    expect(layout).toMatch(/{% sections 'header-group' %}\s*{% render 'breadcrumbs' %}\s*<main/)
+
+    const snippet = readFileSync(path.join(baseTheme, 'snippets/breadcrumbs.liquid'), 'utf8')
+    expect(snippet).toContain('settings.show_breadcrumbs')
+    for (const pageType of ['product', 'collection', 'article', 'page']) expect(snippet).toContain(`when '${pageType}'`)
+    expect(snippet).toContain('"@type": "BreadcrumbList"')
+    expect(snippet).toContain('"@type": "ListItem"')
+    expect(snippet).toMatch(/<nav class="breadcrumbs" aria-label="{{ 'breadcrumbs\.label' \| t }}">/)
+    expect(snippet).toContain('aria-current="page"')
+
+    const settings = parseJSON(readFileSync(path.join(baseTheme, 'config/settings_schema.json'), 'utf8'))
+    const all = settings.flatMap((group: { settings?: object[] }) => group.settings ?? [])
+    expect(all).toContainEqual(expect.objectContaining({ id: 'show_breadcrumbs', type: 'checkbox', default: true }))
+  })
+})

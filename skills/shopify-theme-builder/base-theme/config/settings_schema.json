@@ -72,6 +72,12 @@
         "unit": "px",
         "label": "t:labels.page_margin",
         "default": 20
+      },
+      {
+        "type": "checkbox",
+        "id": "show_breadcrumbs",
+        "label": "t:labels.show_breadcrumbs",
+        "default": true
       }
     ]
   },
