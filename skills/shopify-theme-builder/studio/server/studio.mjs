@@ -97,19 +97,19 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       })
 
       /**
-       * A route answers its exact path; one ending in /:id also answers a single path segment after
-       * that prefix, and hands it to the handler.
+       * A route answers its exact path, where each :param stands for one path segment; the handler gets
+       * those segments in order.
        * @param {string} url
        * @param {string} method
-       * @param {(req: import('node:http').IncomingMessage, id: string) => Promise<unknown>} handle
+       * @param {(req: import('node:http').IncomingMessage, ...ids: string[]) => Promise<unknown>} handle
        */
       function route(url, method, handle) {
-        const [prefix, param] = url.split('/:')
+        const prefix = url.split('/:')[0]
+        const pattern = new RegExp(`^${url.slice(prefix.length).replace(/:\w+/g, '([^/]+)') || '/'}$`)
         server.middlewares.use(prefix, (req, res, next) => {
           // Connect matches path prefixes and strips them from req.url.
-          const rest = new URL(req.url ?? '/', 'http://studio').pathname
-          const id = param ? rest.match(/^\/([^/]+)$/)?.[1] : rest === '/' ? '' : undefined
-          if (req.method !== method || id === undefined) return next()
+          const ids = new URL(req.url ?? '/', 'http://studio').pathname.match(pattern)?.slice(1)
+          if (req.method !== method || ids === undefined) return next()
           // A browser names the page behind a request in Origin. Only the Studio's own page may write: not a
           // script in the preview (served from the proxy's port) nor another website.
           if (method !== 'GET' && req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) {
@@ -119,7 +119,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
             return
           }
           Promise.resolve()
-            .then(() => handle(req, decodeId(id)))
+            .then(() => handle(req, ...ids.map(decodeId)))
             .then((body) => {
               if (body instanceof File) {
                 res.setHeader('Content-Type', body.type)
@@ -177,6 +177,18 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         })
         route(`/api/${page}/order`, 'PUT', async (req) => {
           reorderSections(theme, template, await readBody(req))
+          return readStateAfterWrite()
+        })
+        route(`/api/${page}/sections/:id/blocks`, 'POST', async (req, id) => {
+          addBlock(theme, template, id, await readBody(req))
+          return readStateAfterWrite()
+        })
+        route(`/api/${page}/sections/:id/blocks/:block`, 'DELETE', async (_, id, block) => {
+          removeBlock(theme, template, id, block)
+          return readStateAfterWrite()
+        })
+        route(`/api/${page}/sections/:id/order`, 'PUT', async (req, id) => {
+          reorderBlocks(theme, template, id, await readBody(req))
           return readStateAfterWrite()
         })
       }
@@ -543,9 +555,7 @@ function addSection(theme, catalog, file, body) {
     if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
     const count = Object.values(template.sections).filter((/** @type {{ type: string }} */ section) => section.type === type).length
     if (typeof limit === 'number' && count >= limit) throw new BadRequest(`A page holds at most ${limit} ${type} section${limit === 1 ? '' : 's'}.`)
-    let id
-    do id = `${type}_${randomBytes(3).toString('hex')}`
-    while (id in template.sections)
+    const id = newId(type, template.sections)
     template.sections[id] = fromPreset(type, presets?.[0])
     template.order.push(id)
     if (!existsSync(own)) {
@@ -569,14 +579,24 @@ function fromPreset(type, preset) {
     section.blocks = {}
     section.block_order = []
     for (const block of /** @type {{ type: string, settings?: object }[]} */ (preset.blocks)) {
-      let blockId
-      do blockId = `${block.type}_${randomBytes(3).toString('hex')}`
-      while (blockId in section.blocks)
+      const blockId = newId(block.type, section.blocks)
       section.blocks[blockId] = { type: block.type, settings: structuredClone(block.settings ?? {}) }
       section.block_order.push(blockId)
     }
   }
   return section
+}
+
+/**
+ * A new id for a section or block of this type, like hero_1a2b3c, that `taken` doesn't hold.
+ * @param {string} type
+ * @param {object} taken
+ */
+function newId(type, taken) {
+  let id
+  do id = `${type}_${randomBytes(3).toString('hex')}`
+  while (id in taken)
+  return id
 }
 
 /**
@@ -668,18 +688,105 @@ function removeSection(theme, file, id) {
  * @param {unknown} body
  */
 function reorderSections(theme, file, body) {
-  const { order } = /** @type {{ order?: unknown }} */ (body ?? {})
   updateJSON(theme, file, (template) => {
-    const current = new Set(template.order)
-    if (
-      !Array.isArray(order) ||
-      order.length !== current.size ||
-      new Set(order).size !== order.length ||
-      !order.every((id) => current.has(id))
-    ) {
-      throw new BadRequest(`order must list each section id of ${file} exactly once.`)
+    template.order = checkOrder(body, template.order, `each section id of ${file}`)
+  })
+}
+
+/**
+ * The `order` of a request body, when it lists each of `ids` exactly once.
+ * @param {unknown} body
+ * @param {string[]} ids
+ * @param {string} what Names the ids in the error.
+ * @returns {string[]}
+ */
+function checkOrder(body, ids, what) {
+  const { order } = /** @type {{ order?: unknown }} */ (body ?? {})
+  const current = new Set(ids)
+  if (!Array.isArray(order) || order.length !== current.size || new Set(order).size !== order.length || !order.every((id) => current.has(id))) {
+    throw new BadRequest(`order must list ${what} exactly once.`)
+  }
+  return order
+}
+
+// Shopify's most blocks in a section, and its max_blocks when the schema sets none.
+const maxBlocks = 50
+
+/**
+ * The block types a section's schema lets a page add: its own blocks, not app or theme blocks.
+ * @param {{ blocks?: { type: string, name?: string, limit?: number }[] }} schema
+ */
+function blockTypes(schema) {
+  return (schema.blocks ?? []).filter((block) => !block.type.startsWith('@'))
+}
+
+/**
+ * A section's blocks in order: block_order, or the key order of blocks when a template has no block_order.
+ * @param {{ blocks?: Record<string, { type: string }>, block_order?: string[] }} section
+ */
+function blockOrder(section) {
+  return section.block_order ?? Object.keys(section.blocks ?? {})
+}
+
+/**
+ * Adds a block at the end of a section, within its schema's max_blocks and the block type's limit.
+ * @param {string} theme
+ * @param {string} file The page's JSON template.
+ * @param {string} id
+ * @param {unknown} body `{ type }`
+ */
+function addBlock(theme, file, id, body) {
+  const { type } = /** @type {{ type?: unknown }} */ (body ?? {})
+  if (typeof type !== 'string') throw new BadRequest('type must be a block type, like testimonial.')
+  updateJSON(theme, file, (template) => {
+    const section = findSection(template, file, id)
+    const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
+    const types = blockTypes(schema)
+    const blockType = types.find((candidate) => candidate.type === type)
+    if (!blockType) {
+      throw new BadRequest(`The ${section.type} section has no ${type} block; it takes ${types.map((t) => t.type).join(', ') || 'none'}.`)
     }
-    template.order = order
+    const order = blockOrder(section)
+    const limit = schema.max_blocks ?? maxBlocks
+    if (order.length >= limit) throw new BadRequest(`The ${section.type} section holds at most ${limit} blocks.`)
+    const count = order.filter((blockId) => section.blocks[blockId]?.type === type).length
+    if (typeof blockType.limit === 'number' && count >= blockType.limit) {
+      throw new BadRequest(`The ${section.type} section holds at most ${blockType.limit} ${type} block${blockType.limit === 1 ? '' : 's'}.`)
+    }
+    section.blocks ??= {}
+    const blockId = newId(type, section.blocks)
+    section.blocks[blockId] = { type, settings: {} }
+    section.block_order = [...order, blockId]
+  })
+}
+
+/**
+ * Removes a block from a section. A section may be left with none.
+ * @param {string} theme
+ * @param {string} file The page's JSON template.
+ * @param {string} id
+ * @param {string} blockId
+ */
+function removeBlock(theme, file, id, blockId) {
+  updateJSON(theme, file, (template) => {
+    const section = findSection(template, file, id)
+    if (!Object.hasOwn(section.blocks ?? {}, blockId)) throw new NotFound(`The ${id} section has no block ${blockId}.`)
+    section.block_order = blockOrder(section).filter((other) => other !== blockId)
+    delete section.blocks[blockId]
+  })
+}
+
+/**
+ * Puts a section's blocks in a new order, which must list each of them exactly once.
+ * @param {string} theme
+ * @param {string} file The page's JSON template.
+ * @param {string} id
+ * @param {unknown} body `{ order }`
+ */
+function reorderBlocks(theme, file, id, body) {
+  updateJSON(theme, file, (template) => {
+    const section = findSection(template, file, id)
+    section.block_order = checkOrder(body, blockOrder(section), `each block id of the ${id} section`)
   })
 }
 
@@ -788,7 +895,10 @@ function setValues(target, values, schemaSettings, owner) {
  * @typedef {{ id: string, type: string, label: string, value: string | string[] | boolean | number | null, min?: number, max?: number, step?: number, unit?: string, options?: { value: string, label: string }[] }} Setting
  *   A list setting's value is a list of handles, a checkbox's a boolean, a range's a number, a number's a number or null. A range
  *   has its bounds and step, a select or radio its options.
- * @typedef {{ id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[], blocks: { id: string, type: string, name: string, settings: Setting[] }[] }} SectionDetails
+ * @typedef {{
+ *   id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[],
+ *   blocks: { id: string, type: string, name: string, settings: Setting[] }[], blockTypes: { type: string, name: string }[], maxBlocks: number,
+ * }} SectionDetails blockTypes are the blocks the section can add, up to maxBlocks in all.
  */
 
 /**
@@ -828,11 +938,13 @@ function readSection(theme, file, id) {
     name: translate(schema.name ?? section.type),
     ...(color ? { colorScheme: section.settings?.[color.id] ?? color.default ?? null } : {}),
     settings: texts(schema.settings, section.settings),
-    blocks: (section.block_order ?? Object.keys(blocks)).map((/** @type {string} */ blockId) => {
+    blocks: blockOrder(section).map((blockId) => {
       const block = blocks[blockId]
       const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
       return { id: blockId, type: block.type, name: translate(blockSchema?.name ?? block.type), settings: texts(blockSchema?.settings, block.settings) }
     }),
+    blockTypes: blockTypes(schema).map((block) => ({ type: block.type, name: translate(block.name ?? block.type) })),
+    maxBlocks: schema.max_blocks ?? maxBlocks,
   }
 }
 
