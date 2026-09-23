@@ -27,6 +27,9 @@
                     {% unless item.product.has_only_default_variant %}
                       <p>{{ item.variant.title | escape }}</p>
                     {% endunless %}
+                    {% if item.selling_plan_allocation %}
+                      <p class="main-cart__muted">{{ item.selling_plan_allocation.selling_plan.name | escape }}</p>
+                    {% endif %}
                     <p>
                       {% if item.original_price > item.final_price %}
                         <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>

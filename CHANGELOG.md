@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The product page offers a product's subscriptions (selling plans) next to one-time purchase, prices it with the chosen plan and adds it to the cart with that plan; the cart shows each line's plan.
 - The product page shows the vendor (with a setting to hide it), pickup availability at local pickup locations for the selected variant, and the Shop Pay Installments banner.
 
 ## [0.1.0] - 2026-09-23
