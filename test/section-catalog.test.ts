@@ -283,6 +283,22 @@ describe('Base Theme templates', () => {
   })
 })
 
+describe('Keyboard navigation', () => {
+  const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
+
+  it('opens every page with a skip link to the main content', () => {
+    const layout = readFileSync(path.join(baseTheme, 'layout/theme.liquid'), 'utf8')
+    expect(layout).toMatch(/<body>\s*<a class="skip-to-content" href="#MainContent">{{ 'general\.skip_to_content' \| t }}<\/a>/)
+    expect(layout).toMatch(/<main id="MainContent">\s*{{ content_for_layout }}\s*<\/main>/)
+  })
+
+  it('hides the skip link until it has focus and rings every focused control in the color scheme text color', () => {
+    const css = readFileSync(path.join(baseTheme, 'assets/critical.css'), 'utf8')
+    expect(css).toMatch(/\n\.skip-to-content:not\(:focus\) {[^}]*clip-path: inset\(50%\)/)
+    expect(css).toMatch(/\n:focus-visible {\s*outline: 2px solid var\(--color-foreground\);\s*outline-offset: 2px;\s*}/)
+  })
+})
+
 describe('Header search', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/header.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

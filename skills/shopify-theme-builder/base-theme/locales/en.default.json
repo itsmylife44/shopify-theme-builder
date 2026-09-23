@@ -77,7 +77,8 @@
       "page": "Page {{ page }}",
       "tagged": "tagged \"{{ tags }}\""
     },
-    "shop_all": "Shop all"
+    "shop_all": "Shop all",
+    "skip_to_content": "Skip to content"
   },
   "gift_card": {
     "add_to_apple_wallet": "Add to Apple Wallet",
