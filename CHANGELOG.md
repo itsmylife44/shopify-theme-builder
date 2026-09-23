@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- An announcement bar above the header shows short messages, like free shipping or a sale, each with an optional link; several messages rotate (with previous and next buttons, pausing on hover and focus, and not rotating on their own under reduced motion) or stack. New Themes have it in the header group.
 - A shop in a right-to-left language, like Arabic or Hebrew, renders right to left: the page direction follows the locale, and the Base Theme and Section Catalog styles use logical properties, so layouts and text alignment mirror.
 - Every page describes the shop to search engines as an Organization (name, logo, social links), and product, collection, article and page templates show breadcrumbs with their BreadcrumbList structured data, with a theme setting to hide them.
 - The product page of a gift card lets the customer send it to a recipient: email, optional name, message and send date, checked in the browser before it goes to the cart. The cart shows each line's properties, like the recipient.

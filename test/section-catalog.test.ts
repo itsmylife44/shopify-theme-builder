@@ -439,6 +439,42 @@ describe('Country and language selector', () => {
   })
 })
 
+describe('Announcement bar', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/announcement-bar.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('sits once in the header group, with a color scheme and a preset', () => {
+    expect(schema.enabled_on).toEqual({ groups: ['header'] })
+    expect(schema.limit).toBe(1)
+    expect(schema.presets).toHaveLength(1)
+    expect(source).toContain('class="announcement-bar full-width color-{{ section.settings.color_scheme }}"')
+  })
+
+  it('rotates or stacks several messages, each with an optional link', () => {
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'layout', type: 'select', default: 'rotate' }))
+    expect(schema.blocks[0].settings).toContainEqual(expect.objectContaining({ id: 'link', type: 'url' }))
+    expect(source).toMatch(/{% if block\.settings\.link != blank %}\s*<a href="{{ block\.settings\.link }}">/)
+    expect(source).toMatch(/{% if rotate and forloop\.first == false %}\s*hidden/)
+  })
+
+  it('lets customers step through rotating messages, and stops rotating on hover, focus or reduced motion', () => {
+    expect(source).toContain(`aria-label="{{ 'announcement_bar.previous' | t }}"`)
+    expect(source).toContain(`aria-label="{{ 'announcement_bar.next' | t }}"`)
+    expect(source).toContain("this.matches(':hover, :focus-within')")
+    expect(source).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
+  })
+
+  it('is in the header group of every new Theme, above the header', () => {
+    const group = JSON.parse(readFileSync(path.join(skillDir, 'catalog/sections/header-group.json'), 'utf8'))
+    expect(group.order).toEqual(['announcement-bar', 'header'])
+    expect(group.sections['announcement-bar'].type).toBe('announcement-bar')
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/announcement-bar.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/sections/header-group.json')
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
