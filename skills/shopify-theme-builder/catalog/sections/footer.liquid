@@ -62,7 +62,7 @@
               placeholder="{{ 'footer.newsletter_email' | t }}"
               aria-label="{{ 'footer.newsletter_email' | t }}"
             >
-            <button type="submit">{{ section.settings.newsletter_button_label | escape }}</button>
+            <button type="submit" class="button">{{ section.settings.newsletter_button_label | escape }}</button>
             {% if form.posted_successfully? %}
               <p class="footer__newsletter-message" role="status">{{ 'footer.newsletter_success' | t }}</p>
             {% elsif form.errors %}
@@ -113,7 +113,7 @@
               {% endfor %}
             </select>
           {% endif %}
-          <button type="submit">{{ 'localization.update' | t }}</button>
+          <button type="submit" class="button--secondary">{{ 'localization.update' | t }}</button>
         {% endform %}
       </footer-localization>
     {% endif %}
@@ -202,16 +202,6 @@
     color: inherit;
   }
 
-  .footer__newsletter-form button {
-    padding: var(--space-sm) var(--space-lg);
-    border: 0;
-    border-radius: var(--style-border-radius-inputs);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    cursor: pointer;
-  }
-
   .footer__newsletter-message {
     flex-basis: 100%;
   }
@@ -237,8 +227,7 @@
     display: none;
   }
 
-  .footer__localization select,
-  .footer__localization button {
+  .footer__localization select {
     padding: var(--space-xs) var(--space-sm);
     border: var(--border-width) solid currentcolor;
     border-radius: var(--style-border-radius-inputs);

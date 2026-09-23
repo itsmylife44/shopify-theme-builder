@@ -183,6 +183,40 @@ h6,
   fill: rgb(from var(--color-foreground) r g b / 0.4);
 }
 
+/* Buttons: every button and button-like link is a .button (primary) or a .button--secondary,
+   sized and shaped by the --button-* variables and colored by its color scheme. Sections
+   only lay them out. */
+.button,
+.button--secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: fit-content;
+  padding: var(--button-padding-block) var(--button-padding-inline);
+  border: var(--button-border-width) solid var(--color-button-border);
+  border-radius: var(--button-radius);
+  background-color: var(--color-button);
+  color: var(--color-button-label);
+  font: inherit;
+  font-weight: var(--button-font-weight);
+  text-align: center;
+  text-decoration: none;
+  text-transform: var(--button-text-transform);
+  cursor: pointer;
+}
+
+.button--secondary {
+  border-color: var(--color-secondary-button-border);
+  background-color: var(--color-secondary-button);
+  color: var(--color-secondary-button-label);
+}
+
+:is(.button, .button--secondary):disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
 /** Section layout utilities */
 
 /**
@@ -255,20 +289,8 @@ h6,
   width: 100%;
 }
 
-.basic-page a {
+.basic-page a:not(.button, .button--secondary) {
   color: inherit;
-}
-
-.basic-page :is(button, input[type='submit'], .basic-page__button) {
-  width: fit-content;
-  padding: var(--space-sm) var(--space-lg);
-  border: 0;
-  border-radius: var(--style-border-radius-inputs);
-  background-color: var(--color-button);
-  color: var(--color-button-label);
-  font: inherit;
-  text-decoration: none;
-  cursor: pointer;
 }
 
 .basic-page :is(input:not([type='submit'], [type='hidden']), textarea) {

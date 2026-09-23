@@ -19,7 +19,7 @@
         placeholder="{{ 'footer.newsletter_email' | t }}"
         aria-label="{{ 'footer.newsletter_email' | t }}"
       >
-      <button type="submit">{{ section.settings.button_label | escape }}</button>
+      <button type="submit" class="button">{{ section.settings.button_label | escape }}</button>
       {% if form.posted_successfully? %}
         <p class="newsletter__message" role="status">{{ 'footer.newsletter_success' | t }}</p>
       {% elsif form.errors %}
@@ -65,16 +65,6 @@
     background: transparent;
     color: inherit;
     font: inherit;
-  }
-
-  .newsletter__form button {
-    padding: var(--space-sm) var(--space-lg);
-    border: 0;
-    border-radius: var(--style-border-radius-inputs);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    cursor: pointer;
   }
 
   .newsletter__message {

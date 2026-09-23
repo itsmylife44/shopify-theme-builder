@@ -48,18 +48,18 @@
                   {% if product.available %}
                     <button
                       type="submit"
-                      class="featured-collection__quick-add-button"
+                      class="button featured-collection__quick-add-button"
                       aria-label="{{ 'quick_add.add_label' | t: product: product.title }}"
                     >
                       {{- 'quick_add.add' | t -}}
                     </button>
                   {% else %}
-                    <button type="button" class="featured-collection__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
+                    <button type="button" class="button featured-collection__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
                   {% endif %}
                 </form>
               {% else %}
                 <a
-                  class="featured-collection__quick-add-button"
+                  class="button featured-collection__quick-add-button"
                   href="{{ product.url }}"
                   aria-haspopup="dialog"
                   aria-label="{{ 'quick_add.choose_options_label' | t: product: product.title }}"
@@ -86,7 +86,7 @@
     </ul>
 
     {% if section.settings.show_view_all and show_products %}
-      <a class="featured-collection__view-all" href="{{ featured.url }}">
+      <a class="button" href="{{ featured.url }}">
         {{- 'featured_collection.view_all' | t: collection: featured.title -}}
       </a>
     {% endif %}
@@ -163,13 +163,6 @@
     opacity: var(--opacity-muted);
   }
 
-  .featured-collection__view-all {
-    padding: var(--space-sm) var(--space-lg);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    text-decoration: none;
-  }
-
   .featured-collection__quick-add {
     display: contents;
   }
@@ -177,18 +170,6 @@
   .featured-collection__quick-add-button {
     align-self: start;
     margin-block-start: auto;
-    padding: var(--space-xs) var(--space-md);
-    border: var(--border-width) solid var(--color-button);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .featured-collection__quick-add-button:disabled {
-    opacity: var(--opacity-disabled);
-    cursor: not-allowed;
   }
 {% endstylesheet %}
 

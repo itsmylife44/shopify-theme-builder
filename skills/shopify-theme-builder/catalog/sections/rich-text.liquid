@@ -12,7 +12,7 @@
     {% endif %}
     {% if section.settings.button_label != blank %}
       <a
-        class="rich-text__button"
+        class="button"
         href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
       >
         {{- section.settings.button_label | escape -}}
@@ -38,13 +38,6 @@
 
   .rich-text__inner > * {
     max-width: var(--width-prose);
-  }
-
-  .rich-text__button {
-    padding: var(--space-sm) var(--space-lg);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    text-decoration: none;
   }
 {% endstylesheet %}
 

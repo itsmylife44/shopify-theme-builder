@@ -65,18 +65,18 @@
                       {% if recommendation.available %}
                         <button
                           type="submit"
-                          class="related-products__quick-add-button"
+                          class="button related-products__quick-add-button"
                           aria-label="{{ 'quick_add.add_label' | t: product: recommendation.title }}"
                         >
                           {{- 'quick_add.add' | t -}}
                         </button>
                       {% else %}
-                        <button type="button" class="related-products__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
+                        <button type="button" class="button related-products__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
                       {% endif %}
                     </form>
                   {% else %}
                     <a
-                      class="related-products__quick-add-button"
+                      class="button related-products__quick-add-button"
                       href="{{ recommendation.url }}"
                       aria-haspopup="dialog"
                       aria-label="{{ 'quick_add.choose_options_label' | t: product: recommendation.title }}"
@@ -193,18 +193,6 @@
   .related-products__quick-add-button {
     align-self: start;
     margin-block-start: auto;
-    padding: var(--space-xs) var(--space-md);
-    border: var(--border-width) solid var(--color-button);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .related-products__quick-add-button:disabled {
-    opacity: var(--opacity-disabled);
-    cursor: not-allowed;
   }
 {% endstylesheet %}
 

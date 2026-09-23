@@ -22,7 +22,7 @@
       {% endif %}
       {% if section.settings.button_label != blank %}
         <a
-          class="image-with-text__button"
+          class="button"
           href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
         >
           {{- section.settings.button_label | escape -}}
@@ -74,13 +74,6 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
-  }
-
-  .image-with-text__button {
-    padding: var(--space-sm) var(--space-lg);
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    text-decoration: none;
   }
 {% endstylesheet %}
 

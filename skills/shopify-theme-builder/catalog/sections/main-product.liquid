@@ -249,7 +249,7 @@
         {% endif %}
         <button
           type="submit"
-          class="main-product__add"
+          class="button main-product__add"
           {% unless current_variant.available %}
             disabled
           {% endunless %}
@@ -621,12 +621,7 @@
   }
 
   .main-product__add {
-    padding: var(--space-sm) var(--space-lg);
-    border: 0;
-    background-color: var(--color-button);
-    color: var(--color-button-label);
-    font: inherit;
-    cursor: pointer;
+    width: 100%;
   }
 
   .main-product__pickup {
@@ -645,11 +640,6 @@
 
   .main-product__pickup-time {
     opacity: var(--opacity-muted);
-  }
-
-  .main-product__add:disabled {
-    opacity: var(--opacity-disabled);
-    cursor: not-allowed;
   }
 {% endstylesheet %}
 

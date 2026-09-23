@@ -15,11 +15,11 @@
       placeholder="{{ 'search.placeholder' | t }}"
       aria-label="{{ 'search.title' | t }}"
     >
-    <button type="submit">{{ 'search.submit' | t }}</button>
+    <button type="submit" class="button">{{ 'search.submit' | t }}</button>
   </form>
 
   {% if section.settings.button_label != blank %}
-    <a class="basic-page__button" href="{{ routes.all_products_collection_url }}">
+    <a class="button" href="{{ routes.all_products_collection_url }}">
       {{- section.settings.button_label | escape -}}
     </a>
   {% endif %}

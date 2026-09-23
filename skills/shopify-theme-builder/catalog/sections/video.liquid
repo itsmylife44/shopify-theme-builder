@@ -60,7 +60,7 @@
             | image_url: width: 2400
             | image_tag: widths: '750, 1100, 1500, 2200, 2400', sizes: '(min-width: 1200px) 1100px, 100vw', loading: 'lazy', alt: ''
           }}
-          <span class="video__play">
+          <span class="button video__play">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M7 5v10l8-5z" />
             </svg>
@@ -126,11 +126,6 @@
 
   .video__play {
     place-self: center;
-    display: flex;
-    padding: var(--space-md);
-    border-radius: 50%;
-    background-color: var(--color-button);
-    color: var(--color-button-label);
   }
 
   .video__play svg {
