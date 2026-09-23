@@ -116,6 +116,8 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    The calls on `/api/<page>/sections/<id>` (`GET`, `PATCH` and the block calls) also take `header` or `footer` as `<page>`, for the sections of the header and footer groups every page shares, like the footer's newsletter and menus.
 
    For example: `curl -X PUT <studio>/api/brand/logo -H 'Content-Type: image/png' --data-binary @logo.png`.
+
+   With no logo, the header and footer show the store's name from Shopify admin, not the shop name from step 2. Compare the two: the store's name is the display name in `shopify store info --store <shop>.myshopify.com --json`, or the name in the preview's header once it runs. When they differ, tell the Creator to change it in Shopify admin › Settings › General › Store name.
 3. Compose the pages. A page keeps at least one section, so add the new sections before removing the Base Theme's `main`:
    - **home**: pick 4 to 6 sections that fit the style from `catalog.home` in `GET /api/theme`. Start with `hero`. Then remove `main`.
    - **product**: add `main-product` and `related-products`, then remove `main`.
@@ -141,7 +143,8 @@ Tell the Creator, in a few lines:
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
 5. When the shop sells in more than one language: the Theme's own text (buttons, labels, messages) comes in each language from its locale files, and the page text is written in the default language. Translate the page text into the other languages with Shopify's free Translate & Adapt app: install it from the Shopify App Store, make sure each language is added in Shopify admin › Settings › Languages, then in the app pick the language and the theme and translate its sections' text (Auto-translate fills it in to review). Translations belong to one theme on the store, so translate the theme delivered in step 8; text changed later in the Studio or Theme Editor needs translating again.
-6. Ask you for a section the catalog doesn't have (step 6), to bring a newer catalog's fixes into the Theme's sections (step 7), and to deliver the Theme to the store when it's ready (step 8).
+6. Only when there is no logo and the store's name differs from the shop name (step 4.2): the header and footer show the store's name, so change it in Shopify admin › Settings › General › Store name.
+7. Ask you for a section the catalog doesn't have (step 6), to bring a newer catalog's fixes into the Theme's sections (step 7), and to deliver the Theme to the store when it's ready (step 8).
 
 ## 6. Custom Sections
 
