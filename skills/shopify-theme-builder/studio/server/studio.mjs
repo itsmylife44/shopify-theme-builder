@@ -144,7 +144,10 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       route('/api/frame', 'GET', async () => {
         const { state } = preview
         if (state.status !== 'running') throw new Conflict('The preview is not running yet.')
-        return { url: frame.url, paths: await pagePaths(state.url) }
+        const { editor } = preview
+        // ponytail: opens the page's template only; Shopify's editor link has no documented way to select a section.
+        const editors = editor ? perPage((file) => `${editor}?template=${path.basename(file, '.json')}`) : null
+        return { url: frame.url, paths: await pagePaths(state.url), editor: editors }
       })
       const storeResources = storeReader(cli, store)
       route('/api/store', 'GET', storeResources)
@@ -856,6 +859,8 @@ const listTypes = new Set(['collection_list', 'product_list'])
 // Settings that pick one of their schema's options.
 const optionTypes = new Set(['select', 'radio'])
 const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, ...optionTypes, 'url', 'checkbox', 'range', 'number'])
+// Image and video settings, which the Studio only lists: they are picked in the Theme Editor (no Admin API, ADR-0004).
+const mediaTypes = new Set(['image_picker', 'video', 'video_url'])
 const handle = /^[^\s/]+$/
 // The links a url setting takes: a store path, a web or mail link, or a shopify:// link to a store resource.
 const link = /^(\/|https?:\/\/|mailto:|tel:|shopify:\/\/)\S*$/
@@ -913,9 +918,10 @@ function setValues(target, values, schemaSettings, owner) {
  * @typedef {{ id: string, type: string, label: string, value: string | string[] | boolean | number | null, min?: number, max?: number, step?: number, unit?: string, options?: { value: string, label: string }[] }} Setting
  *   A list setting's value is a list of handles, a checkbox's a boolean, a range's a number, a number's a number or null. A range
  *   has its bounds and step, a select or radio its options.
+ * @typedef {{ id: string, type: string, label: string, set: boolean }} MediaSetting An image or video setting, and whether it holds one.
  * @typedef {{
- *   id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[],
- *   blocks: { id: string, type: string, name: string, settings: Setting[] }[], blockTypes: { type: string, name: string }[], maxBlocks: number,
+ *   id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[], media: MediaSetting[],
+ *   blocks: { id: string, type: string, name: string, settings: Setting[], media: MediaSetting[] }[], blockTypes: { type: string, name: string }[], maxBlocks: number,
  * }} SectionDetails blockTypes are the blocks the section can add, up to maxBlocks in all.
  */
 
@@ -948,6 +954,14 @@ function readSection(theme, file, id) {
       }
       return [{ ...read, value: listTypes.has(setting.type) ? (Array.isArray(value) ? value.map(String) : []) : String(value ?? '') }]
     })
+  /** @param {SchemaSetting[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values @returns {MediaSetting[]} */
+  const media = (schemaSettings, values) =>
+    (schemaSettings ?? [])
+      .filter((setting) => setting.id && mediaTypes.has(setting.type))
+      .map((setting) => {
+        const id = /** @type {string} */ (setting.id)
+        return { id, type: setting.type, label: translate(setting.label ?? id), set: Boolean(values?.[id] ?? setting.default) }
+      })
   const color = colorSchemeSetting(theme, section.type)
   const blocks = section.blocks ?? {}
   return {
@@ -956,10 +970,17 @@ function readSection(theme, file, id) {
     name: translate(schema.name ?? section.type),
     ...(color ? { colorScheme: section.settings?.[color.id] ?? color.default ?? null } : {}),
     settings: texts(schema.settings, section.settings),
+    media: media(schema.settings, section.settings),
     blocks: blockOrder(section).map((blockId) => {
       const block = blocks[blockId]
       const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
-      return { id: blockId, type: block.type, name: translate(blockSchema?.name ?? block.type), settings: texts(blockSchema?.settings, block.settings) }
+      return {
+        id: blockId,
+        type: block.type,
+        name: translate(blockSchema?.name ?? block.type),
+        settings: texts(blockSchema?.settings, block.settings),
+        media: media(blockSchema?.settings, block.settings),
+      }
     }),
     blockTypes: blockTypes(schema).map((block) => ({ type: block.type, name: translate(block.name ?? block.type) })),
     maxBlocks: schema.max_blocks ?? maxBlocks,

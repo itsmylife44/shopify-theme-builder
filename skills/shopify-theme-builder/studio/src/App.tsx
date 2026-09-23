@@ -14,7 +14,7 @@ import {
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
-import type { Brand, Group, Offense, Page, SectionDetails, Setting, StoreResources, TemplateSection, ThemeState } from '../server/studio.mjs'
+import type { Brand, Group, MediaSetting, Offense, Page, SectionDetails, Setting, StoreResources, TemplateSection, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -42,7 +42,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
-type Frame = { url: string; paths: Record<Page, string> }
+type Frame = { url: string; paths: Record<Page, string>; editor: Record<Page, string> | null }
 type Tab = 'sections' | 'brand' | 'checks'
 type Device = 'desktop' | 'mobile'
 
@@ -187,6 +187,7 @@ export function App() {
               state={state}
               page={page}
               sectionId={selectedId}
+              editor={typeof frame === 'object' && frame?.editor ? frame.editor[page] : null}
               onClose={() => setSelectedId(null)}
               onSaved={showState}
             />
@@ -555,12 +556,15 @@ function Inspector({
   state,
   page,
   sectionId,
+  editor,
   onClose,
   onSaved,
 }: {
   state: ThemeState
   page: Page
   sectionId: string
+  /** The Theme Editor on this page's template, once the preview runs. */
+  editor: string | null
   onClose: () => void
   onSaved: (state: ThemeState) => void
 }) {
@@ -764,6 +768,7 @@ function Inspector({
             </Select>
           </Field>
         ) : null}
+        <MediaSettings media={details.media} editor={editor} />
       </FieldGroup>
       {details.settings.length > 0 || details.blocks.length > 0 ? (
         <form onSubmit={saveSettings} className="flex flex-col gap-4">
@@ -807,6 +812,7 @@ function Inspector({
                     </Button>
                   </FieldLegend>
                   {block.settings.map((setting) => settingField(setting, `${block.id}/${setting.id}`))}
+                  <MediaSettings media={block.media} editor={editor} />
                 </FieldSet>
               )
             })}
@@ -946,6 +952,32 @@ function StorePicker({
       {content}
     </Combobox>
   )
+}
+
+/** Image and video settings, which the Studio doesn't upload: it shows whether each is set and links to the Theme Editor. */
+function MediaSettings({ media, editor }: { media: MediaSetting[]; editor: string | null }) {
+  return media.map((setting) => (
+    <div key={setting.id} className="flex flex-col items-start gap-1.5">
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{setting.label}</span>
+        <Badge variant={setting.set ? 'secondary' : 'outline'}>{setting.set ? 'Set' : 'Empty'}</Badge>
+      </div>
+      {editor ? (
+        <a
+          href={editor}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Choose ${setting.label} in the Theme Editor`}
+          className={buttonVariants({ size: 'sm', variant: 'outline' })}
+        >
+          <ExternalLinkIcon data-icon="inline-start" />
+          Choose in the Theme Editor
+        </a>
+      ) : (
+        <p className="text-muted-foreground">Chosen in Shopify's Theme Editor, linked here once the preview runs.</p>
+      )}
+    </div>
+  ))
 }
 
 function InspectorFrame({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {

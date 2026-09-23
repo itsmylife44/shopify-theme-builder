@@ -514,6 +514,7 @@ describe('Studio API: section settings', () => {
         { id: 'author', type: 'text', label: 'Author', value: 'Customer name' },
         { id: 'author_detail', type: 'text', label: 'Author detail', value: '' },
       ],
+      media: [],
     })
   })
 
@@ -572,6 +573,32 @@ describe('Studio API: section settings', () => {
   it('answers 404 for a section the page does not have', async () => {
     const { studio } = await withTestimonials()
     expect((await studio.send('GET', 'api/home/sections/nope')).status).toBe(404)
+  })
+
+  it("lists a section's and its blocks' image and video settings, whether set, without making them writable", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const hero = (await studio.addSection('hero')).body.home.at(-1).id
+    const gallery = (await studio.addSection('image-gallery')).body.home.at(-1).id
+    // What the Theme Editor writes once the Merchant picks an image.
+    const template = readTemplate(theme)
+    template.sections[hero].settings.image = 'shopify://shop_images/cover.jpg'
+    writeTemplate(theme, template)
+
+    const read = (await studio.send('GET', `api/home/sections/${hero}`)).body
+    expect(read.media).toEqual([
+      { id: 'image', type: 'image_picker', label: 'Image', set: true },
+      { id: 'video', type: 'video', label: 'Video', set: false },
+    ])
+    expect(read.settings.map((setting: { id: string }) => setting.id)).not.toContain('image')
+    const { blocks } = (await studio.send('GET', `api/home/sections/${gallery}`)).body
+    expect(blocks[0].media).toEqual([{ id: 'image', type: 'image_picker', label: 'Image', set: false }])
+
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: 'shopify://shop_images/other.jpg' } })
+    expect(status).toBe(400)
+    expect(body.error).toContain('image')
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
   })
 
   it("lists every catalog section's name and description", async () => {
@@ -1488,6 +1515,9 @@ describe('Studio: live preview', () => {
     const { status, body } = await studio.send('GET', 'api/frame')
     expect(status).toBe(200)
     expect(body.paths).toEqual({ home: '/', product: '/products/clay-mug', collection: '/collections/all' })
+    // The Theme Editor on theme dev's development theme, from the share link theme dev printed.
+    const editor = 'https://theme-builder-dev-ou5grn62.myshopify.com/admin/themes/207592816979/editor'
+    expect(body.editor).toEqual({ home: `${editor}?template=index`, product: `${editor}?template=product`, collection: `${editor}?template=collection` })
     const page = await fetch(`${body.url}/`)
     expect(page.headers.get('x-frame-options')).toBeNull()
     expect(page.headers.get('access-control-allow-origin')).toBeNull()
