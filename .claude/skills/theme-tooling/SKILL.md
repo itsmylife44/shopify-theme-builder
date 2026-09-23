@@ -25,13 +25,7 @@ The Studio runs `theme dev` itself (`studio --theme <dir> --store <shop>.myshopi
 
 ## Shop language
 
-A Theme ships English as its default locale: `locales/en.default.json` (storefront text) and `locales/en.default.schema.json` (Theme Editor labels). When the shop's language isn't English, the product skill adds it; this is the convention:
-
-1. Name the files after the language's ISO code, as Shopify admin › Settings › Languages lists it: `it`, `de`, `pt-BR`.
-2. Copy `locales/en.default.json` to `locales/<code>.json` and translate every value. Keep every key, and keep `{{ variables }}` and the HTML of `_html` keys as they are. Plural keys (`one`, `other`) get the forms the language needs (`zero`, `two`, `few`, `many`).
-3. Copy `locales/en.default.schema.json` to `locales/<code>.schema.json` and translate it the same way, so the Merchant sees the Theme Editor in that language.
-4. Keep `en` as the default: don't rename `en.default.json`. The storefront shows `<code>.json` for a language the shop publishes.
-5. Run Theme Check. `MatchingTranslations` fails on a key missing from, or added to, the shop's language file.
+A Theme ships English as its default locale: `locales/en.default.json` (storefront text) and `locales/en.default.schema.json` (Theme Editor labels). When the shop's language isn't English, the product skill adds `locales/<code>.json` and `locales/<code>.schema.json` (the convention is in the root `SKILL.md`, step 3.4). Theme Check's `MatchingTranslations` fails on a key missing from, or added to, the shop's language file.
 
 When the Studio copies a catalog section into a Theme that lacks some Base Theme keys, it adds them in English to every locale file, so Theme Check keeps passing; translate them afterwards. In this repo, add new keys only to `base-theme/locales/en.default.json`.
 
