@@ -168,19 +168,23 @@
     "settings": [
       {
         "type": "select",
-        "id": "max_page_width",
+        "id": "page_width",
         "label": "t:labels.page_width",
         "options": [
           {
-            "value": "90rem",
+            "value": "narrow",
             "label": "t:options.page_width.narrow"
           },
           {
-            "value": "110rem",
+            "value": "normal",
+            "label": "t:options.page_width.normal"
+          },
+          {
+            "value": "wide",
             "label": "t:options.page_width.wide"
           }
         ],
-        "default": "90rem"
+        "default": "normal"
       },
       {
         "type": "range",
@@ -191,6 +195,27 @@
         "unit": "px",
         "label": "t:labels.page_margin",
         "default": 20
+      },
+      {
+        "type": "select",
+        "id": "density",
+        "label": "t:labels.density",
+        "info": "t:info.density",
+        "options": [
+          {
+            "value": "compact",
+            "label": "t:options.density.compact"
+          },
+          {
+            "value": "normal",
+            "label": "t:options.density.normal"
+          },
+          {
+            "value": "airy",
+            "label": "t:options.density.airy"
+          }
+        ],
+        "default": "normal"
       },
       {
         "type": "checkbox",

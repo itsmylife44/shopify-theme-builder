@@ -47,6 +47,28 @@
       assign radius_media = '0.5rem'
       assign radius_badges = '0.25rem'
   endcase
+
+  # The density: section spacing and grid gaps in px on desktop.
+  case settings.density
+    when 'compact'
+      assign section_spacing = 48
+      assign grid_gap = 16
+    when 'airy'
+      assign section_spacing = 112
+      assign grid_gap = 32
+    else
+      assign section_spacing = 80
+      assign grid_gap = 24
+  endcase
+
+  case settings.page_width
+    when 'narrow'
+      assign page_width = '75rem'
+    when 'wide'
+      assign page_width = '110rem'
+    else
+      assign page_width = '90rem'
+  endcase
 -%}
 {% style %}
   {% # Loads all font variantions with display: swap %}
@@ -93,7 +115,11 @@
     --line-height-display: 1.1;
     --line-height-heading: 1.2;
     --line-height-body: 1.5;
-    {% # Spacing: padding, margins and gaps take a step of this scale; sections pad their top and bottom with --section-spacing. %}
+    {% comment %}
+      Spacing: padding, margins and gaps take a step of this scale. Sections pad their top and bottom with
+      --section-spacing, and grids of items space them with --grid-gap (--grid-row-gap between rows of cards with
+      text): both follow the density, halved (the gaps three quarters) on mobile.
+    {% endcomment %}
     --space-2xs: 0.25rem;
     --space-xs: 0.5rem;
     --space-sm: 0.75rem;
@@ -101,7 +127,9 @@
     --space-lg: 1.5rem;
     --space-xl: 2rem;
     --space-2xl: 3rem;
-    --section-spacing: 3rem;
+    --section-spacing: {{ section_spacing | divided_by: 32.0 }}rem;
+    --grid-gap: {{ grid_gap | times: 0.75 | divided_by: 16 }}rem;
+    --grid-row-gap: calc(var(--grid-gap) * 1.5);
     {% # Content widths: forms, a text column beside media, a column of running text. %}
     --width-narrow: 30rem;
     --width-text: 40rem;
@@ -133,8 +161,15 @@
       The breakpoint is 750px: layouts switch at @media (min-width: 750px) and (max-width: 749px), and image sizes
       at (min-width: 750px). CSS variables don't work in media queries, so it is this constant instead of a variable.
     {% endcomment %}
-    --page-width: {{ settings.max_page_width }};
+    --page-width: {{ page_width }};
     --page-margin: {{ settings.min_page_margin }}px;
+  }
+
+  @media (min-width: 750px) {
+    :root {
+      --section-spacing: {{ section_spacing | divided_by: 16.0 }}rem;
+      --grid-gap: {{ grid_gap | divided_by: 16.0 }}rem;
+    }
   }
 
   {% # The first color scheme is the page default; sections opt into others with a color-<scheme id> class. %}

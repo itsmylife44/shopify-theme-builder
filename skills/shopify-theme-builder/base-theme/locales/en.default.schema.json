@@ -95,6 +95,7 @@
     "padding": "Padding",
     "page_margin": "Page margin",
     "page_width": "Page width",
+    "density": "Density",
     "show_payment_icons": "Show payment icons",
     "social_facebook": "Facebook",
     "social_instagram": "Instagram",
@@ -166,6 +167,7 @@
     "button_font_weight": "Weight"
   },
   "info": {
+    "density": "The space above and below every section and between the items of a grid.",
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
     "footer_show_newsletter": "Subscribers are added to your customer list with email marketing consent. Hidden on pages that have a newsletter section.",
     "social_links_setting": "Social links come from the theme settings, under Social media.",
@@ -203,7 +205,13 @@
     },
     "page_width": {
       "narrow": "Narrow",
+      "normal": "Normal",
       "wide": "Wide"
+    },
+    "density": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "airy": "Airy"
     },
     "size": {
       "large": "Large",

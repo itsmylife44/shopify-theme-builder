@@ -62,7 +62,7 @@
   .image-gallery__grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-md);
+    gap: var(--grid-gap);
     width: 100%;
     margin: 0;
     padding: 0;
@@ -72,7 +72,6 @@
   @media (min-width: 750px) {
     .image-gallery__grid {
       grid-template-columns: repeat(var(--columns), 1fr);
-      gap: var(--space-lg);
     }
   }
 
