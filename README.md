@@ -97,6 +97,8 @@ Every section follows the Brand through theme settings, has its own color scheme
 | Any page | Custom Liquid (your own Liquid or HTML, like an app snippet or an embed) |
 | Every page | Header (menus, search with suggestions) · Footer (menus, email signup, country and language selectors, payment icons) |
 
+Product cards (featured collection, product grid, search results, related products) have a quick add button: a product without variants goes straight into the cart drawer, one with variants opens a small dialog to pick one.
+
 Every other page (blog, 404 …) uses Skeleton's own layout, styled by the same Brand.
 
 ## Prerequisites

@@ -175,5 +175,13 @@
   },
   "blog_posts": {
     "article_title": "Example blog post"
+  },
+  "quick_add": {
+    "add": "Add",
+    "add_label": "Add {{ product }} to cart",
+    "choose_options": "Choose options",
+    "choose_options_label": "Choose options for {{ product }}",
+    "close": "Close",
+    "view_details": "View full details"
   }
 }

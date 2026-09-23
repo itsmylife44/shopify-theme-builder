@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Product cards in the featured collection, the collection product grid, search results and related products have a quick add button, with a setting to hide it. A product without variants goes straight into the cart drawer; one with variants opens a dialog with its variant picker, loaded from the new `quick-add` section, which new Themes get in step 3. Without the drawer the card adds through the cart page, and without JavaScript the button opens the product page.
 - Add to cart on the product page and the featured product section opens a cart drawer instead of the cart page, and so does the header's cart icon. The drawer shows the cart page's `main-cart` section, where quantity changes and removals apply at once, and the header's cart count follows. A Cart type theme setting (drawer, the default, or page) keeps the cart page instead; without JavaScript, add to cart still goes to the cart page.
 - Before delivery, the agent runs Lighthouse on the preview's home, product and collection pages, on mobile and desktop, against the Theme Store's bars (performance 60, accessibility 90), reports the scores and fixes the accessibility failures the Theme causes.
 - The Studio lists the header and footer groups' sections with the page's, and edits them like a page's section: click one in the list or the preview to change its color scheme, settings (like the footer's newsletter and menus) and blocks, saved to `sections/header-group.json` and `sections/footer-group.json`.

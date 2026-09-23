@@ -185,6 +185,34 @@
                     {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
                   </p>
                 {% endif %}
+                {% if section.settings.show_quick_add %}
+                  {% if product.has_only_default_variant and product.requires_selling_plan == false %}
+                    <form class="main-collection__quick-add" action="{{ routes.cart_add_url }}" method="post" data-quick-add-form>
+                      <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+                      {% if product.available %}
+                        <button
+                          type="submit"
+                          class="main-collection__quick-add-button"
+                          aria-label="{{ 'quick_add.add_label' | t: product: product.title }}"
+                        >
+                          {{- 'quick_add.add' | t -}}
+                        </button>
+                      {% else %}
+                        <button type="button" class="main-collection__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
+                      {% endif %}
+                    </form>
+                  {% else %}
+                    <a
+                      class="main-collection__quick-add-button"
+                      href="{{ product.url }}"
+                      aria-haspopup="dialog"
+                      aria-label="{{ 'quick_add.choose_options_label' | t: product: product.title }}"
+                      data-quick-add
+                    >
+                      {{- 'quick_add.choose_options' | t -}}
+                    </a>
+                  {% endif %}
+                {% endif %}
               </li>
             {% endfor %}
           {% endif %}
@@ -433,6 +461,27 @@
     outline: 2px solid var(--color-foreground);
     outline-offset: 2px;
   }
+
+  .main-collection__quick-add {
+    display: contents;
+  }
+
+  .main-collection__quick-add-button {
+    align-self: start;
+    margin-block-start: auto;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-button);
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .main-collection__quick-add-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -486,6 +535,12 @@
       "max": 5,
       "step": 1,
       "default": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quick_add",
+      "label": "t:labels.show_quick_add",
+      "default": true
     }
   ],
   "presets": [

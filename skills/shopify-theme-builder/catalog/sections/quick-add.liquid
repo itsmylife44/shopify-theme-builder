@@ -1,0 +1,370 @@
+{% comment %}The quick add dialog of product cards, with the variant picker and add to cart, fetched through the Section Rendering API.{% endcomment %}
+{% liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign featured_media = current_variant.featured_media | default: product.featured_media
+  if product.requires_selling_plan
+    assign selling_plan_allocation = current_variant.selling_plan_allocations.first
+  endif
+  if selling_plan_allocation
+    assign price = selling_plan_allocation.price
+    assign compare_at_price = selling_plan_allocation.compare_at_price
+  else
+    assign price = current_variant.price
+    assign compare_at_price = current_variant.compare_at_price
+  endif
+%}
+
+{% if product != blank %}
+  <quick-add-dialog>
+    <dialog class="quick-add color-{{ section.settings.color_scheme }}" aria-labelledby="QuickAddTitle">
+      <div class="quick-add__inner" data-url="{{ product.url }}">
+        <form method="dialog">
+          <button class="quick-add__close" aria-label="{{ 'quick_add.close' | t }}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+              <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m5 5 10 10M15 5 5 15" />
+            </svg>
+          </button>
+        </form>
+
+        <div class="quick-add__summary">
+          <div class="quick-add__media">
+            {% if featured_media %}
+              {{
+                featured_media.preview_image
+                | image_url: width: 400
+                | image_tag: widths: '200, 400', sizes: '8rem', loading: 'lazy'
+              }}
+            {% else %}
+              {{ 'product-1' | placeholder_svg_tag: 'quick-add__placeholder' }}
+            {% endif %}
+          </div>
+          <div>
+            <h2 id="QuickAddTitle" class="quick-add__title">{{ product.title | escape }}</h2>
+            <p class="quick-add__price">
+              {% if compare_at_price > price %}
+                <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
+                {{ price | money }}
+                <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
+                <s class="quick-add__compare-at">{{ compare_at_price | money }}</s>
+              {% else %}
+                {{ price | money }}
+              {% endif %}
+            </p>
+            {% if selling_plan_allocation %}
+              <p class="quick-add__plan">{{ selling_plan_allocation.selling_plan.name | escape }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        {% unless product.has_only_default_variant %}
+          {% for option in product.options_with_values %}
+            <fieldset class="quick-add__option">
+              <legend>{{ option.name | escape }}</legend>
+              {% for option_value in option.values %}
+                {% capture input_id %}QuickAdd-{{ option.position }}-{{ forloop.index0 }}{% endcapture %}
+                <input
+                  id="{{ input_id }}"
+                  class="quick-add__option-input"
+                  type="radio"
+                  name="QuickAdd-option-{{ option.position }}"
+                  value="{{ option_value | escape }}"
+                  data-option-value-id="{{ option_value.id }}"
+                  {% if option_value.product_url %}
+                    data-product-url="{{ option_value.product_url }}"
+                  {% endif %}
+                  {% if option_value.selected %}
+                    checked
+                  {% endif %}
+                >
+                <label
+                  for="{{ input_id }}"
+                  class="quick-add__option-label{% unless option_value.available %} quick-add__option-label--unavailable{% endunless %}"
+                >
+                  {{- option_value | escape -}}
+                  {% unless option_value.available %}
+                    <span class="visually-hidden">{{ 'product.unavailable' | t }}</span>
+                  {% endunless %}
+                </label>
+              {% endfor %}
+            </fieldset>
+          {% endfor %}
+        {% endunless %}
+
+        {% form 'product', product, id: 'QuickAddForm', class: 'quick-add__form' %}
+          <input type="hidden" name="id" value="{{ current_variant.id }}">
+          {% if selling_plan_allocation %}
+            <input type="hidden" name="selling_plan" value="{{ selling_plan_allocation.selling_plan.id }}">
+          {% endif %}
+          <button
+            type="submit"
+            class="quick-add__add"
+            {% unless current_variant.available %}
+              disabled
+            {% endunless %}
+          >
+            {% if current_variant.available %}
+              {{ 'product.add_to_cart' | t }}
+            {% else %}
+              {{ 'product.sold_out' | t }}
+            {% endif %}
+          </button>
+        {% endform %}
+
+        <a class="quick-add__details" href="{{ product.url }}">{{ 'quick_add.view_details' | t }}</a>
+      </div>
+    </dialog>
+  </quick-add-dialog>
+{% endif %}
+
+{% javascript %}
+  class QuickAddDialog extends HTMLElement {
+    static async load(url, optionValues, signal) {
+      const target = new URL(url, location.origin);
+      target.searchParams.set('section_id', 'quick-add');
+      if (optionValues) target.searchParams.set('option_values', optionValues);
+      const text = await fetch(target, { signal })
+        .then((response) => (response.ok ? response.text() : null))
+        .catch(() => null);
+      return text ? new DOMParser().parseFromString(text, 'text/html').querySelector('quick-add-dialog') : null;
+    }
+
+    static async open(trigger) {
+      const fresh = await QuickAddDialog.load(trigger.href);
+      if (!fresh) return location.assign(trigger.href);
+      document.querySelector('quick-add-dialog')?.remove();
+      document.body.append(fresh);
+      fresh.show(trigger);
+    }
+
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.dialog = this.querySelector('dialog');
+      this.dialog.addEventListener('click', (event) => event.target === this.dialog && this.dialog.close(), { signal });
+      this.dialog.addEventListener('close', () => this.opener?.focus(), { signal });
+      this.addEventListener('change', (event) => this.onChange(event), { signal });
+      this.addEventListener('submit', (event) => this.onSubmit(event), { signal });
+    }
+
+    disconnectedCallback() {
+      this.controller.abort();
+      this.request?.abort();
+    }
+
+    show(opener) {
+      this.opener = opener;
+      this.dialog.showModal();
+    }
+
+    async onChange(event) {
+      const input = event.target.closest('[data-option-value-id]');
+      if (!input) return;
+      const optionValues = [...this.querySelectorAll('[data-option-value-id]:checked')]
+        .map((option) => option.dataset.optionValueId)
+        .join(',');
+      this.request?.abort();
+      this.request = new AbortController();
+      const url = input.dataset.productUrl || this.querySelector('.quick-add__inner').dataset.url;
+      const fresh = await QuickAddDialog.load(url, optionValues, this.request.signal);
+      const inner = fresh?.querySelector('.quick-add__inner');
+      if (!inner) return;
+      this.querySelector('.quick-add__inner').replaceWith(inner);
+      document.getElementById(input.id)?.focus();
+    }
+
+    onSubmit(event) {
+      if (event.target.method === 'dialog') return;
+      const drawer = document.querySelector('cart-drawer');
+      if (!drawer?.add) return;
+      event.preventDefault();
+      this.dialog.close();
+      drawer.add(event.target, this.opener);
+    }
+  }
+
+  if (!customElements.get('quick-add-dialog')) {
+    customElements.define('quick-add-dialog', QuickAddDialog);
+
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest('[data-quick-add]');
+      if (!trigger || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      QuickAddDialog.open(trigger);
+    });
+
+    document.addEventListener('submit', (event) => {
+      if (!event.target.closest('[data-quick-add-form]')) return;
+      const drawer = document.querySelector('cart-drawer');
+      if (!drawer?.add) return;
+      event.preventDefault();
+      drawer.add(event.target, event.submitter);
+    });
+  }
+{% endjavascript %}
+
+{% stylesheet %}
+  .quick-add {
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  .quick-add::backdrop {
+    background-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+
+  .quick-add__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .quick-add__inner > form[method='dialog'] {
+    align-self: end;
+  }
+
+  .quick-add__close {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .quick-add__close svg {
+    width: 2rem;
+  }
+
+  .quick-add__summary {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .quick-add__media img,
+  .quick-add__placeholder {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  .quick-add__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .quick-add__title {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .quick-add__price,
+  .quick-add__plan {
+    margin: 0;
+  }
+
+  .quick-add__compare-at {
+    margin-inline-start: 0.5rem;
+    opacity: 0.6;
+  }
+
+  .quick-add__option {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .quick-add__option legend {
+    margin-block-end: 0.5rem;
+  }
+
+  .quick-add__option-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .quick-add__option-label {
+    padding: 0.5rem 1rem;
+    border: 1px solid rgb(from var(--color-foreground) r g b / 0.3);
+    cursor: pointer;
+  }
+
+  .quick-add__option-label--unavailable {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .quick-add__option-input:checked + .quick-add__option-label {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    border-color: var(--color-foreground);
+  }
+
+  .quick-add__option-input:focus-visible + .quick-add__option-label {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+
+  .quick-add__form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .quick-add__add {
+    padding: 0.875rem 1.5rem;
+    border: 0;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .quick-add__add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .quick-add__details {
+    align-self: start;
+    color: inherit;
+    text-underline-offset: 0.3em;
+  }
+
+  .quick-add .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.quick_add",
+  "enabled_on": {
+    "groups": ["header"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    }
+  ]
+}
+{% endschema %}
