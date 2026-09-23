@@ -1596,6 +1596,80 @@ describe('Card and media settings', () => {
   })
 })
 
+describe('Motion', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const all = parseJSON(read('base-theme/config/settings_schema.json')).flatMap((group: { settings?: object[] }) => group.settings ?? [])
+  const setting = (id: string) => all.find((s: { id?: string }) => s.id === id)
+  const variables = read('base-theme/snippets/css-variables.liquid')
+  const critical = read('base-theme/assets/critical.css')
+  const layout = read('base-theme/layout/theme.liquid')
+  const reveal = read('base-theme/assets/reveal.js')
+  const noPreference = (css: string) =>
+    [...css.matchAll(/@media \(prefers-reduced-motion: no-preference\) {([\s\S]*?)\n}/g)].map((m) => m[1]).join('\n')
+
+  it('offers no, subtle or expressive motion, subtle by default', () => {
+    expect(setting('motion').options.map((o: { value: string }) => o.value)).toEqual(['none', 'subtle', 'expressive'])
+    expect(setting('motion').default).toBe('subtle')
+  })
+
+  it('sets 0.25s fades for subtle, 1s rises and a slow image zoom for expressive, and nothing for none', () => {
+    expect(variables).toMatch(
+      /case settings\.motion\s+when 'none'\s+assign motion_duration = '0s'\s+assign motion_duration_reveal = '0s'\s+assign motion_duration_zoom = '0s'\s+assign motion_easing = 'ease'\s+assign motion_rise = '0'\s+when 'expressive'\s+assign motion_duration = '0\.3s'\s+assign motion_duration_reveal = '1s'\s+assign motion_duration_zoom = '1\.5s'\s+assign motion_easing = 'cubic-bezier\(0\.165, 0\.84, 0\.44, 1\)'\s+assign motion_rise = '2rem'\s+else\s+assign motion_duration = '0\.25s'\s+assign motion_duration_reveal = '0\.25s'\s+assign motion_duration_zoom = '0\.25s'\s+assign motion_easing = 'ease-out'\s+assign motion_rise = '0'\s+endcase/,
+    )
+    for (const name of ['duration', 'duration-reveal', 'duration-zoom', 'easing', 'rise']) {
+      expect(variables).toContain(`--motion-${name}: {{ motion_${name.replace('-', '_')} }};`)
+    }
+  })
+
+  it('turns every duration and the rise off under reduced motion', () => {
+    expect(variables).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) {\s*:root {\s*--motion-duration: 0s;\s*--motion-duration-reveal: 0s;\s*--motion-duration-zoom: 0s;\s*--motion-rise: 0;\s*}\s*}/,
+    )
+  })
+
+  it('loads one shared reveal script, deferred, unless motion is none', () => {
+    const scripts = readdirSync(path.join(skillDir, 'base-theme/assets')).filter((file) => file.endsWith('.js'))
+    expect(scripts).toEqual(['reveal.js'])
+    expect(layout).toMatch(/{% if settings\.motion != 'none' %}\s*<script src="{{ 'reveal\.js' \| asset_url }}" defer><\/script>\s*{% endif %}/)
+  })
+
+  it('reveals the sections of the page with an IntersectionObserver, never under reduced motion', () => {
+    expect(reveal).toMatch(/if \(!matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\)/)
+    expect(reveal).toContain('new IntersectionObserver(')
+    expect(reveal).toContain("document.querySelectorAll('main > .shopify-section')")
+  })
+
+  it('never hides a section in view on load, so the first viewport, and its hero or LCP image, never animates', () => {
+    // The first observation of each section only hides those out of view; later ones reveal them.
+    expect(reveal).toMatch(/if \(isIntersecting\) observer\.unobserve\(target\);\s*else target\.classList\.add\('reveal'\);/)
+    expect(reveal).toMatch(/else if \(isIntersecting\) {\s*target\.classList\.add\('reveal--visible'\);\s*observer\.unobserve\(target\);/)
+  })
+
+  it('fades, and rises, the revealed sections and eases the card hover from the motion variables, only without reduced motion', () => {
+    const css = noPreference(critical)
+    expect(css).toMatch(/\.reveal {\s*opacity: 0;\s*translate: 0 var\(--motion-rise\);\s*}/)
+    expect(css).toMatch(
+      /\.reveal--visible {\s*opacity: 1;\s*translate: none;\s*transition:\s*opacity var\(--motion-duration-reveal\) var\(--motion-easing\),\s*translate var\(--motion-duration-reveal\) var\(--motion-easing\);\s*}/,
+    )
+    expect(css).toMatch(
+      /\.product-card__image img {\s*transition:\s*transform var\(--motion-duration-zoom\) var\(--motion-easing\),\s*opacity var\(--motion-duration\) var\(--motion-easing\);\s*}/,
+    )
+    // Outside that block, nothing in critical.css transitions or animates.
+    expect(critical.replace(/@media \(prefers-reduced-motion: no-preference\) {[\s\S]*?\n}/g, '')).not.toMatch(/transition|animation/)
+  })
+
+  it('labels the motion setting with translation keys the schema locale has', () => {
+    const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+    const group = parseJSON(read('base-theme/config/settings_schema.json')).find((g: { settings?: { id?: string }[] }) => g.settings?.some((s) => s.id === 'motion'))
+    const keys = [group.name, setting('motion').label, setting('motion').info, ...setting('motion').options.map((o: { label: string }) => o.label)]
+    for (const key of keys) {
+      expect(key).toMatch(/^t:/)
+      expect(key.slice(2).split('.').reduce((node: Record<string, unknown>, part: string) => node?.[part] as Record<string, unknown>, locale), key).toBeTypeOf('string')
+    }
+  })
+})
+
 describe('Buttons', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')

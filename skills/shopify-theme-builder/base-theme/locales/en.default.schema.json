@@ -78,7 +78,8 @@
     "buttons": "Buttons",
     "shipping_note": "Shipping note",
     "collapsible_content": "Collapsible content",
-    "product_cards": "Product cards"
+    "product_cards": "Product cards",
+    "motion": "Motion"
   },
   "labels": {
     "alignment": "Alignment",
@@ -174,7 +175,8 @@
     "text_alignment": "Text alignment",
     "card_hover": "Image on hover",
     "media_treatment": "Treatment",
-    "media_tint": "Tint behind images"
+    "media_tint": "Tint behind images",
+    "motion": "Animations"
   },
   "info": {
     "density": "The space above and below every section and between the items of a grid.",
@@ -202,7 +204,8 @@
     "shipping_note_text": "Shown next to the buy button. Links to the shipping and refund policies follow it once they're set in the Shopify admin, under Settings › Policies.",
     "card_hover": "The second image is the product's second media. Only on devices with a mouse.",
     "media_treatment": "Full-bleed crops each image to fill its box. Framed shows the whole image, inset in its box on the tint.",
-    "media_tint": "Suits cut-out product photos: their white background takes the tint. Pick a light color, or clear it for none."
+    "media_tint": "Suits cut-out product photos: their white background takes the tint. Pick a light color, or clear it for none.",
+    "motion": "Subtle fades sections in as they scroll into view and eases hovers. Expressive raises them and zooms images slowly. Always off for customers who reduce motion on their device, and never on what shows first."
   },
   "options": {
     "alignment": {
@@ -302,6 +305,11 @@
     "media_treatment": {
       "full_bleed": "Full-bleed",
       "framed": "Framed"
+    },
+    "motion": {
+      "none": "None",
+      "subtle": "Subtle",
+      "expressive": "Expressive"
     }
   }
 }

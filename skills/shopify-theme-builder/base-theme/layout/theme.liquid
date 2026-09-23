@@ -25,6 +25,11 @@
     {% # Load and preload the critical CSS %}
     {{ 'critical.css' | asset_url | stylesheet_tag: preload: true }}
 
+    {% # Reveal on scroll, the one shared script of the motion setting %}
+    {% if settings.motion != 'none' %}
+      <script src="{{ 'reveal.js' | asset_url }}" defer></script>
+    {% endif %}
+
     {% # Social, title, etc. %}
     {% render 'meta-tags' %}
 

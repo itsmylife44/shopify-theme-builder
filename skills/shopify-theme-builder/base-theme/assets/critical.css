@@ -277,11 +277,12 @@ h6,
   }
 }
 
+/* The hover zooms the image over the zoom duration and fades the second image in. */
 @media (prefers-reduced-motion: no-preference) {
   .product-card__image img {
     transition:
-      transform 0.4s ease-out,
-      opacity 0.3s ease-out;
+      transform var(--motion-duration-zoom) var(--motion-easing),
+      opacity var(--motion-duration) var(--motion-easing);
   }
 }
 
@@ -306,6 +307,23 @@ a.product-card__title:hover {
 .product-card__quick-add-button {
   align-self: var(--card-text-align);
   margin-block-start: auto;
+}
+
+/* Reveal on scroll: reveal.js hides the sections out of view on load with .reveal, then
+   fades them in, and with expressive motion raises them, as they scroll into view. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    translate: 0 var(--motion-rise);
+  }
+
+  .reveal--visible {
+    opacity: 1;
+    translate: none;
+    transition:
+      opacity var(--motion-duration-reveal) var(--motion-easing),
+      translate var(--motion-duration-reveal) var(--motion-easing);
+  }
 }
 
 /** Section layout utilities */

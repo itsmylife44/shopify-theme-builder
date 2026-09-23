@@ -66,6 +66,28 @@
     assign framed = true
   endif
 
+  # Motion: fades and hovers, reveals on scroll, and the image zoom; none sets no motion at all.
+  case settings.motion
+    when 'none'
+      assign motion_duration = '0s'
+      assign motion_duration_reveal = '0s'
+      assign motion_duration_zoom = '0s'
+      assign motion_easing = 'ease'
+      assign motion_rise = '0'
+    when 'expressive'
+      assign motion_duration = '0.3s'
+      assign motion_duration_reveal = '1s'
+      assign motion_duration_zoom = '1.5s'
+      assign motion_easing = 'cubic-bezier(0.165, 0.84, 0.44, 1)'
+      assign motion_rise = '2rem'
+    else
+      assign motion_duration = '0.25s'
+      assign motion_duration_reveal = '0.25s'
+      assign motion_duration_zoom = '0.25s'
+      assign motion_easing = 'ease-out'
+      assign motion_rise = '0'
+  endcase
+
   case settings.page_width
     when 'narrow'
       assign page_width = '75rem'
@@ -175,6 +197,16 @@
     --media-background: {{ settings.media_tint | default: 'transparent' }};
     --media-blend: {% if settings.media_tint != blank %}multiply{% else %}normal{% endif %};
     {% comment %}
+      Motion: hover transitions take --motion-duration, sections revealed on scroll (reveal.js) fade in over
+      --motion-duration-reveal and rise by --motion-rise, and an image zooms over --motion-duration-zoom, all with
+      --motion-easing. Reduced motion sets them to nothing, below.
+    {% endcomment %}
+    --motion-duration: {{ motion_duration }};
+    --motion-duration-reveal: {{ motion_duration_reveal }};
+    --motion-duration-zoom: {{ motion_duration_zoom }};
+    --motion-easing: {{ motion_easing }};
+    --motion-rise: {{ motion_rise }};
+    {% comment %}
       The breakpoint is 750px: layouts switch at @media (min-width: 750px) and (max-width: 749px), and image sizes
       at (min-width: 750px). CSS variables don't work in media queries, so it is this constant instead of a variable.
     {% endcomment %}
@@ -186,6 +218,15 @@
     :root {
       --section-spacing: {{ section_spacing | divided_by: 16.0 }}rem;
       --grid-gap: {{ grid_gap | divided_by: 16.0 }}rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --motion-duration: 0s;
+      --motion-duration-reveal: 0s;
+      --motion-duration-zoom: 0s;
+      --motion-rise: 0;
     }
   }
 
