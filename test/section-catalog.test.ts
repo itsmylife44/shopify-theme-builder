@@ -723,6 +723,15 @@ describe('Header menu', () => {
     expect(source).toMatch(/href="{{ link\.url }}"\s*{%-? if link\.current -?%}\s*aria-current="page"/)
   })
 
+  it('opens and closes a desktop dropdown 300 ms after a mouse enters or leaves it, the click and keys still toggling it', () => {
+    const script = source.match(/class HeaderMenu[\s\S]*?\n  }\n/)![0]
+    expect(script).toMatch(/querySelectorAll\('\.header__menu \.header__submenu'\)/)
+    expect(script).toMatch(/'pointerenter'[\s\S]*'pointerleave'/)
+    expect(script).toMatch(/pointerType [!=]== 'mouse'/)
+    expect(script).toMatch(/clearTimeout\([^)]*\);\s*[^;]*setTimeout\([^;]*, 300\)/)
+    expect(script).toMatch(/event\.key === 'Escape'/)
+  })
+
   it('opens the menu in a dialog drawer from a menu button on mobile', () => {
     expect(source).toMatch(/<button[^>]*class="header__menu-button"[^>]*aria-controls="HeaderDrawer"/)
     expect(source).toMatch(/<dialog[^>]*id="HeaderDrawer"/)
@@ -1258,6 +1267,88 @@ describe('Style system', () => {
       for (const [query] of css.matchAll(/\((min|max)-width:[^)]*\)/g)) {
         expect(['(min-width: 750px)', '(max-width: 749px)'], file).toContain(query)
       }
+    }
+  })
+})
+
+describe('Touch targets and text measure', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const liquidFiles = ['base-theme', 'catalog'].flatMap((dir) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => path.join(dir, file)),
+  )
+  const markup = liquidFiles.map((file) => ({ file, source: read(file) }))
+  const css = [
+    read('base-theme/assets/critical.css'),
+    ...markup.flatMap(({ source }) => [...source.matchAll(/{%-? stylesheet -?%}([\s\S]*?){%-? endstylesheet -?%}/g)].map((m) => m[1])),
+  ]
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+  // Every rule, as its selectors (split on commas outside parentheses) and its declarations.
+  const rules = [...css.matchAll(/([^{}]+){([^{}]*)}/g)].map(([, selectors, body]) => ({
+    selectors: selectors.split(/,(?![^(]*\))/).map((s) => s.trim()),
+    body,
+  }))
+  const px = { '--target-size': 44, '--target-size-min': 24 }
+  // The smallest size, in px, the stylesheets give a selector on one axis: 0 when none does.
+  const target = (selector: string, axis: 'block' | 'inline') =>
+    Math.max(
+      0,
+      ...rules
+        .filter((rule) => rule.selectors.includes(selector))
+        .flatMap((rule) => [...rule.body.matchAll(new RegExp(`min-${axis}-size:\\s*var\\((--target-size(?:-min)?)\\)`, 'g'))])
+        .map((m) => px[m[1] as keyof typeof px]),
+    )
+  const field = "input:not([type='checkbox'], [type='radio'])"
+
+  it('defines a 44px size for primary controls and a 24px floor for every other target', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    expect(variables).toMatch(/--target-size: 44px;/)
+    expect(variables).toMatch(/--target-size-min: 24px;/)
+  })
+
+  it('gives every button, summary, select and field the 24px floor, and buttons, selects and fields 44px', () => {
+    for (const selector of ['button', 'summary', 'select', 'textarea', field]) {
+      expect(target(selector, 'block'), selector).toBeGreaterThanOrEqual(24)
+      expect(target(selector, 'inline'), selector).toBeGreaterThanOrEqual(24)
+    }
+    for (const selector of ['.button', '.button--secondary', 'select', field]) expect(target(selector, 'block'), selector).toBe(44)
+  })
+
+  it('sizes every icon control to at least 24px square, from the target variables', () => {
+    const icons = markup.flatMap(({ file, source }) =>
+      [...source.matchAll(/<(button|summary|a)\b([^>]*aria-label[^>]*)>([\s\S]*?)<\/\1>/g)]
+        .filter(([, , , content]) => /<svg|inline_asset_content/.test(content))
+        .map(([, , attributes]) => ({ file, selector: `.${attributes.match(/class="([\w-]+)/)?.[1]}` })),
+    )
+    expect(icons.length).toBeGreaterThan(5)
+    for (const { file, selector } of icons) {
+      expect(target(selector, 'block'), `${file} ${selector}`).toBeGreaterThanOrEqual(24)
+      expect(target(selector, 'inline'), `${file} ${selector}`).toBeGreaterThanOrEqual(24)
+    }
+  })
+
+  it('makes the menu and close buttons and the variant options 44px square', () => {
+    for (const selector of ['.header__menu-button', '.header__drawer-close', '.quick-add__close', '.main-product__option-label', '.quick-add__option-label']) {
+      expect(target(selector, 'block'), selector).toBe(44)
+      expect(target(selector, 'inline'), selector).toBe(44)
+    }
+  })
+
+  it('gives menu links and every label around a checkbox or radio button the 24px floor', () => {
+    const labels = markup.flatMap(({ source }) =>
+      [...source.matchAll(/<label class="([\w-]+)"[^>]*>\s*<input[^>]*type="(checkbox|radio)"/g)].map((m) => `.${m[1]}`),
+    )
+    expect(labels).toContain('.main-collection__filter-value')
+    for (const selector of ['.header__menu-link', ...labels]) expect(target(selector, 'block'), selector).toBeGreaterThanOrEqual(24)
+  })
+
+  it('caps running text at about 70 characters a line', () => {
+    expect(read('base-theme/snippets/css-variables.liquid')).toMatch(/--width-prose: 70ch;/)
+    for (const selector of ['.basic-page__text', '.rich-text__inner > *', '.faq__list', '.main-article__header', '.main-collection__description']) {
+      expect(rules.some((rule) => rule.selectors.includes(selector) && /max-width: var\(--width-prose\)/.test(rule.body)), selector).toBe(true)
     }
   })
 })

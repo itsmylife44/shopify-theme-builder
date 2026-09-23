@@ -276,6 +276,10 @@
     margin: 0;
   }
 
+  .main-collection__description {
+    max-width: var(--width-prose);
+  }
+
   .main-collection__facets {
     display: flex;
     flex-wrap: wrap;
@@ -313,6 +317,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+    min-block-size: var(--target-size-min);
   }
 
   .main-collection__filter-value:has(input:disabled) {

@@ -291,6 +291,12 @@
     list-style: none;
   }
 
+  .header__menu-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-size-min);
+  }
+
   .header__menu-link[aria-current='page'],
   .header__menu-link:hover {
     text-decoration: underline;
@@ -352,6 +358,10 @@
   .header__menu-button,
   .header__drawer-close {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
     padding: 0;
     border: 0;
     background: none;
@@ -514,10 +524,18 @@
     display: flex;
   }
 
+  .header__search-toggle,
+  .header__cart {
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+  }
+
   .header__cart-count {
     position: absolute;
-    inset-block-start: -0.25rem;
-    inset-inline-end: -0.5rem;
+    inset-block-start: 0;
+    inset-inline-end: 0;
     min-width: 1.25rem;
     padding-inline: var(--space-2xs);
     border-radius: var(--style-border-radius-badges);
@@ -575,6 +593,10 @@
 
   .quick-add__close {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
     padding: 0;
     border: 0;
     background: none;
@@ -638,6 +660,11 @@
   }
 
   .quick-add__option-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
     padding: var(--space-xs) var(--space-md);
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--style-border-radius-inputs);
@@ -694,6 +721,15 @@
         },
         { signal }
       );
+      for (const details of this.querySelectorAll('.header__menu .header__submenu')) {
+        const hover = (open) => (event) => {
+          if (event.pointerType !== 'mouse') return;
+          clearTimeout(details.hoverTimer);
+          details.hoverTimer = setTimeout(() => (details.open = open), 300);
+        };
+        details.addEventListener('pointerenter', hover(true), { signal });
+        details.addEventListener('pointerleave', hover(false), { signal });
+      }
       document.addEventListener(
         'click',
         (event) => {
