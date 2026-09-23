@@ -2,7 +2,7 @@
 // plugin adds the Node file API over the Theme folder on disk.
 import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
@@ -50,7 +50,8 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       /** @type {Promise<Offense[]> | null} The latest Theme Check result, until a file changes. */
       let validation = null
       let validatedAt = 0
-      const readState = () => readThemeState(theme, catalog, (validation ??= validateOnce()))
+      const steps = history(theme)
+      const readState = async () => ({ ...(await readThemeState(theme, catalog, (validation ??= validateOnce()))), history: steps.state() })
       function validateOnce() {
         validatedAt = Date.now()
         const result = validate(theme)
@@ -63,6 +64,14 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       function readStateAfterWrite() {
         validation = null
         return readState()
+      }
+      /**
+       * Runs a Studio write as one undo step.
+       * @param {() => void} change
+       */
+      function write(change) {
+        steps.record(change)
+        return readStateAfterWrite()
       }
 
       // The agent, the Theme Editor (pulled) or anything else may change the Theme: re-validate and tell the UI.
@@ -140,6 +149,21 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         })
       }
       route('/api/theme', 'GET', readState)
+      /**
+       * Undoes or redoes a step. A refused one leaves the history changed, so the UI reads the Theme again.
+       * @param {() => void} move
+       */
+      function travel(move) {
+        try {
+          move()
+        } catch (error) {
+          server.ws.send('studio:theme')
+          throw error
+        }
+        return readStateAfterWrite()
+      }
+      route('/api/undo', 'POST', async () => travel(steps.undo))
+      route('/api/redo', 'POST', async () => travel(steps.redo))
       route('/api/preview', 'GET', async () => preview.state)
       route('/api/frame', 'GET', async () => {
         const { state } = preview
@@ -152,50 +176,41 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       const storeResources = storeReader(cli, store)
       route('/api/store', 'GET', storeResources)
       route('/api/brand', 'PUT', async (req) => {
-        setBrand(theme, await readBody(req))
-        return readStateAfterWrite()
+        const change = await readBody(req)
+        return write(() => setBrand(theme, change))
       })
       route('/api/brand/logo', 'GET', async () => readLogo(theme))
       route('/api/brand/logo', 'PUT', async (req) => {
-        uploadLogo(theme, req.headers['content-type'] ?? '', await buffer(req))
-        return readStateAfterWrite()
+        const file = await buffer(req)
+        return write(() => uploadLogo(theme, req.headers['content-type'] ?? '', file))
       })
-      route('/api/brand/logo', 'DELETE', async () => {
-        removeLogo(theme)
-        return readStateAfterWrite()
-      })
+      route('/api/brand/logo', 'DELETE', async () => write(() => removeLogo(theme)))
       for (const [page, template] of Object.entries(pages)) {
         route(`/api/${page}/sections`, 'POST', async (req) => {
-          addSection(theme, catalog, template, await readBody(req))
-          return readStateAfterWrite()
+          const body = await readBody(req)
+          return write(() => addSection(theme, catalog, template, body))
         })
-        route(`/api/${page}/sections/:id`, 'DELETE', async (_, id) => {
-          removeSection(theme, template, id)
-          return readStateAfterWrite()
-        })
+        route(`/api/${page}/sections/:id`, 'DELETE', async (_, id) => write(() => removeSection(theme, template, id)))
         route(`/api/${page}/order`, 'PUT', async (req) => {
-          reorderSections(theme, template, await readBody(req))
-          return readStateAfterWrite()
+          const body = await readBody(req)
+          return write(() => reorderSections(theme, template, body))
         })
       }
       // The header and footer groups' sections are edited like a page's, but not added, removed or reordered.
       for (const [name, template] of Object.entries({ ...pages, ...groups })) {
         route(`/api/${name}/sections/:id`, 'GET', async (_, id) => readSection(theme, template, id))
         route(`/api/${name}/sections/:id`, 'PATCH', async (req, id) => {
-          updateSection(theme, template, id, await readBody(req))
-          return readStateAfterWrite()
+          const body = await readBody(req)
+          return write(() => updateSection(theme, template, id, body))
         })
         route(`/api/${name}/sections/:id/blocks`, 'POST', async (req, id) => {
-          addBlock(theme, template, id, await readBody(req))
-          return readStateAfterWrite()
+          const body = await readBody(req)
+          return write(() => addBlock(theme, template, id, body))
         })
-        route(`/api/${name}/sections/:id/blocks/:block`, 'DELETE', async (_, id, block) => {
-          removeBlock(theme, template, id, block)
-          return readStateAfterWrite()
-        })
+        route(`/api/${name}/sections/:id/blocks/:block`, 'DELETE', async (_, id, block) => write(() => removeBlock(theme, template, id, block)))
         route(`/api/${name}/sections/:id/order`, 'PUT', async (req, id) => {
-          reorderBlocks(theme, template, id, await readBody(req))
-          return readStateAfterWrite()
+          const body = await readBody(req)
+          return write(() => reorderBlocks(theme, template, id, body))
         })
       }
     },
@@ -231,6 +246,108 @@ class Conflict extends HttpError {
   status = 409
 }
 
+/** @type {Map<string, Buffer | null> | null} While a Studio write runs: each file it touched, as it was before (null: absent). */
+let touched = null
+
+/**
+ * Writes a Theme file, remembering its content before for undo.
+ * @param {string} file
+ * @param {string | Buffer} data
+ */
+function writeFile(file, data) {
+  remember(file)
+  writeFileSync(file, data)
+}
+
+/** @param {string} file */
+function removeFile(file) {
+  remember(file)
+  rmSync(file, { force: true })
+}
+
+/** @param {string} file */
+function remember(file) {
+  if (touched && !touched.has(file)) touched.set(file, readIfExists(file))
+}
+
+/** @param {string} file */
+function readIfExists(file) {
+  return existsSync(file) ? readFileSync(file) : null
+}
+
+/**
+ * @param {Buffer | null} a
+ * @param {Buffer | null} b
+ */
+function same(a, b) {
+  return a === null || b === null ? a === b : a.equals(b)
+}
+
+const maxSteps = 50
+
+/**
+ * The Studio's undo history, in memory only: a step holds each file one write changed, before and after it.
+ * Undo and redo refuse a step whose files changed since, so edits made outside the Studio are never undone.
+ * @param {string} theme
+ */
+function history(theme) {
+  /** @typedef {{ file: string, before: Buffer | null, after: Buffer | null }[]} Step */
+  /** @type {Step[]} */
+  const undo = []
+  /** @type {Step[]} */
+  const redo = []
+
+  /**
+   * Moves the latest step of `from` onto `to`, putting its files back to `restore`.
+   * @param {Step[]} from
+   * @param {Step[]} to
+   * @param {'before' | 'after'} restore
+   * @param {string} what
+   */
+  function move(from, to, restore, what) {
+    const step = from.pop()
+    if (!step) throw new Conflict(`Nothing to ${what}.`)
+    const expected = restore === 'before' ? 'after' : 'before'
+    const changed = step.filter((entry) => !same(readIfExists(entry.file), entry[expected]))
+    if (changed.length > 0) {
+      const files = changed.map((entry) => path.relative(theme, entry.file)).join(', ')
+      throw new Conflict(`Can't ${what}: ${files} changed outside the Studio since, and the Studio leaves those edits alone. This step is dropped.`)
+    }
+    for (const entry of step) {
+      const data = entry[restore]
+      if (data === null) rmSync(entry.file, { force: true })
+      else writeFileSync(entry.file, data)
+    }
+    to.push(step)
+  }
+
+  return {
+    state: () => ({ undo: undo.length > 0, redo: redo.length > 0 }),
+    /**
+     * Runs a Studio write and records the files it changed as one step; a new step clears redo.
+     * @param {() => void} write
+     */
+    record(write) {
+      touched = new Map()
+      try {
+        write()
+      } finally {
+        const step = [...touched]
+          .map(([file, before]) => ({ file, before, after: readIfExists(file) }))
+          .filter((entry) => !same(entry.before, entry.after))
+        touched = null
+        if (step.length > 0) {
+          undo.push(step)
+          if (undo.length > maxSteps) undo.shift()
+          redo.length = 0
+        }
+      }
+    },
+    undo: () => move(undo, redo, 'before', 'undo'),
+    redo: () => move(redo, undo, 'after', 'redo'),
+  }
+}
+
 /**
  * @typedef {{ file: string, line: number, severity: 'error' | 'warning', check: string, message: string }} Offense
  * @typedef {{ id: string, type: string, colorScheme?: string | null }} TemplateSection A section on a page; colorScheme is absent when its schema has no color scheme setting.
@@ -244,7 +361,8 @@ class Conflict extends HttpError {
  * }} Brand
  * @typedef {keyof typeof pages} Page
  * @typedef {keyof typeof groups} Group
- * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, validation: Offense[] }} ThemeState
+ * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, validation: Offense[] }} ThemeFiles
+ * @typedef {ThemeFiles & { history: { undo: boolean, redo: boolean } }} ThemeState The Theme's files, and whether the Studio can undo or redo a write.
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
  */
 
@@ -252,7 +370,7 @@ class Conflict extends HttpError {
  * @param {string} theme
  * @param {string} catalog
  * @param {Promise<Offense[]>} validation
- * @returns {Promise<ThemeState>}
+ * @returns {Promise<ThemeFiles>}
  */
 async function readThemeState(theme, catalog, validation) {
   return {
@@ -389,7 +507,7 @@ function updateJSON(theme, name, change) {
   if (change(data) === false) return
   // Keep the comment header Shopify writes at the top of the file.
   const header = raw.match(/^\s*\/\*[\s\S]*?\*\/\s*/)?.[0] ?? ''
-  writeFileSync(file, header + JSON.stringify(data, null, 2) + '\n')
+  writeFile(file, header + JSON.stringify(data, null, 2) + '\n')
 }
 
 // The Studio's logo lives in the Theme's assets, since only the Admin API can add images to the
@@ -427,8 +545,8 @@ function uploadLogo(theme, contentType, file) {
   if (file.length > maxLogoBytes) throw new BadRequest('The logo must be at most 2 MB.')
   const name = `studio-logo.${type.extension}`
   const previous = readLogoAsset(theme)
-  writeFileSync(path.join(theme, 'assets', name), file)
-  if (previous !== name && isStudioLogo(previous)) rmSync(path.join(theme, 'assets', previous), { force: true })
+  writeFile(path.join(theme, 'assets', name), file)
+  if (previous !== name && isStudioLogo(previous)) removeFile(path.join(theme, 'assets', previous))
   updateSettings(theme, (current) => {
     current.logo_asset = name
   })
@@ -440,7 +558,7 @@ function uploadLogo(theme, contentType, file) {
  */
 function removeLogo(theme) {
   const previous = readLogoAsset(theme)
-  if (isStudioLogo(previous)) rmSync(path.join(theme, 'assets', previous), { force: true })
+  if (isStudioLogo(previous)) removeFile(path.join(theme, 'assets', previous))
   updateSettings(theme, (current) => {
     delete current.logo_asset
   })
@@ -575,7 +693,7 @@ function addSection(theme, catalog, file, body) {
     template.order.push(id)
     if (!existsSync(own)) {
       addMissingFromBaseTheme(theme)
-      copyFileSync(source, own)
+      writeFile(own, readFileSync(source))
     }
   })
 }
@@ -624,7 +742,7 @@ function addMissingFromBaseTheme(theme) {
   mkdirSync(path.join(theme, 'blocks'), { recursive: true })
   for (const name of readdirSync(path.join(baseTheme, 'blocks'))) {
     const own = path.join(theme, 'blocks', name)
-    if (!existsSync(own)) copyFileSync(path.join(baseTheme, 'blocks', name), own)
+    if (!existsSync(own)) writeFile(own, readFileSync(path.join(baseTheme, 'blocks', name)))
   }
   const storefront = readJSON(baseTheme, 'locales/en.default.json')
   const schema = readJSON(baseTheme, 'locales/en.default.schema.json')

@@ -7,8 +7,10 @@ import {
   MonitorIcon,
   PaletteIcon,
   PlusIcon,
+  Redo2Icon,
   SmartphoneIcon,
   Trash2Icon,
+  Undo2Icon,
   XIcon,
 } from 'lucide-react'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
@@ -130,6 +132,7 @@ export function App() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <UndoRedo history={state.history} onSaved={showState} />
           <PreviewBadge preview={preview} />
           <ChecksBadge offenses={state.validation} onClick={() => setTab('checks')} />
           <div className="flex rounded-md border p-0.5">
@@ -218,6 +221,45 @@ function TabButton({
       {icon}
       {label}
     </Button>
+  )
+}
+
+/** Undo and Redo of the Studio's writes, with Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z outside text fields. */
+function UndoRedo({ history, onSaved }: { history: ThemeState['history']; onSaved: (state: ThemeState) => void }) {
+  const { saving, error, write } = useWrite(onSaved)
+  const travel = (to: 'undo' | 'redo') => {
+    if (!saving && history[to]) void write(`/api/${to}`, { method: 'POST' })
+  }
+
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== 'z') return
+    // A text field keeps its own undo.
+    const target = event.target as HTMLElement
+    if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
+    event.preventDefault()
+    travel(event.shiftKey ? 'redo' : 'undo')
+  })
+  useEffect(() => {
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  return (
+    <>
+      {error ? (
+        <p role="alert" title={error} className="max-w-xs truncate text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex rounded-md border p-0.5">
+        <Button size="icon-sm" variant="ghost" aria-label="Undo" title="Undo" disabled={saving || !history.undo} onClick={() => travel('undo')}>
+          <Undo2Icon />
+        </Button>
+        <Button size="icon-sm" variant="ghost" aria-label="Redo" title="Redo" disabled={saving || !history.redo} onClick={() => travel('redo')}>
+          <Redo2Icon />
+        </Button>
+      </div>
+    </>
   )
 }
 
