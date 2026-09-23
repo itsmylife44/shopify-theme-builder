@@ -1,0 +1,115 @@
+{% doc %}
+  Renders a heading that expands to the product description or the Merchant's
+  text, like materials or care. Open on desktop, collapsed on mobile.
+
+  @example
+  {% content_for 'block', type: 'collapsible-content', id: 'collapsible-content' %}
+{% enddoc %}
+
+{% liquid
+  if block.settings.source == 'description'
+    assign content = product.description
+  else
+    assign content = block.settings.text
+  endif
+%}
+
+{% if content != blank or request.design_mode %}
+  <collapsible-content class="collapsible-content" {{ block.shopify_attributes }}>
+    <details>
+      <summary class="collapsible-content__summary">{{ block.settings.heading | escape }}</summary>
+      <div class="collapsible-content__body">{{ content }}</div>
+    </details>
+  </collapsible-content>
+{% endif %}
+
+{% javascript %}
+  class CollapsibleContent extends HTMLElement {
+    connectedCallback() {
+      if (matchMedia('(min-width: 750px)').matches) this.querySelector('details').open = true;
+    }
+  }
+
+  if (!customElements.get('collapsible-content')) customElements.define('collapsible-content', CollapsibleContent);
+{% endjavascript %}
+
+{% stylesheet %}
+  .collapsible-content {
+    display: block;
+    border-block-end: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .collapsible-content__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-block: var(--space-sm);
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .collapsible-content__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .collapsible-content__summary::after {
+    content: '';
+    flex-shrink: 0;
+    width: 0.5em;
+    height: 0.5em;
+    border-block-end: var(--border-width) solid currentcolor;
+    border-inline-end: var(--border-width) solid currentcolor;
+    rotate: 45deg;
+    translate: 0 -25%;
+  }
+
+  details[open] > .collapsible-content__summary::after {
+    rotate: 225deg;
+    translate: 0 25%;
+  }
+
+  .collapsible-content__body {
+    padding-block-end: var(--space-md);
+  }
+
+  .collapsible-content__body > :first-child {
+    margin-block-start: 0;
+  }
+
+  .collapsible-content__body > :last-child {
+    margin-block-end: 0;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.collapsible_content",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Description"
+    },
+    {
+      "type": "select",
+      "id": "source",
+      "label": "t:labels.content",
+      "options": [
+        { "value": "description", "label": "t:options.collapsible_content.description" },
+        { "value": "text", "label": "t:options.collapsible_content.text" }
+      ],
+      "default": "text"
+    },
+    {
+      "visible_if": "{{ block.settings.source == 'text' }}",
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    }
+  ],
+  "presets": [{ "name": "t:general.collapsible_content" }]
+}
+{% endschema %}

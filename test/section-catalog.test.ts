@@ -389,6 +389,58 @@ describe('Unit prices', () => {
   })
 })
 
+describe('Product page shipping note and collapsible content', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const parse = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const mainProduct = read('catalog/sections/main-product.liquid')
+
+  it('lets the Merchant place a shipping note and collapsible content in any order in the main product, as theme blocks', () => {
+    const schema = parse(mainProduct)
+    expect(schema.blocks).toEqual(expect.arrayContaining([{ type: 'shipping-note' }, { type: 'collapsible-content' }]))
+    expect(schema.presets[0].blocks.map((block: { type: string }) => block.type)).toEqual([
+      'shipping-note',
+      'collapsible-content',
+      'collapsible-content',
+      'collapsible-content',
+      'collapsible-content',
+    ])
+    expect(schema.presets[0].blocks[1].settings).toMatchObject({ source: 'description' })
+  })
+
+  it('shows the description only through a collapsible block, never as one fixed block of text', () => {
+    expect(mainProduct).not.toContain('product.description')
+  })
+
+  it("summarises shipping and returns with links to the shop's policy pages", () => {
+    const source = read('base-theme/blocks/shipping-note.liquid')
+    const schema = parse(source)
+    expect(source).toContain('{{ block.shopify_attributes }}')
+    expect(source).toContain('{{ block.settings.text }}')
+    for (const policy of ['shipping_policy', 'refund_policy']) {
+      expect(source).toContain(`{% if shop.${policy} %}`)
+      expect(source).toContain(`href="{{ shop.${policy}.url }}"`)
+      expect(source).toContain(`{{ shop.${policy}.title | escape }}`)
+    }
+    expect(schema.settings).toContainEqual(expect.objectContaining({ type: 'richtext', id: 'text' }))
+  })
+
+  it('collapses content in a native disclosure, open on desktop, never in tabs', () => {
+    const source = read('base-theme/blocks/collapsible-content.liquid')
+    const schema = parse(source)
+    expect(source).toMatch(/<details[^>]*>\s*<summary[^>]*>/)
+    expect(source).toContain('{{ block.settings.heading | escape }}')
+    expect(source).not.toMatch(/role="tab/)
+    expect(source).toContain("matchMedia('(min-width: 750px)')")
+    const sourceSetting = schema.settings.find((setting: { id: string }) => setting.id === 'source')
+    expect(sourceSetting.options.map((option: { value: string }) => option.value)).toEqual(['description', 'text'])
+    expect(source).toContain('product.description')
+    expect(source).toContain('block.settings.text')
+    // Hidden from customers when it has nothing to show, like a product without a description.
+    expect(source).toMatch(/{% if content != blank or request\.design_mode %}/)
+  })
+})
+
 describe('Product page requirements', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-product.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

@@ -1,0 +1,57 @@
+{% doc %}
+  Renders a short shipping and returns summary, with links to the shop's
+  shipping and refund policy pages when they are set.
+
+  @example
+  {% content_for 'block', type: 'shipping-note', id: 'shipping-note' %}
+{% enddoc %}
+
+<div class="shipping-note text-small" {{ block.shopify_attributes }}>
+  {{ block.settings.text }}
+  {% if shop.shipping_policy or shop.refund_policy %}
+    <ul class="shipping-note__links" role="list">
+      {% if shop.shipping_policy %}
+        <li><a href="{{ shop.shipping_policy.url }}">{{ shop.shipping_policy.title | escape }}</a></li>
+      {% endif %}
+      {% if shop.refund_policy %}
+        <li><a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title | escape }}</a></li>
+      {% endif %}
+    </ul>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .shipping-note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .shipping-note > * {
+    margin: 0;
+  }
+
+  .shipping-note__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+    padding: 0;
+    list-style: none;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.shipping_note",
+  "settings": [
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "info": "t:info.shipping_note_text",
+      "default": "<p>Shipping calculated at checkout. Returns accepted within 30 days.</p>"
+    }
+  ],
+  "presets": [{ "name": "t:general.shipping_note" }]
+}
+{% endschema %}

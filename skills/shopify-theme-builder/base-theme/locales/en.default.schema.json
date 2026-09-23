@@ -75,7 +75,9 @@
     "type_scale": "Type scale",
     "headings": "Headings",
     "shape": "Shape",
-    "buttons": "Buttons"
+    "buttons": "Buttons",
+    "shipping_note": "Shipping note",
+    "collapsible_content": "Collapsible content"
   },
   "labels": {
     "alignment": "Alignment",
@@ -164,7 +166,8 @@
     "border_width": "Border width",
     "button_primary_style": "Primary button",
     "button_text_case": "Text case",
-    "button_font_weight": "Weight"
+    "button_font_weight": "Weight",
+    "content": "Content"
   },
   "info": {
     "density": "The space above and below every section and between the items of a grid.",
@@ -187,7 +190,8 @@
     "type_accent_font": "Used for labels and prices.",
     "type_scale_ratio": "How much larger each heading level is than the one below it, from the body size up. Smaller on mobile.",
     "type_display_size": "The size of the largest headings, like the hero heading, on desktop. Never smaller than a main heading.",
-    "shape_family": "Rounds buttons, inputs, cards, images and badges together. Round makes buttons and badges pills."
+    "shape_family": "Rounds buttons, inputs, cards, images and badges together. Round makes buttons and badges pills.",
+    "shipping_note_text": "Shown next to the buy button. Links to the shipping and refund policies follow it once they're set in the Shopify admin, under Settings › Policies."
   },
   "options": {
     "alignment": {
@@ -264,6 +268,10 @@
     },
     "button_font_weight": {
       "font": "Body font's own"
+    },
+    "collapsible_content": {
+      "description": "Product description",
+      "text": "Text"
     }
   }
 }
