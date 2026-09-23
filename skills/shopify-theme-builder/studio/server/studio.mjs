@@ -195,6 +195,15 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         const change = await readBody(req)
         return write(() => setStyle(theme, change))
       })
+      // Before the Direction route, which would take current as a name.
+      route('/api/directions/current', 'PUT', async (req) => {
+        const body = await readBody(req)
+        return write(() => switchDirection(theme, body))
+      })
+      route('/api/directions/:name', 'PUT', async (req, name) => {
+        const body = await readBody(req)
+        return write(() => setDirection(theme, catalog, name, body))
+      })
       for (const [page, template] of Object.entries(pages)) {
         route(`/api/${page}/sections`, 'POST', async (req) => {
           const body = await readBody(req)
@@ -811,13 +820,9 @@ const maxSections = 25
  * @param {unknown} body
  */
 function addSection(theme, catalog, file, body) {
-  const { type } = /** @type {{ type?: unknown }} */ (body ?? {})
-  if (typeof type !== 'string' || !sectionName.test(type)) throw new BadRequest('type must be a section name, like hero.')
-  const own = path.join(theme, 'sections', `${type}.liquid`)
-  const source = path.join(catalog, 'sections', `${type}.liquid`)
-  const placed = existsSync(own) ? own : source
-  if (!existsSync(placed)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
-  if (!goesOn(placed, file)) throw new BadRequest(`The ${type} section can't go on ${file}.`)
+  // sectionFile checks the type is a section name.
+  const { type } = /** @type {{ type: string }} */ (body ?? {})
+  const placed = sectionFile(theme, catalog, type, file)
   const { limit, presets } = readSchema(placed) ?? {}
   updateJSON(theme, file, (template) => {
     if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
@@ -826,11 +831,144 @@ function addSection(theme, catalog, file, body) {
     const id = newId(type, template.sections)
     template.sections[id] = fromPreset(type, presets?.[0])
     template.order.push(id)
-    if (!existsSync(own)) {
-      addMissingFromBaseTheme(theme)
-      writeFile(own, readFileSync(source))
-    }
+    copySection(theme, catalog, type)
   })
+}
+
+/**
+ * The file of a section a page places: the Theme's own, else the catalog's. Refuses a type neither has, or one the page can't take.
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {unknown} type
+ * @param {string} file The page's JSON template.
+ * @returns {string}
+ */
+function sectionFile(theme, catalog, type, file) {
+  if (typeof type !== 'string' || !sectionName.test(type)) throw new BadRequest('type must be a section name, like hero.')
+  const own = path.join(theme, 'sections', `${type}.liquid`)
+  const placed = existsSync(own) ? own : path.join(catalog, 'sections', `${type}.liquid`)
+  if (!existsSync(placed)) throw new NotFound(`Neither the Theme nor the Section Catalog has a ${type} section.`)
+  if (!goesOn(placed, file)) throw new BadRequest(`The ${type} section can't go on ${file}.`)
+  return placed
+}
+
+/**
+ * Copies a catalog section into the Theme with the Base Theme files it needs, unless the Theme has it (copy-once).
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {string} type
+ */
+function copySection(theme, catalog, type) {
+  const own = path.join(theme, 'sections', `${type}.liquid`)
+  if (existsSync(own)) return
+  addMissingFromBaseTheme(theme)
+  writeFile(own, readFileSync(path.join(catalog, 'sections', `${type}.liquid`)))
+}
+
+// A Direction is a Shopify preset: one or two words under 30 characters (the Theme Store's rule), at most three per Theme (ADR-0007).
+const directionName = /^[a-z0-9]+( [a-z0-9]+)?$/i
+const maxDirections = 3
+// The setting types a preset switch overwrites; the others, like a logo or a text, keep the Theme's value (Shopify's settings_data.json
+// docs). text_alignment isn't in Shopify's list, but the card text alignment is one of a Direction's style settings.
+const presentationalTypes = new Set(['checkbox', 'color', 'color_background', 'color_palette', 'color_scheme', 'color_scheme_group', 'font_picker', 'number', 'radio', 'range', 'select', 'text_alignment'])
+
+/**
+ * The home template of a Direction, in its listing folder: the preset's name in kebab case.
+ * @param {string} name
+ */
+function listingHome(name) {
+  return `listings/${name.toLowerCase().replace(' ', '-')}/templates/index.json`
+}
+
+/**
+ * Writes a Direction: a preset in config/settings_data.json of the Theme's settings with the Direction's style
+ * settings (a style setting it leaves out takes its default), and its home template in listings/<name>/.
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {string} name
+ * @param {unknown} body `{ settings?: { <style setting id>: value }, template: { sections, order } }`
+ */
+function setDirection(theme, catalog, name, body) {
+  if (!directionName.test(name) || name.length >= 30) {
+    throw new BadRequest('A Direction name is one or two words of letters and digits, under 30 characters, like Olive Press.')
+  }
+  const { settings = {}, template, ...unknown } = /** @type {Record<string, unknown>} */ (isObject(body) ? body : {})
+  const extra = Object.keys(unknown)
+  if (extra.length > 0) throw new BadRequest(`Unknown Direction field: ${extra.join(', ')}.`)
+  if (!isObject(settings)) throw new BadRequest('settings must be an object of style settings by id, like { "shape_family": "round" }.')
+  const types = checkTemplate(theme, catalog, template)
+  const style = readStyleSchema(theme).flatMap((group) => group.settings)
+  let current = false
+  updateJSON(theme, settingsData, (data) => {
+    data.presets ??= {}
+    const names = Object.keys(data.presets)
+    const clash = names.find((other) => other !== name && listingHome(other) === listingHome(name))
+    if (clash) throw new BadRequest(`The Theme has a Direction ${clash} already; use that name.`)
+    if (!names.includes(name) && names.length >= maxDirections) {
+      throw new BadRequest(`A Theme holds at most ${maxDirections} Directions: ${names.join(', ')}. Rewrite one of them.`)
+    }
+    const preset = structuredClone(currentSettings(data))
+    for (const setting of style) delete preset[/** @type {string} */ (setting.id)]
+    setValues({ settings: preset }, /** @type {object} */ (settings), style, 'the style settings', styleTypes)
+    data.presets[name] = preset
+    current = data.current === name
+  })
+  for (const type of new Set(types)) copySection(theme, catalog, type)
+  const text = JSON.stringify(template, null, 2) + '\n'
+  mkdirSync(path.dirname(path.join(theme, listingHome(name))), { recursive: true })
+  writeFile(path.join(theme, listingHome(name)), text)
+  // The chosen Direction's home is the Theme's.
+  if (current) writeFile(path.join(theme, pages.home), text)
+}
+
+/**
+ * Checks a Direction's home template: its sections, each placed in order once, at most 25, of sections the Theme or the catalog has.
+ * Returns their types.
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {unknown} template
+ */
+function checkTemplate(theme, catalog, template) {
+  const { sections, order } = /** @type {{ sections?: unknown, order?: unknown }} */ (isObject(template) ? template : {})
+  if (!isObject(sections) || !Object.values(/** @type {object} */ (sections)).every(isObject)) {
+    throw new BadRequest('template must be a JSON template like { "sections": { "hero": { "type": "hero" } }, "order": ["hero"] }.')
+  }
+  const ids = Object.keys(/** @type {object} */ (sections))
+  if (ids.length === 0 || ids.length > maxSections) throw new BadRequest(`template holds 1 to ${maxSections} sections.`)
+  checkOrder({ order }, ids, 'each section id of the template')
+  return Object.values(/** @type {Record<string, { type?: unknown }>} */ (sections)).map(({ type }) => {
+    sectionFile(theme, catalog, type, pages.home)
+    return /** @type {string} */ (type)
+  })
+}
+
+/**
+ * Switches the Theme to a Direction the way Shopify applies a preset and its listing: `current` names the preset,
+ * which keeps the Theme's values of the settings that aren't presentational, and the listing's home template
+ * becomes templates/index.json.
+ * @param {string} theme
+ * @param {unknown} body `{ name }`
+ */
+function switchDirection(theme, body) {
+  const { name } = /** @type {{ name?: unknown }} */ (isObject(body) ? body : {})
+  const schema = readGlobalSchema(theme)
+  updateJSON(theme, settingsData, (data) => {
+    const names = Object.keys(data.presets ?? {})
+    if (typeof name !== 'string' || !names.includes(name)) {
+      throw new BadRequest(`name must be one of the Theme's Directions: ${names.join(', ') || 'none yet, PUT /api/directions/<name> writes one'}.`)
+    }
+    const current = currentSettings(data)
+    const preset = data.presets[name]
+    for (const [id, setting] of Object.entries(schema)) {
+      if (presentationalTypes.has(setting.type)) continue
+      if (id in current) preset[id] = current[id]
+      else delete preset[id]
+    }
+    data.current = name
+  })
+  const listing = path.join(theme, listingHome(/** @type {string} */ (name)))
+  // ponytail: the home template edited since the last switch is replaced, as Shopify's install does; undo brings it back.
+  if (existsSync(listing)) writeFile(path.join(theme, pages.home), readFileSync(listing))
 }
 
 /**

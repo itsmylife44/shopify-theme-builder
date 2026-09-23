@@ -528,6 +528,112 @@ describe('Studio API: style settings', () => {
   })
 })
 
+describe('Studio API: Directions', () => {
+  const heroHome = { sections: { hero: { type: 'hero', settings: { color_scheme: 'scheme-2' } } }, order: ['hero'] }
+
+  it('writes a Direction as a preset of the Theme settings with its style, and its home template as a listing', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.setBrand({ headingFont: 'work_sans_n7' })
+    await studio.setStyle({ density: 'airy' })
+    const { status, body } = await studio.send('PUT', `api/directions/${encodeURIComponent('Olive Press')}`, {
+      settings: { shape_family: 'square', motion: 'none' },
+      template: heroHome,
+    })
+    expect(status).toBe(200)
+    const data = readSettingsData(theme)
+    const preset = data.presets['Olive Press']
+    // The Brand comes along; the style is the Direction's own, and a style setting it leaves out takes its default.
+    expect(preset).toMatchObject({ type_heading_font: 'work_sans_n7', shape_family: 'square', motion: 'none' })
+    expect(preset).not.toHaveProperty('density')
+    expect(Object.keys(preset.color_schemes)).toEqual(['scheme-1', 'scheme-2'])
+    // Writing a Direction doesn't switch to it.
+    expect(data.current.density).toBe('airy')
+    expect(readTemplate(theme, 'listings/olive-press/templates/index.json')).toEqual(heroHome)
+    // The catalog section the template names is copied into the Theme.
+    expect(readFileSync(path.join(theme, 'sections/hero.liquid'), 'utf8')).toBe(catalogHero)
+    expect(readTemplate(theme)).toMatchObject({ order: ['main'] })
+    expect(errors(body.validation)).toEqual([])
+  })
+
+  it('switches to a Direction as Shopify applies a preset and its listing, keeping the logo, in one undo step', async () => {
+    const theme = fixtureTheme()
+    const settingsBefore = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const homeBefore = readFileSync(path.join(theme, home), 'utf8')
+    const studio = await openStudio(theme)
+    await studio.send('PUT', 'api/directions/Quiet', { settings: { shape_family: 'square', card_text_alignment: 'center' }, template: heroHome })
+    await studio.send('PUT', 'api/directions/Loud', { settings: { shape_family: 'round' }, template: { sections: { main: { type: 'hello-world' } }, order: ['main'] } })
+    // A logo added after the Directions were written, and a style change: switching keeps the one and not the other.
+    await studio.uploadLogo(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2]), 'image/png')
+    await studio.setStyle({ shape_family: 'soft' })
+    const settingsWritten = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+
+    const { status, body } = await studio.send('PUT', 'api/directions/current', { name: 'Quiet' })
+    expect(status).toBe(200)
+    const data = readSettingsData(theme)
+    expect(data.current).toBe('Quiet')
+    expect(data.presets.Quiet).toMatchObject({ shape_family: 'square', card_text_alignment: 'center', logo_asset: 'studio-logo.png' })
+    expect(readTemplate(theme)).toEqual(heroHome)
+    // The preview reads the preset's values and the listing's home.
+    const shape = body.style.flatMap((group: { settings: { id: string; value: unknown }[] }) => group.settings).find((setting: { id: string }) => setting.id === 'shape_family')
+    expect(shape.value).toBe('square')
+    expect(body.home).toEqual([{ id: 'hero', type: 'hero', colorScheme: 'scheme-2' }])
+    expect(body.brand.logoAsset).toBe('studio-logo.png')
+    expect(errors(body.validation)).toEqual([])
+
+    // Rewriting the chosen Direction changes the home page with it.
+    await studio.send('PUT', 'api/directions/Quiet', { settings: { shape_family: 'square' }, template: { sections: { main: { type: 'hello-world' } }, order: ['main'] } })
+    expect(readTemplate(theme)).toMatchObject({ order: ['main'] })
+    await studio.send('POST', 'api/undo')
+
+    await studio.send('POST', 'api/undo')
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(settingsWritten)
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(homeBefore)
+    for (let step = 0; step < 4; step++) await studio.send('POST', 'api/undo')
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(settingsBefore)
+    expect(existsSync(path.join(theme, 'listings/quiet/templates/index.json'))).toBe(false)
+    // Each write and undo runs Theme Check.
+  }, 60_000)
+
+  it.each([
+    ['a name of three words', 'Very Quiet Press', { template: heroHome }],
+    ['a name of 30 characters', 'A'.repeat(30), { template: heroHome }],
+    ['a name with punctuation', 'Quiet!', { template: heroHome }],
+    ['no template', 'Quiet', { settings: {} }],
+    ['a template without sections', 'Quiet', { template: { sections: {}, order: [] } }],
+    ['an order missing a section', 'Quiet', { template: { ...heroHome, order: [] } }],
+    ['a section neither the Theme nor the catalog has', 'Quiet', { template: { sections: { a: { type: 'nope' } }, order: ['a'] } }],
+    ['a setting that is not a style setting', 'Quiet', { settings: { cart_type: 'page' }, template: heroHome }],
+    ['a style value off its options', 'Quiet', { settings: { shape_family: 'blob' }, template: heroHome }],
+    ['an unknown field', 'Quiet', { template: heroHome, thesis: 'Calm' }],
+  ])('rejects %s and writes nothing', async (_, name, direction) => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const { status, body } = await (await openStudio(theme)).send('PUT', `api/directions/${encodeURIComponent(name)}`, direction)
+    // A missing section is a 404, as when adding one to a page.
+    expect([400, 404]).toContain(status)
+    expect(body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
+    expect(existsSync(path.join(theme, 'listings'))).toBe(false)
+    expect(existsSync(path.join(theme, 'sections/hero.liquid'))).toBe(false)
+  })
+
+  it('holds at most three Directions, refuses a name whose folder another has, and switches only to one it has', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    for (const name of ['One', 'Two', 'Three']) expect((await studio.send('PUT', `api/directions/${name}`, { template: heroHome })).status).toBe(200)
+    const fourth = await studio.send('PUT', 'api/directions/Four', { template: heroHome })
+    expect(fourth.status).toBe(400)
+    expect(fourth.body.error).toContain('at most 3 Directions: One, Two, Three')
+    expect((await studio.send('PUT', 'api/directions/Two', { template: heroHome })).status).toBe(200)
+    expect((await studio.send('PUT', 'api/directions/two', { template: heroHome })).body.error).toContain('Direction Two already')
+    const unknown = await studio.send('PUT', 'api/directions/current', { name: 'Four' })
+    expect(unknown.status).toBe(400)
+    expect(unknown.body.error).toContain('One, Two, Three')
+    expect(readSettingsData(theme).current).not.toEqual(expect.any(String))
+  }, 30_000)
+})
+
 describe('Studio API: logo', () => {
   const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
   const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>')
