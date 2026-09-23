@@ -1,4 +1,4 @@
-{% comment %}The product page's media, title, price, variant picker and add to cart button.{% endcomment %}
+{% comment %}The product page's media, title, price, variant picker, add to cart button, shipping note and collapsible content.{% endcomment %}
 {% liquid
   assign current_variant = product.selected_or_first_available_variant
   assign featured_media = current_variant.featured_media | default: product.featured_media
@@ -290,10 +290,6 @@
       {% endif %}
 
       {% content_for 'blocks' %}
-
-      {% if product.description != blank %}
-        <div class="main-product__description">{{ product.description }}</div>
-      {% endif %}
     </div>
   </product-info>
 </div>
@@ -686,11 +682,24 @@
     },
     {
       "type": "custom-liquid"
+    },
+    {
+      "type": "shipping-note"
+    },
+    {
+      "type": "collapsible-content"
     }
   ],
   "presets": [
     {
-      "name": "t:general.main_product"
+      "name": "t:general.main_product",
+      "blocks": [
+        { "type": "shipping-note" },
+        { "type": "collapsible-content", "settings": { "heading": "Description", "source": "description" } },
+        { "type": "collapsible-content", "settings": { "heading": "Materials", "source": "text" } },
+        { "type": "collapsible-content", "settings": { "heading": "Care", "source": "text" } },
+        { "type": "collapsible-content", "settings": { "heading": "Shipping and returns", "source": "text" } }
+      ]
     }
   ]
 }
