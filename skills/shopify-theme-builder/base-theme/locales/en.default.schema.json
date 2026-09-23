@@ -91,7 +91,8 @@
     "timeline": "Timeline",
     "milestone": "Milestone",
     "process_steps": "Process steps",
-    "step": "Step"
+    "step": "Step",
+    "comparison_table": "Comparison table"
   },
   "labels": {
     "accent": "Accent",
@@ -201,7 +202,11 @@
     "label": "Label",
     "horizontal_position": "Horizontal position",
     "vertical_position": "Vertical position",
-    "year": "Year"
+    "year": "Year",
+    "option_1": "Option 1",
+    "option_2": "Option 2",
+    "option_3": "Option 3",
+    "option_4": "Option 4"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -236,7 +241,8 @@
     "type_banner_heading": "A line or two. Press Enter where the line should break.",
     "marquee_speed": "Pauses on hover, and customers can pause it. It stays still when a customer's device asks for reduced motion, or with Motion set to None.",
     "editorial_split_quote": "A pull quote after the text, at a heading size. Leave it empty for none.",
-    "lookbook_position": "From the left and top edges of the image, in percent. Place it on the product in the photo."
+    "lookbook_position": "From the left and top edges of the image, in percent. Place it on the product in the photo.",
+    "comparison_table_options": "The products or options to compare, a column each. Leave one empty to hide its column."
   },
   "options": {
     "alignment": {

@@ -1296,6 +1296,54 @@ describe('Process steps', () => {
   })
 })
 
+describe('Comparison table', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/comparison-table.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const row = schema.blocks[0]
+  const blockSettings = Object.fromEntries(row.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a heading, a color scheme and a preset with a few rows', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="comparison-table full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(schema.presets[0].name).toBe('t:general.comparison_table')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(2)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('compares up to four products or options, a column each, by rows of attributes', () => {
+    for (const n of [1, 2, 3, 4]) {
+      expect(settings[`option_${n}`]).toEqual(expect.objectContaining({ type: 'text', label: `t:labels.option_${n}` }))
+      expect(blockSettings[`value_${n}`]).toEqual(expect.objectContaining({ type: 'text', label: `t:labels.option_${n}` }))
+    }
+    expect(settings.option_1.info).toBe('t:info.comparison_table_options')
+    expect(row).toEqual(expect.objectContaining({ type: 'row', name: 't:general.row' }))
+    expect(blockSettings.label.type).toBe('text')
+    // A column shows only when its product or option has a name, in the header and in every row alike.
+    expect(source.match(/{% if section\.settings\[option_key\] != blank %}/g)).toHaveLength(2)
+    expect(source).toMatch(/<th class="comparison-table__option text-h6" scope="col">{{ section\.settings\[option_key\] \| escape }}<\/th>/)
+    expect(source).toMatch(/<tr class="comparison-table__row" {{ block\.shopify_attributes }}>\s*<th class="comparison-table__label text-label" scope="row">{{ block\.settings\.label \| escape }}<\/th>/)
+    expect(source).toContain('<td class="comparison-table__value">{{ block.settings[value_key] | escape }}</td>')
+  })
+
+  it('names the table for screen readers and lets the keyboard scroll it', () => {
+    expect(source).toContain('<h2 class="comparison-table__heading" id="ComparisonTable-{{ section.id }}">')
+    expect(source).toMatch(/<div\s+class="comparison-table__scroll"\s+role="region"\s+tabindex="0"/)
+    expect(source).toContain("aria-label=\"{{ 'comparison_table.label' | t }}\"")
+    expect(source).toContain('aria-labelledby="ComparisonTable-{{ section.id }}"')
+  })
+
+  it('scrolls sideways on narrow screens with the attribute column held in place', () => {
+    expect(css).toMatch(/\.comparison-table__scroll {[^}]*overflow-x: auto;/)
+    expect(css).toMatch(/\.comparison-table__label,\s*\.comparison-table__corner {[^}]*position: sticky;[^}]*inset-inline-start: 0;[^}]*background-color: var\(--color-background\);/)
+    expect(css).toMatch(/\.comparison-table__table th,\s*\.comparison-table__table td {[^}]*padding: var\(--space-sm\) var\(--space-md\);[^}]*border-block-end: var\(--border-width\) solid var\(--color-border-subtle\);/)
+    expect(css).toMatch(/\.comparison-table__table th,\s*\.comparison-table__table td {[^}]*text-align: start;/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
