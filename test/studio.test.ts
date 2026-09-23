@@ -128,6 +128,9 @@ async function openStudio(
     setBrand(brand: unknown) {
       return send('PUT', 'api/brand', brand)
     },
+    setStyle(style: unknown) {
+      return send('PUT', 'api/style', style)
+    },
     async uploadLogo(file: Uint8Array<ArrayBuffer>, type: string) {
       const response = await fetch(new URL('api/brand/logo', url), {
         method: 'PUT',
@@ -281,6 +284,7 @@ describe('Studio API: set Brand', () => {
       gradientFields: ['background_gradient'],
       headingFont: 'work_sans_n4',
       bodyFont: 'work_sans_n4',
+      accentFont: 'work_sans_n4',
       logo: null,
       logoAsset: null,
     })
@@ -296,6 +300,7 @@ describe('Studio API: set Brand', () => {
       },
       headingFont: 'playfair_display_n7',
       bodyFont: 'assistant_n4',
+      accentFont: 'space_mono_n4',
       logo: 'shopify://shop_images/logo.png',
     })
     expect(status).toBe(200)
@@ -320,6 +325,7 @@ describe('Studio API: set Brand', () => {
     })
     expect(current.type_heading_font).toBe('playfair_display_n7')
     expect(current.type_body_font).toBe('assistant_n4')
+    expect(current.type_accent_font).toBe('space_mono_n4')
     expect(current.logo).toBe('shopify://shop_images/logo.png')
     expect(body.brand.headingFont).toBe('playfair_display_n7')
     expect(body.brand.colorSchemes['scheme-1'].background).toBe('#FAF7F2')
@@ -413,6 +419,109 @@ describe('Studio API: set Brand', () => {
     const theme = fixtureTheme()
     const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
     const { status, body } = await (await openStudio(theme)).setBrand(brand)
+    expect(status).toBe(400)
+    expect(body.error).toEqual(expect.any(String))
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
+  })
+})
+
+describe('Studio API: style settings', () => {
+  it('reads the style settings grouped like the Theme Editor, with labels, values and choices', async () => {
+    const state = await (await openStudio(fixtureTheme())).readTheme()
+    expect(state.style.map((group: { name: string }) => group.name)).toEqual(['Type', 'Shape', 'Buttons', 'Spacing', 'Cards', 'Media', 'Motion'])
+    const settings = Object.fromEntries(state.style.flatMap((group: { settings: { id: string }[] }) => group.settings.map((setting) => [setting.id, setting])))
+    expect(Object.keys(settings)).toEqual([
+      'type_body_size',
+      'type_scale_ratio',
+      'type_display_size',
+      'type_heading_weight',
+      'type_heading_case',
+      'type_heading_tracking',
+      'shape_family',
+      'border_width',
+      'button_primary_style',
+      'button_text_case',
+      'button_font_weight',
+      'density',
+      'page_width',
+      'card_image_ratio',
+      'card_style',
+      'card_text_alignment',
+      'card_hover',
+      'media_treatment',
+      'media_tint',
+      'motion',
+    ])
+    expect(settings.type_body_size).toEqual({ id: 'type_body_size', type: 'range', label: 'Body size', value: 16, min: 14, max: 18, step: 1, unit: 'px' })
+    expect(settings.shape_family).toEqual({
+      id: 'shape_family',
+      type: 'select',
+      label: 'Shape',
+      value: 'soft',
+      options: [
+        { value: 'square', label: 'Square' },
+        { value: 'soft', label: 'Soft' },
+        { value: 'round', label: 'Round' },
+      ],
+    })
+    expect(settings.card_text_alignment).toEqual({
+      id: 'card_text_alignment',
+      type: 'select',
+      label: 'Text alignment',
+      value: 'left',
+      options: [
+        { value: 'left', label: 'Left' },
+        { value: 'center', label: 'Center' },
+        { value: 'right', label: 'Right' },
+      ],
+    })
+    expect(settings.media_tint).toEqual({ id: 'media_tint', type: 'color', label: 'Tint behind images', value: '' })
+  })
+
+  it('writes style settings into settings data with a clean Theme Check, one undo step, and clears a color with an empty string', async () => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const studio = await openStudio(theme)
+    const { status, body } = await studio.setStyle({
+      type_body_size: 17,
+      shape_family: 'round',
+      card_text_alignment: 'center',
+      media_tint: '#F4EFE8',
+      motion: 'expressive',
+    })
+    expect(status).toBe(200)
+    const current = readSettingsData(theme).current
+    expect(current).toMatchObject({ type_body_size: 17, shape_family: 'round', card_text_alignment: 'center', media_tint: '#F4EFE8', motion: 'expressive' })
+    // The Brand's color schemes stay.
+    expect(Object.keys(current.color_schemes)).toEqual(['scheme-1', 'scheme-2'])
+    const read = (state: { style: { settings: { id: string; value: unknown }[] }[] }, id: string) =>
+      state.style.flatMap((group) => group.settings).find((setting) => setting.id === id)?.value
+    expect(read(body, 'shape_family')).toBe('round')
+    expect(read(body, 'media_tint')).toBe('#F4EFE8')
+    expect(errors(body.validation)).toEqual([])
+
+    const cleared = await studio.setStyle({ media_tint: '' })
+    expect(readSettingsData(theme).current).not.toHaveProperty('media_tint')
+    expect(read(cleared.body, 'media_tint')).toBe('')
+
+    await studio.send('POST', 'api/undo')
+    const { body: undone } = await studio.send('POST', 'api/undo')
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
+    expect(undone.history).toEqual({ undo: false, redo: true })
+  })
+
+  it.each([
+    ['a range value off its step', { type_scale_ratio: 132 }],
+    ['a range value out of bounds', { type_body_size: 20 }],
+    ['an option the setting does not have', { shape_family: 'blob' }],
+    ['an alignment that is not left, center or right', { card_text_alignment: 'justify' }],
+    ['a color that is not hex', { media_tint: 'beige' }],
+    ['a setting that is not a style setting', { cart_type: 'page' }],
+    ['a list instead of an object', ['round']],
+  ])('rejects %s and leaves settings data untouched', async (_, style) => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const { status, body } = await (await openStudio(theme)).setStyle(style)
     expect(status).toBe(400)
     expect(body.error).toEqual(expect.any(String))
     expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)

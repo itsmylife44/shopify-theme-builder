@@ -191,6 +191,10 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         return write(() => uploadLogo(theme, req.headers['content-type'] ?? '', file))
       })
       route('/api/brand/logo', 'DELETE', async () => write(() => removeLogo(theme)))
+      route('/api/style', 'PUT', async (req) => {
+        const change = await readBody(req)
+        return write(() => setStyle(theme, change))
+      })
       for (const [page, template] of Object.entries(pages)) {
         route(`/api/${page}/sections`, 'POST', async (req) => {
           const body = await readBody(req)
@@ -383,14 +387,16 @@ function history(theme) {
  *   gradientFields: string[],
  *   headingFont: string,
  *   bodyFont: string,
+ *   accentFont: string,
  *   logo: string | null,
  *   logoAsset: string | null,
  * }} Brand
  * @typedef {keyof typeof pages} Page
  * @typedef {keyof typeof groups} Group
- * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, validation: Offense[] }} ThemeFiles
+ * @typedef {{ name: string, settings: Setting[] }} StyleGroup A group of the global style settings; a color's value is a hex color or empty.
+ * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, style: StyleGroup[], validation: Offense[] }} ThemeFiles
  * @typedef {ThemeFiles & { history: { undo: boolean, redo: boolean } }} ThemeState The Theme's files, and whether the Studio can undo or redo a write.
- * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
+ * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'accentFont' | 'logo'>>} BrandChange
  */
 
 /**
@@ -408,6 +414,7 @@ async function readThemeState(theme, catalog, validation) {
     custom: perPage((file) => listCustomSections(theme, catalog, file)),
     sectionInfo: readSectionInfo(theme, catalog),
     brand: readBrand(theme),
+    style: readStyle(theme),
     validation: await validation,
   }
 }
@@ -432,15 +439,79 @@ function parseThemeJSON(text, file) {
 }
 
 /**
- * The Brand settings the Studio edits, keyed by their id in config/settings_schema.json.
+ * The Theme's global settings in config/settings_schema.json, by id.
  * @param {string} theme
+ * @returns {Record<string, any>}
  */
-function readBrandSchema(theme) {
+function readGlobalSchema(theme) {
   /** @type {Record<string, any>} */
   const settings = {}
   for (const group of readJSON(theme, 'config/settings_schema.json')) {
     for (const setting of group.settings ?? []) if (setting.id) settings[setting.id] = setting
   }
+  return settings
+}
+
+// The global style settings the Studio edits, grouped as in the design direction proposal. An older Theme
+// may lack some; those are left out.
+const styleGroups = {
+  Type: ['type_body_size', 'type_scale_ratio', 'type_display_size', 'type_heading_weight', 'type_heading_case', 'type_heading_tracking'],
+  Shape: ['shape_family', 'border_width'],
+  Buttons: ['button_primary_style', 'button_text_case', 'button_font_weight'],
+  Spacing: ['density', 'page_width'],
+  Cards: ['card_image_ratio', 'card_style', 'card_text_alignment', 'card_hover'],
+  Media: ['media_treatment', 'media_tint'],
+  Motion: ['motion'],
+}
+
+/**
+ * The style settings' schema, by group. A text_alignment setting becomes a select of its three alignments.
+ * @param {string} theme
+ * @returns {{ name: string, settings: SchemaSetting[] }[]}
+ */
+function readStyleSchema(theme) {
+  const schema = readGlobalSchema(theme)
+  return Object.entries(styleGroups).map(([name, ids]) => ({
+    name,
+    settings: ids.flatMap((id) => {
+      const setting = schema[id]
+      if (!setting) return []
+      if (setting.type !== 'text_alignment') return [setting]
+      const options = ['left', 'center', 'right'].map((value) => ({ value, label: `t:options.alignment.${value}` }))
+      return [{ ...setting, type: 'select', options }]
+    }),
+  }))
+}
+
+/**
+ * @param {string} theme
+ * @returns {StyleGroup[]}
+ */
+function readStyle(theme) {
+  const translate = schemaTranslator(theme)
+  const current = currentSettings(readJSON(theme, settingsData))
+  return readStyleSchema(theme).map(({ name, settings }) => ({ name, settings: readSettings(settings, current, translate, styleTypes) }))
+}
+
+/**
+ * Writes style settings into config/settings_data.json, checked against their schema. An empty color clears it.
+ * @param {string} theme
+ * @param {unknown} change The values by setting id, like { "shape_family": "round" }.
+ */
+function setStyle(theme, change) {
+  if (!isObject(change)) throw new BadRequest('The style must be an object of settings by id, like { "shape_family": "round" }.')
+  const settings = readStyleSchema(theme).flatMap((group) => group.settings)
+  updateSettings(theme, (current) => {
+    setValues({ settings: current }, /** @type {object} */ (change), settings, 'the style settings', styleTypes)
+  })
+}
+
+/**
+ * The Brand settings the Studio edits, keyed by their id in config/settings_schema.json.
+ * @param {string} theme
+ */
+function readBrandSchema(theme) {
+  const settings = readGlobalSchema(theme)
   const group = settings.color_schemes
   /** @type {Record<string, string>} Default color per color field of a scheme. */
   const colors = {}
@@ -450,7 +521,13 @@ function readBrandSchema(theme) {
     if (field.type === 'color') colors[field.id] = field.default
     if (field.type === 'color_background') gradients.push(field.id)
   }
-  return { colors, gradients, headingFont: settings.type_heading_font?.default, bodyFont: settings.type_body_font?.default }
+  return {
+    colors,
+    gradients,
+    headingFont: settings.type_heading_font?.default,
+    bodyFont: settings.type_body_font?.default,
+    accentFont: settings.type_accent_font?.default,
+  }
 }
 
 /**
@@ -483,6 +560,7 @@ function readBrand(theme) {
     gradientFields: schema.gradients,
     headingFont: current.type_heading_font ?? schema.headingFont,
     bodyFont: current.type_body_font ?? schema.bodyFont,
+    accentFont: current.type_accent_font ?? schema.accentFont,
     logo: current.logo ?? null,
     logoAsset: current.logo_asset || null,
   }
@@ -518,6 +596,7 @@ function setBrand(theme, change) {
     }
     if (brand.headingFont) current.type_heading_font = brand.headingFont
     if (brand.bodyFont) current.type_body_font = brand.bodyFont
+    if (brand.accentFont) current.type_accent_font = brand.accentFont
     if (brand.logo) current.logo = brand.logo
     else if (brand.logo === null) delete current.logo
   })
@@ -637,7 +716,7 @@ function validateBrand(change, colorFields, gradientFields) {
   if (typeof change !== 'object' || change === null || Array.isArray(change)) {
     throw new BadRequest('The Brand must be an object.')
   }
-  const { colorSchemes, headingFont, bodyFont, logo, ...unknown } = /** @type {Record<string, unknown>} */ (change)
+  const { colorSchemes, headingFont, bodyFont, accentFont, logo, ...unknown } = /** @type {Record<string, unknown>} */ (change)
   const extra = Object.keys(unknown)
   if (extra.length > 0) throw new BadRequest(`Unknown Brand field: ${extra.join(', ')}.`)
 
@@ -662,7 +741,7 @@ function validateBrand(change, colorFields, gradientFields) {
       }
     }
   }
-  for (const [name, font] of Object.entries({ headingFont, bodyFont })) {
+  for (const [name, font] of Object.entries({ headingFont, bodyFont, accentFont })) {
     if (font !== undefined && (typeof font !== 'string' || !fontHandles.has(font))) {
       throw new BadRequest(`${name} must be a font handle from Shopify's font library, like work_sans_n4.`)
     }
@@ -1035,6 +1114,8 @@ const listTypes = new Set(['collection_list', 'product_list'])
 // Settings that pick one of their schema's options.
 const optionTypes = new Set(['select', 'radio'])
 const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, ...optionTypes, 'url', 'checkbox', 'range', 'number'])
+// Besides a section's setting types, the style settings hold a color, hex or empty for none.
+const styleTypes = new Set([...editableTypes, 'color'])
 // Image and video settings, which the Studio only lists: they are picked in the Theme Editor (no Admin API, ADR-0004).
 const mediaTypes = new Set(['image_picker', 'video', 'video_url'])
 const handle = /^[^\s/]+$/
@@ -1050,11 +1131,12 @@ const maxListItems = 50
  * @param {object} values
  * @param {SchemaSetting[] | undefined} schemaSettings
  * @param {string} owner Names the section or block in errors.
+ * @param {Set<string>} types The setting types it writes.
  */
-function setValues(target, values, schemaSettings, owner) {
+function setValues(target, values, schemaSettings, owner, types = editableTypes) {
   for (const [key, value] of Object.entries(values)) {
     const setting = schemaSettings?.find((candidate) => candidate.id === key)
-    if (!setting || !editableTypes.has(setting.type)) throw new BadRequest(`${key} is not a setting the Studio edits in ${owner}.`)
+    if (!setting || !types.has(setting.type)) throw new BadRequest(`${key} is not a setting the Studio edits in ${owner}.`)
     if (setting.type === 'checkbox') {
       if (typeof value !== 'boolean') throw new BadRequest(`${key} must be true or false.`)
     } else if (setting.type === 'number') {
@@ -1077,6 +1159,8 @@ function setValues(target, values, schemaSettings, owner) {
       throw new BadRequest(`${key} must be a string.`)
     } else if (handleTypes.has(setting.type) && value !== '' && !handle.test(value)) {
       throw new BadRequest(`${key} must be a ${setting.type.replace('_', ' ')} handle, like summer-sale.`)
+    } else if (setting.type === 'color' && value !== '' && !hexColor.test(value)) {
+      throw new BadRequest(`${key} must be a hex color like #1A2B3C, or empty for none.`)
     } else if (setting.type === 'url' && value !== '' && !link.test(value)) {
       throw new BadRequest(`${key} must be a link like /collections/all, https://… or shopify://collections/<handle>.`)
     } else if (setting.type === 'richtext' && value.trim() !== '' && !/^\s*<(p|ul|ol|h[1-6])[\s>]/.test(value)) {
@@ -1112,24 +1196,6 @@ function readSection(theme, file, id) {
   const section = findSection(readJSON(theme, file), file, id)
   const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
   const translate = schemaTranslator(theme)
-  /** @param {SchemaSetting[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values @returns {Setting[]} */
-  const texts = (schemaSettings, values) =>
-    (schemaSettings ?? []).flatMap(/** @returns {Setting[]} */ (setting) => {
-      if (!setting.id || !editableTypes.has(setting.type)) return []
-      const value = values?.[setting.id] ?? setting.default
-      const read = { id: setting.id, type: setting.type, label: translate(setting.label ?? setting.id) }
-      if (setting.type === 'checkbox') return [{ ...read, value: value === true }]
-      if (setting.type === 'number') return [{ ...read, value: typeof value === 'number' ? value : null }]
-      if (setting.type === 'range') {
-        const { min = 0, max = 0, step = 1, unit } = setting
-        return [{ ...read, value: Number(value ?? min), min, max, step, ...(unit ? { unit: translate(unit) } : {}) }]
-      }
-      if (optionTypes.has(setting.type)) {
-        const options = (setting.options ?? []).map((option) => ({ value: option.value, label: translate(option.label ?? option.value) }))
-        return [{ ...read, value: String(value ?? ''), options }]
-      }
-      return [{ ...read, value: listTypes.has(setting.type) ? (Array.isArray(value) ? value.map(String) : []) : String(value ?? '') }]
-    })
   /** @param {SchemaSetting[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values @returns {MediaSetting[]} */
   const media = (schemaSettings, values) =>
     (schemaSettings ?? [])
@@ -1145,7 +1211,7 @@ function readSection(theme, file, id) {
     type: section.type,
     name: translate(schema.name ?? section.type),
     ...(color ? { colorScheme: section.settings?.[color.id] ?? color.default ?? null } : {}),
-    settings: texts(schema.settings, section.settings),
+    settings: readSettings(schema.settings, section.settings, translate),
     media: media(schema.settings, section.settings),
     blocks: blockOrder(section).map((blockId) => {
       const block = blocks[blockId]
@@ -1154,13 +1220,40 @@ function readSection(theme, file, id) {
         id: blockId,
         type: block.type,
         name: translate(blockSchema?.name ?? block.type),
-        settings: texts(blockSchema?.settings, block.settings),
+        settings: readSettings(blockSchema?.settings, block.settings, translate),
         media: media(blockSchema?.settings, block.settings),
       }
     }),
     blockTypes: blockTypes(schema).map((block) => ({ type: block.type, name: translate(block.name ?? block.type) })),
     maxBlocks: schema.max_blocks ?? maxBlocks,
   }
+}
+
+/**
+ * The settings the Studio edits, with their labels in the Theme's schema language and their values, else their defaults.
+ * @param {SchemaSetting[] | undefined} schemaSettings
+ * @param {Record<string, unknown> | undefined} values
+ * @param {(text: string) => string} translate
+ * @param {Set<string>} types The setting types to read.
+ * @returns {Setting[]}
+ */
+function readSettings(schemaSettings, values, translate, types = editableTypes) {
+  return (schemaSettings ?? []).flatMap(/** @returns {Setting[]} */ (setting) => {
+    if (!setting.id || !types.has(setting.type)) return []
+    const value = values?.[setting.id] ?? setting.default
+    const read = { id: setting.id, type: setting.type, label: translate(setting.label ?? setting.id) }
+    if (setting.type === 'checkbox') return [{ ...read, value: value === true }]
+    if (setting.type === 'number') return [{ ...read, value: typeof value === 'number' ? value : null }]
+    if (setting.type === 'range') {
+      const { min = 0, max = 0, step = 1, unit } = setting
+      return [{ ...read, value: Number(value ?? min), min, max, step, ...(unit ? { unit: translate(unit) } : {}) }]
+    }
+    if (optionTypes.has(setting.type)) {
+      const options = (setting.options ?? []).map((option) => ({ value: option.value, label: translate(option.label ?? option.value) }))
+      return [{ ...read, value: String(value ?? ''), options }]
+    }
+    return [{ ...read, value: listTypes.has(setting.type) ? (Array.isArray(value) ? value.map(String) : []) : String(value ?? '') }]
+  })
 }
 
 /**
