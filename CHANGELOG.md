@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A spec tiles section for technical or material facts: a grid of tiles, each a big value in the heading font at the h2 size (like "250 ml") above a small label (like "Volume"), two across on mobile and two to four on desktop. Tiles sit under a line or in a box; every size, gap, border and radius comes from the style system, and screen readers hear each label before its value.
+
 - A marquee section: a strip of short texts (in the heading font) or badges that scrolls sideways at a slow, medium or fast speed, repeated to fill wide screens and read once to screen readers. It pauses on hover, on focus and with a pause control, and stays still, wrapped and centered, when a customer's device asks for reduced motion or the Merchant sets Motion to None. Every size, gap, border and radius comes from the style system, and it mirrors in right-to-left shops.
 
 - An editorial split section for brand stories: a tall image beside a long text column, the image on either side on desktop and held in view while the text scrolls past it. The first paragraph can open with a drop cap (three lines tall, set with `initial-letter` in the heading font) and an optional pull quote follows the text at a heading size between two thin rules. Every size, gap, width, radius and media treatment comes from the style system.

@@ -83,7 +83,9 @@
     "type_banner": "Type banner",
     "editorial_split": "Editorial split",
     "marquee": "Marquee",
-    "item": "Item"
+    "item": "Item",
+    "spec_tiles": "Spec tiles",
+    "tile": "Tile"
   },
   "labels": {
     "accent": "Accent",
@@ -187,7 +189,10 @@
     "link_label": "Link label",
     "item_style": "Item style",
     "speed": "Speed",
-    "drop_cap": "Drop cap on the first paragraph"
+    "drop_cap": "Drop cap on the first paragraph",
+    "tile_style": "Tile style",
+    "value": "Value",
+    "label": "Label"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -340,6 +345,10 @@
       "slow": "Slow",
       "medium": "Medium",
       "fast": "Fast"
+    },
+    "tile_style": {
+      "rule": "Line above",
+      "box": "Box"
     }
   }
 }

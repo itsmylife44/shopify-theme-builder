@@ -1114,6 +1114,45 @@ describe('Marquee', () => {
   })
 })
 
+describe('Spec tiles', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/spec-tiles.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a color scheme and a preset with a few tiles', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toMatch(/class="spec-tiles full-width spec-tiles--{{ section\.settings\.tile_style }} color-{{ section\.settings\.color_scheme }}"/)
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets[0].name).toBe('t:general.spec_tiles')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(1)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows each tile as a big value and its label, read label first', () => {
+    expect(schema.blocks).toEqual([expect.objectContaining({ type: 'tile', name: 't:general.tile' })])
+    expect(schema.blocks[0].settings.map((setting: { id: string }) => setting.id)).toEqual(['value', 'label'])
+    expect(source).toMatch(
+      /<dt class="spec-tiles__label text-label">{{ block\.settings\.label \| escape }}<\/dt>\s*<dd class="spec-tiles__value text-h2">{{ block\.settings\.value \| escape }}<\/dd>/,
+    )
+    expect(css).toMatch(/\.spec-tiles__tile {[^}]*flex-direction: column-reverse;/)
+  })
+
+  it('lays the tiles in a grid, two across on mobile and the Merchant’s columns on desktop', () => {
+    expect(settings.columns).toMatchObject({ type: 'range', min: 2, max: 4 })
+    expect(css).toMatch(/\.spec-tiles__grid {[^}]*grid-template-columns: repeat\(2, 1fr\);[^}]*gap: var\(--grid-gap\);/)
+    expect(css).toMatch(/@media \(min-width: 750px\) {\s*\.spec-tiles__grid {\s*grid-template-columns: repeat\(var\(--columns\), 1fr\);/)
+  })
+
+  it('sets the tiles apart with a rule or a box, from the style system', () => {
+    expect(settings.tile_style.options.map((option: { value: string }) => option.value)).toEqual(['rule', 'box'])
+    expect(css).toMatch(/\.spec-tiles--rule \.spec-tiles__tile {[^}]*border-block-start: var\(--border-width\) solid var\(--color-border\);/)
+    expect(css).toMatch(
+      /\.spec-tiles--box \.spec-tiles__tile {[^}]*border: var\(--border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-cards\);/,
+    )
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

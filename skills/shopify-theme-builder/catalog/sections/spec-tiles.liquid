@@ -1,0 +1,162 @@
+{% comment %}A grid of tiles, each a big value and a label, for technical or material facts.{% endcomment %}
+{% assign text_alignment = section.settings.text_alignment | replace: 'left', 'start' | replace: 'right', 'end' %}
+<div class="spec-tiles full-width spec-tiles--{{ section.settings.tile_style }} color-{{ section.settings.color_scheme }}">
+  <div class="spec-tiles__inner" style="--text-alignment: {{ text_alignment }};">
+    {% if section.settings.heading != blank %}
+      <h2 class="spec-tiles__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <dl class="spec-tiles__grid" style="--columns: {{ section.settings.columns }};">
+      {% for block in section.blocks %}
+        <div class="spec-tiles__tile" {{ block.shopify_attributes }}>
+          <dt class="spec-tiles__label text-label">{{ block.settings.label | escape }}</dt>
+          <dd class="spec-tiles__value text-h2">{{ block.settings.value | escape }}</dd>
+        </div>
+      {% endfor %}
+    </dl>
+  </div>
+</div>
+
+{% stylesheet %}
+  .spec-tiles {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .spec-tiles__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+    text-align: var(--text-alignment);
+  }
+
+  .spec-tiles__heading {
+    margin: 0;
+  }
+
+  .spec-tiles__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--grid-gap);
+    margin: 0;
+  }
+
+  @media (min-width: 750px) {
+    .spec-tiles__grid {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+  }
+
+  .spec-tiles__tile {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+  }
+
+  .spec-tiles--rule .spec-tiles__tile {
+    padding-block-start: var(--space-md);
+    border-block-start: var(--border-width) solid var(--color-border);
+  }
+
+  .spec-tiles--box .spec-tiles__tile {
+    padding: var(--space-lg);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-cards);
+  }
+
+  .spec-tiles__label {
+    opacity: var(--opacity-muted);
+  }
+
+  .spec-tiles__value {
+    margin: 0;
+    overflow-wrap: break-word;
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    text-transform: var(--font-heading--case);
+    font-variant-numeric: tabular-nums;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.spec_tiles",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "The details"
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "t:labels.columns_on_desktop",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "tile_style",
+      "label": "t:labels.tile_style",
+      "options": [
+        { "value": "rule", "label": "t:options.tile_style.rule" },
+        { "value": "box", "label": "t:options.tile_style.box" }
+      ],
+      "default": "rule"
+    },
+    {
+      "type": "text_alignment",
+      "id": "text_alignment",
+      "label": "t:labels.alignment",
+      "default": "left"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "t:general.tile",
+      "settings": [
+        {
+          "type": "text",
+          "id": "value",
+          "label": "t:labels.value",
+          "default": "250 ml"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "t:labels.label",
+          "default": "Volume"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.spec_tiles",
+      "blocks": [
+        { "type": "tile", "settings": { "value": "250 ml", "label": "Volume" } },
+        { "type": "tile", "settings": { "value": "October", "label": "Harvest" } },
+        { "type": "tile", "settings": { "value": "Kyoto", "label": "Origin" } },
+        { "type": "tile", "settings": { "value": "Recycled glass", "label": "Bottle" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
