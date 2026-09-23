@@ -62,7 +62,7 @@ flowchart LR
 2. **Theme.** It creates the theme in a new folder with its own Git history, writes the Brand, composes the home, product and collection pages from the Section Catalog, and writes every heading and paragraph in your shop's language.
 3. **Studio.** It opens the Studio, where you see the real store rendered by Shopify and change colors, text and section order.
 4. **Custom sections.** Need something the catalog doesn't have, like a size guide? Ask. The agent writes a section with the same conventions and validates it.
-5. **Delivery.** Ask to deliver: the agent uploads the theme to your store unpublished, packages it as a zip, or explains the GitHub integration.
+5. **Delivery.** Ask to deliver: the agent checks speed and accessibility with Lighthouse, fixes the accessibility failures, then uploads the theme to your store unpublished, packages it as a zip, or explains the GitHub integration.
 
 ## The Studio
 
