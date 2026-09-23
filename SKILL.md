@@ -102,6 +102,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    | `POST /api/<page>/sections` | `{"type": "<catalog section>"}`; `<page>` is `home`, `product` or `collection` |
    | `DELETE /api/<page>/sections/<id>` | none |
    | `PATCH /api/<page>/sections/<id>` | `{"colorScheme": "scheme-2"}` |
+   | `PUT /api/<page>/order` | `{"order": ["<id>", …]}`, every section id of the page exactly once; a new section is added at the end, so move it with this |
    | `GET /api/theme` | none; the current state, with the catalog sections each page can take under `catalog` and the Custom Sections under `custom` |
 
    For example: `curl -X PUT <studio>/api/brand/logo -H 'Content-Type: image/png' --data-binary @logo.png`.
