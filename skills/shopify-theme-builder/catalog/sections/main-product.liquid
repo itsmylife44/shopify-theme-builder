@@ -66,11 +66,11 @@
 
     <div class="main-product__details">
       {% if section.settings.show_vendor and product.vendor != blank %}
-        <p class="main-product__vendor">{{ product.vendor | escape }}</p>
+        <p class="main-product__vendor text-small">{{ product.vendor | escape }}</p>
       {% endif %}
       <h1 class="main-product__title">{{ product.title }}</h1>
 
-      <p class="main-product__price">
+      <p class="main-product__price text-h4">
         {% if compare_at_price > price %}
           <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
           {{ price | money }}
@@ -83,14 +83,14 @@
       {% if selling_plan_allocation %}
         {% if selling_plan_allocation.per_delivery_price != selling_plan_allocation.price %}
           {% assign per_delivery_price = selling_plan_allocation.per_delivery_price | money %}
-          <p class="main-product__plan-note">{{ 'product.per_delivery' | t: price: per_delivery_price }}</p>
+          <p class="main-product__plan-note text-small">{{ 'product.per_delivery' | t: price: per_delivery_price }}</p>
         {% endif %}
         {% if selling_plan_allocation.selling_plan.description != blank %}
-          <p class="main-product__plan-note">{{ selling_plan_allocation.selling_plan.description | escape }}</p>
+          <p class="main-product__plan-note text-small">{{ selling_plan_allocation.selling_plan.description | escape }}</p>
         {% endif %}
       {% endif %}
       {% if current_variant.unit_price_measurement %}
-        <p class="main-product__unit-price">
+        <p class="main-product__unit-price text-small">
           <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
           {{ current_variant.unit_price | unit_price_with_measurement: current_variant.unit_price_measurement }}
         </p>
@@ -167,7 +167,7 @@
               {% assign group_allocations = current_variant.selling_plan_allocations | where: 'selling_plan_group_id', group.id %}
               {% if group_allocations != empty %}
                 <fieldset class="main-product__selling-plans">
-                  <legend>{{ group.name | escape }}</legend>
+                  <legend class="text-small">{{ group.name | escape }}</legend>
                   {% for allocation in group_allocations %}
                     <label class="main-product__selling-plan">
                       <input
@@ -267,7 +267,7 @@
 
       {% assign pickup_availabilities = current_variant.store_availabilities | where: 'pick_up_enabled', true %}
       {% if pickup_availabilities.size > 0 %}
-        <ul class="main-product__pickup" role="list" aria-label="{{ 'product.pickup_locations' | t }}">
+        <ul class="main-product__pickup text-small" role="list" aria-label="{{ 'product.pickup_locations' | t }}">
           {% for availability in pickup_availabilities %}
             <li>
               <strong>{{ availability.location.name | escape }}</strong>
@@ -472,29 +472,18 @@
 
   .main-product__vendor {
     margin-block-end: -1rem;
-    font-size: 0.875rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     opacity: 0.7;
   }
 
-  .main-product__title {
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
-  }
-
-  .main-product__price {
-    font-size: 1.25rem;
-  }
-
   .main-product__unit-price {
     margin-block-start: -0.5rem;
-    font-size: 0.875rem;
     opacity: 0.7;
   }
 
   .main-product__plan-note {
     margin-block-start: -1rem;
-    font-size: 0.875rem;
     opacity: 0.7;
   }
 
@@ -512,7 +501,6 @@
   }
 
   .main-product__selling-plans .main-product__selling-plans legend {
-    font-size: 0.875rem;
     opacity: 0.7;
   }
 
@@ -563,8 +551,8 @@
   }
 
   .main-product__option-label--swatch {
+    display: inline-flex;
     padding: 0.25rem;
-    line-height: 0;
   }
 
   .main-product__swatch {
@@ -661,7 +649,6 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 0.875rem;
   }
 
   .main-product__pickup li {

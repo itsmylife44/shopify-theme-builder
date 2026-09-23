@@ -56,7 +56,7 @@
 {% capture header_localization %}
   {% if section.settings.show_localization %}
     {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
-      {% form 'localization', id: 'HeaderLocalization', class: 'header__localization' %}
+      {% form 'localization', id: 'HeaderLocalization', class: 'header__localization text-small' %}
         {% if localization.available_countries.size > 1 %}
           <label class="visually-hidden" for="HeaderCountry">{{ 'localization.country' | t }}</label>
           <select id="HeaderCountry" name="country_code">
@@ -118,7 +118,7 @@
             </button>
           </form>
           <nav aria-label="{{ 'header.main_menu' | t }}">
-            <ul class="header__menu-list" role="list">
+            <ul class="header__menu-list text-h5" role="list">
               {{ menu_items }}
             </ul>
           </nav>
@@ -143,7 +143,7 @@
         >
         {% # theme-check-enable ImgWidthAndHeight %}
       {% else %}
-        <span class="header__shop-name">{{ shop.name | escape }}</span>
+        <span class="header__shop-name text-h3">{{ shop.name | escape }}</span>
       {% endif %}
     </a>
 
@@ -204,7 +204,7 @@
         <a class="header__cart" href="{{ routes.cart_url }}" aria-label="{{ 'header.cart' | t: count: cart.item_count }}">
           {{ 'icon-cart.svg' | inline_asset_content }}
           {% if cart.item_count > 0 %}
-            <span class="header__cart-count" aria-hidden="true">{{ cart.item_count }}</span>
+            <span class="header__cart-count text-label" aria-hidden="true">{{ cart.item_count }}</span>
           {% endif %}
         </a>
       {% endcapture %}
@@ -284,7 +284,6 @@
     font-family: var(--font-heading--family);
     font-style: var(--font-heading--style);
     font-weight: var(--font-heading--weight);
-    font-size: 1.5rem;
   }
 
   .header__menu {
@@ -423,7 +422,6 @@
   .header__drawer .header__menu-list {
     flex-direction: column;
     gap: 1rem;
-    font-size: 1.125rem;
   }
 
   .header__drawer .header__submenu > .header__submenu-list {
@@ -446,7 +444,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.875rem;
   }
 
   .header__icons .header__localization {
@@ -550,9 +547,9 @@
     border-radius: 1rem;
     background-color: var(--color-button);
     color: var(--color-button-label);
-    font-size: 0.75rem;
-    line-height: 1.25rem;
-    text-align: center;
+    min-height: 1.25rem;
+    display: grid;
+    place-items: center;
   }
 
   @media (max-width: 749px) {
@@ -636,7 +633,6 @@
 
   .quick-add__title {
     margin: 0;
-    font-size: 1.25rem;
   }
 
   .quick-add__price,

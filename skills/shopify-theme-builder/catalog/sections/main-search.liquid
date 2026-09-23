@@ -189,7 +189,7 @@
                     <p class="main-search__price">{{ result.price | money }}</p>
                     {% assign unit_variant = result.selected_or_first_available_variant %}
                     {% if unit_variant.unit_price_measurement %}
-                      <p class="main-search__unit-price">
+                      <p class="main-search__unit-price text-small">
                         <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
                         {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
                       </p>
@@ -234,13 +234,13 @@
                         {{ 'image' | placeholder_svg_tag: 'main-search__placeholder' }}
                       {% endif %}
                     </a>
-                    <p class="main-search__type">{{ 'search.article' | t }}</p>
+                    <p class="main-search__type text-small">{{ 'search.article' | t }}</p>
                     <a class="main-search__product-title" href="{{ result.url }}">{{ result.title | escape }}</a>
-                    <p class="main-search__excerpt">{{ result.excerpt_or_content | strip_html | truncatewords: 20 }}</p>
+                    <p class="main-search__excerpt text-small">{{ result.excerpt_or_content | strip_html | truncatewords: 20 }}</p>
                   {% when 'page' %}
-                    <p class="main-search__type">{{ 'search.page' | t }}</p>
+                    <p class="main-search__type text-small">{{ 'search.page' | t }}</p>
                     <a class="main-search__product-title" href="{{ result.url }}">{{ result.title | escape }}</a>
-                    <p class="main-search__excerpt">{{ result.content | strip_html | truncatewords: 20 }}</p>
+                    <p class="main-search__excerpt text-small">{{ result.content | strip_html | truncatewords: 20 }}</p>
                 {% endcase %}
               </li>
             {% endfor %}
@@ -318,7 +318,6 @@
 
   .main-search__title {
     margin: 0;
-    font-size: clamp(2rem, 4vw, 3rem);
   }
 
   .main-search__facets {
@@ -475,7 +474,6 @@
 
   .main-search__unit-price {
     margin: 0;
-    font-size: 0.875rem;
     opacity: 0.7;
   }
 
@@ -530,14 +528,12 @@
   }
 
   .main-search__type {
-    font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     opacity: 0.7;
   }
 
   .main-search__excerpt {
-    font-size: 0.875rem;
     opacity: 0.8;
   }
 

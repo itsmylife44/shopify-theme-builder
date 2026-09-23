@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A type scale sizes the text of every section: display, h1 to h6, body, small and label sizes that keep their order on mobile, with line heights for headings and body, in `snippets/css-variables.liquid`, and shared `text-display`, `text-h1` to `text-h6`, `text-body`, `text-small` and `text-label` classes in `assets/critical.css`. Sections no longer set font sizes of their own, and headings in rich text (h3 to h6) follow the scale. Sizes stay within a step of before.
+
 - When the Theme has no logo and the store's name in Shopify admin differs from the shop name the Creator gave, the agent tells the Creator to change it under Settings › General › Store name, in step 4 and again in the hand-off, since the header and footer show it.
 - A `create-theme` command (`node <skill-dir>/studio/bin/create-theme.mjs <theme> --name "<shop name>" --author "<author>"`) creates the Theme folder in step 3: the Base Theme with the catalog files every Theme starts with, the Theme's name and author, and a Git repository. It refuses a folder with files. The agent no longer copies those files one by one.
 - The Studio composes every page, not only home, product and collection: a page, the contact page, cart, search, blog, article, 404 and the collections list, picked in the top bar and shown in the preview on a real URL of the store (its first page, blog and article). The API takes them as `<page>` (`page`, `contact`, `cart`, `search`, `blog`, `article`, `404`, `collections`), and offers each page the catalog sections its template takes, like the contact form on page templates only.

@@ -33,7 +33,7 @@
                     {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'main-list-collections__placeholder' }}
                   {% endif %}
                 </span>
-                <span class="main-list-collections__title">{{ collection.title | escape }}</span>
+                <span class="main-list-collections__title text-h5">{{ collection.title | escape }}</span>
               </a>
             </li>
           {% endfor %}
@@ -52,7 +52,7 @@
               <span class="main-list-collections__image">
                 {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'main-list-collections__placeholder' }}
               </span>
-              <span class="main-list-collections__title">{{ 'collection_list.collection_title' | t }}</span>
+              <span class="main-list-collections__title text-h5">{{ 'collection_list.collection_title' | t }}</span>
             </li>
           {% endfor %}
         </ul>
@@ -121,7 +121,6 @@
   }
 
   .main-list-collections__title {
-    font-size: 1.125rem;
   }
 
   a.main-list-collections__card:hover .main-list-collections__title {

@@ -28,7 +28,7 @@
           {{ block.shopify_attributes }}
         >
           {% if block.settings.heading != blank %}
-            <h2 class="footer__heading">{{ block.settings.heading | escape }}</h2>
+            <h2 class="footer__heading text-h6">{{ block.settings.heading | escape }}</h2>
           {% endif %}
           <ul class="footer__list" role="list">
             {% for link in block.settings.menu.links %}
@@ -50,7 +50,7 @@
       {% if section.settings.show_newsletter %}
         <div class="footer__newsletter">
           {% if section.settings.newsletter_heading != blank %}
-            <h2 class="footer__heading">{{ section.settings.newsletter_heading | escape }}</h2>
+            <h2 class="footer__heading text-h6">{{ section.settings.newsletter_heading | escape }}</h2>
           {% endif %}
           {% form 'customer', id: 'FooterNewsletter', class: 'footer__newsletter-form' %}
             <input type="hidden" name="contact[tags]" value="newsletter">
@@ -81,7 +81,7 @@
 
     {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
       <footer-localization>
-        {% form 'localization', id: 'FooterLocalization', class: 'footer__localization' %}
+        {% form 'localization', id: 'FooterLocalization', class: 'footer__localization text-small' %}
           {% if localization.available_countries.size > 1 %}
             <label for="FooterCountry">{{ 'localization.country' | t }}</label>
             <select id="FooterCountry" name="country_code">
@@ -118,7 +118,7 @@
       </footer-localization>
     {% endif %}
 
-    <div class="footer__bottom">
+    <div class="footer__bottom text-small">
       <p>
         &copy; {{ 'now' | date: '%Y' }}
         {{ shop.name | link_to: routes.root_url }}, {{ powered_by_link }}
@@ -177,7 +177,6 @@
 
   .footer__heading {
     margin-block-end: 1rem;
-    font-size: 1rem;
   }
 
   .footer__list {
@@ -236,7 +235,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 1rem;
-    font-size: 0.875rem;
   }
 
   footer-localization {
@@ -263,8 +261,6 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    font-size: 0.875rem;
   }
 
   .footer__payment {

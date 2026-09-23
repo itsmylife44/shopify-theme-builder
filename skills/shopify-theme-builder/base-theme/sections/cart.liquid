@@ -59,7 +59,7 @@
       </table>
 
       <div class="cart__summary">
-        <p class="cart__subtotal">
+        <p class="cart__subtotal text-h4">
           {{ 'cart.subtotal' | t }}
           {{ cart.total_price | money_with_currency }}
         </p>
@@ -129,10 +129,6 @@
     justify-items: end;
     gap: 0.75rem;
     text-align: end;
-  }
-
-  .cart__subtotal {
-    font-size: 1.25rem;
   }
 
   .cart__actions {

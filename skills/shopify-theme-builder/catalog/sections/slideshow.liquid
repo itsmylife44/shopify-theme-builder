@@ -57,7 +57,7 @@
           {% if block.settings.heading != blank or block.settings.text != blank or block.settings.button_label != blank %}
             <div class="slideshow__content">
               {% if block.settings.heading != blank %}
-                <{{ heading_tag }} class="slideshow__heading">{{ block.settings.heading }}</{{ heading_tag }}>
+                <{{ heading_tag }} class="slideshow__heading text-display">{{ block.settings.heading }}</{{ heading_tag }}>
               {% endif %}
               {% if block.settings.text != blank %}
                 <div class="slideshow__text">{{ block.settings.text }}</div>
@@ -175,15 +175,6 @@
     padding: 2rem;
     background-color: var(--color-background);
     color: var(--color-foreground);
-  }
-
-  .slideshow__heading {
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    line-height: 1.1;
-  }
-
-  .slideshow__text {
-    line-height: 1.5;
   }
 
   .slideshow__button {
