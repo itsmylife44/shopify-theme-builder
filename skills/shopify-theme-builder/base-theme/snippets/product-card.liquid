@@ -1,7 +1,8 @@
 {% doc %}
   Renders a product card: image, title, price, unit price and an optional quick add. Without a product it
   renders an example card with one of Shopify's product placeholders. The .product-card classes in
-  assets/critical.css style it from the --card-* variables in snippets/css-variables.liquid.
+  assets/critical.css style it from the --card-* and --media-* variables in snippets/css-variables.liquid; when
+  the card hover setting shows the second image, the card stacks the product's second media over the first.
 
   @param {product} [product] - The product; leave it out for an example card
   @param {number} [placeholder] - Which product placeholder (1 to 6) an example card or a product without an image shows, 1 by default
@@ -23,6 +24,13 @@
           | image_url: width: 1200
           | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
         }}
+        {% if settings.card_hover == 'second_image' and product.media.size > 1 %}
+          {{
+            product.media[1].preview_image
+            | image_url: width: 1200
+            | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy', class: 'product-card__image-secondary', alt: ''
+          }}
+        {% endif %}
       {% else %}
         {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
       {% endif %}

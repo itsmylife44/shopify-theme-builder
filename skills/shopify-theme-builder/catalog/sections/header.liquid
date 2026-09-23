@@ -593,14 +593,21 @@
     gap: var(--space-md);
   }
 
+  .quick-add__media {
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
   .quick-add__media img,
   .quick-add__placeholder {
     display: block;
     width: 100%;
     height: auto;
     aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: var(--style-border-radius-media);
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
   }
 
   .quick-add__title {

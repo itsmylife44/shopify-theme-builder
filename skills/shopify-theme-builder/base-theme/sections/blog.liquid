@@ -56,8 +56,13 @@
   .blog__article :is(img, .placeholder) {
     width: 100%;
     aspect-ratio: 3 / 2;
-    object-fit: cover;
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
     border-radius: var(--style-border-radius-media);
+  }
+
+  .blog__article img {
+    background-color: var(--media-background);
   }
 
   .blog__article h2 a {

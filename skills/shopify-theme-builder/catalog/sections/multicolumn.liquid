@@ -81,6 +81,9 @@
 
   .multicolumn__media {
     width: 100%;
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
   }
 
   .multicolumn__media--small {
@@ -92,13 +95,14 @@
     display: block;
     width: 100%;
     height: auto;
-    border-radius: var(--style-border-radius-media);
+    padding: var(--media-inset);
+    mix-blend-mode: var(--media-blend);
   }
 
   .multicolumn__media--large img,
   .multicolumn__media--large .multicolumn__placeholder {
     aspect-ratio: 3 / 2;
-    object-fit: cover;
+    object-fit: var(--media-fit);
   }
 
   .multicolumn__media--small img,
