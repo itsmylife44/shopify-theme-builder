@@ -96,6 +96,7 @@
       "one": "Cart, {{ count }} item",
       "other": "Cart, {{ count }} items"
     },
+    "close_cart": "Close cart",
     "close_menu": "Close menu",
     "main_menu": "Main menu",
     "menu": "Menu",

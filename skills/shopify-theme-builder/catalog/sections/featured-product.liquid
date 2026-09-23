@@ -107,6 +107,12 @@
         if (event.target.name !== 'id') return;
         this.querySelector('.featured-product__price').innerHTML = event.target.selectedOptions[0].dataset.price;
       });
+      this.addEventListener('submit', (event) => {
+        const drawer = document.querySelector('cart-drawer');
+        if (!drawer?.add) return;
+        event.preventDefault();
+        drawer.add(event.target, event.submitter);
+      });
     }
   }
 

@@ -123,6 +123,71 @@ describe('Cart page', () => {
   })
 })
 
+describe('Cart drawer', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+
+  it('has a Cart type theme setting, drawer or page, drawer by default', () => {
+    const groups = parseJSON(read('base-theme/config/settings_schema.json'))
+    const all = groups.flatMap((group: { settings?: object[] }) => group.settings ?? [])
+    expect(all).toContainEqual({
+      type: 'select',
+      id: 'cart_type',
+      label: 't:labels.cart_type',
+      options: [
+        { value: 'drawer', label: 't:options.cart_type.drawer' },
+        { value: 'page', label: 't:options.cart_type.page' },
+      ],
+      default: 'drawer',
+    })
+  })
+
+  it('puts a dialog drawer holding the rendered main-cart around the header cart link, only with the drawer cart type', () => {
+    const header = read('catalog/sections/header.liquid')
+    const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+    expect(header).toMatch(/{%-? if settings\.cart_type == 'drawer' and template\.name != 'cart' -?%}\s*<cart-drawer/)
+    const drawer = header.slice(header.indexOf('<cart-drawer'), header.indexOf('</cart-drawer>'))
+    expect(drawer).toContain('{{ cart_link }}')
+    expect(drawer).toMatch(/<dialog[^>]*aria-label="{{ 'cart\.title' \| t }}"/)
+    expect(drawer).toMatch(/<form method="dialog">\s*<button[^>]*aria-label="{{ 'header\.close_cart' \| t }}"/)
+    expect(drawer).toContain('data-sections="main-cart,{{ section.id }}"')
+    expect(locale.header.close_cart).toBeTruthy()
+    // The header cart link still goes to /cart without JavaScript or with the page cart type.
+    expect(header).toMatch(/{% else %}\s*{{ cart_link }}/)
+    expect(header).toMatch(/<a class="header__cart" href="{{ routes\.cart_url }}"/)
+  })
+
+  it('opens from the header cart link with the main-cart section, and returns focus on close', () => {
+    const header = read('catalog/sections/header.liquid')
+    expect(header).toContain('?section_id=main-cart')
+    expect(header).toContain(".closest('.header__cart')")
+    expect(header).toContain('this.dialog.showModal()')
+    expect(header).toMatch(/addEventListener\(\s*'close'/)
+    expect(header).toContain("customElements.define('cart-drawer'")
+  })
+
+  it('changes quantities and removes lines through /cart/change.js, then re-renders the drawer and the cart count', () => {
+    const header = read('catalog/sections/header.liquid')
+    const cart = read('catalog/sections/main-cart.liquid')
+    expect(header).toContain('data-change-url="{{ routes.cart_change_url }}.js"')
+    expect(header).toContain('sections: this.dataset.sections')
+    expect(header).toContain("querySelector('.header__cart').replaceWith(")
+    expect(cart).toMatch(/<input\s+type="number"\s+name="updates\[\]"[^>]*data-line="{{ forloop\.index }}"/)
+    expect(cart).toMatch(/href="{{ item\.url_to_remove }}"\s+data-line="{{ forloop\.index }}"/)
+  })
+
+  it.each(['main-product', 'featured-product'])('adds from %s through /cart/add.js and opens the drawer, or posts to /cart without one', (name) => {
+    const header = read('catalog/sections/header.liquid')
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(source).toContain("{% form 'product', product")
+    expect(source).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);\s*drawer\.add\(event\.target, event\.submitter\)/)
+    expect(header).toContain('data-add-url="{{ routes.cart_add_url }}.js"')
+    expect(header).toContain("body.append('sections', this.dataset.sections)")
+    // A failed add falls back to the plain form post, which shows Shopify's error page.
+    expect(header).toContain('return form.submit()')
+  })
+})
+
 describe('Search page', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const source = readFileSync(path.join(skillDir, 'catalog/sections/main-search.liquid'), 'utf8')

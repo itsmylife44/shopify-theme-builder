@@ -120,6 +120,7 @@
     "show_order_note": "Show order note",
     "show_search": "Show search",
     "show_breadcrumbs": "Show breadcrumbs",
+    "cart_type": "Cart type",
     "quote": "Quote",
     "author": "Author",
     "author_detail": "Author detail",
@@ -187,6 +188,10 @@
     "layout": {
       "rotate": "Rotate",
       "stack": "Stack"
+    },
+    "cart_type": {
+      "drawer": "Drawer",
+      "page": "Page"
     }
   }
 }

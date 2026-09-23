@@ -297,6 +297,12 @@
   class ProductInfo extends HTMLElement {
     connectedCallback() {
       this.addEventListener('change', this.onChange);
+      this.addEventListener('submit', (event) => {
+        const drawer = document.querySelector('cart-drawer');
+        if (!drawer?.add) return;
+        event.preventDefault();
+        drawer.add(event.target, event.submitter);
+      });
       this.toggleRecipient();
     }
 
