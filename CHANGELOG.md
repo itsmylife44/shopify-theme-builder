@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The collections list page shows every collection as a card (image or placeholder, and title), sorted alphabetically or by date through a setting, with pagination; new Themes use it.
 - The 404 page shows a heading and text the Creator writes, a search form and a link back to the shop; new Themes use it.
 - The article page shows the article's image, title, date, author (behind a setting), content and tag links, and, when the blog allows comments, its comments with pagination and a comment form that says when a comment was posted or awaits approval; new Themes use it.
 - The blog page shows its articles as cards (image or placeholder, title, date, excerpt, and the author behind a setting), with links to filter by tag and pagination; new Themes use it.

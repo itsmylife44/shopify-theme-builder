@@ -1,0 +1,210 @@
+{% comment %}The collections list page: every collection as a card with image and title, sorted by a setting, with pagination.{% endcomment %}
+<div class="main-list-collections full-width color-{{ section.settings.color_scheme }}">
+  <div class="main-list-collections__inner">
+    {% if section.settings.heading != blank %}
+      <h1 class="main-list-collections__heading">{{ section.settings.heading | escape }}</h1>
+    {% endif %}
+
+    {% liquid
+      assign sorted = collections
+      if section.settings.sort != 'alphabetical'
+        assign sorted = collections | sort: 'published_at'
+        if section.settings.sort == 'date_reversed'
+          assign sorted = sorted | reverse
+        endif
+      endif
+    %}
+
+    {% paginate sorted by section.settings.collections_per_page %}
+      {% if sorted.size > 0 %}
+        <ul class="main-list-collections__grid" role="list" style="--columns: {{ section.settings.columns }};">
+          {% for collection in sorted %}
+            <li>
+              <a class="main-list-collections__card" href="{{ collection.url }}">
+                <span class="main-list-collections__image">
+                  {% if collection.featured_image %}
+                    {{
+                      collection.featured_image
+                      | image_url: width: 1200
+                      | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 33vw, 50vw', loading: 'lazy', alt: ''
+                    }}
+                  {% else %}
+                    {% assign placeholder = forloop.index0 | modulo: 6 | plus: 1 %}
+                    {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'main-list-collections__placeholder' }}
+                  {% endif %}
+                </span>
+                <span class="main-list-collections__title">{{ collection.title | escape }}</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+
+        {% if paginate.pages > 1 %}
+          <nav class="main-list-collections__pagination" aria-label="{{ 'collection.pagination' | t }}">
+            {{ paginate | default_pagination }}
+          </nav>
+        {% endif %}
+      {% else %}
+        <ul class="main-list-collections__grid" role="list" style="--columns: {{ section.settings.columns }};">
+          {% for i in (1..section.settings.columns) %}
+            {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
+            <li class="main-list-collections__card">
+              <span class="main-list-collections__image">
+                {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'main-list-collections__placeholder' }}
+              </span>
+              <span class="main-list-collections__title">{{ 'collection_list.collection_title' | t }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endpaginate %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .main-list-collections {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .main-list-collections__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .main-list-collections__heading {
+    margin: 0;
+  }
+
+  .main-list-collections__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .main-list-collections__grid {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+  }
+
+  .main-list-collections__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .main-list-collections__image {
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+
+  .main-list-collections__image img,
+  .main-list-collections__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .main-list-collections__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .main-list-collections__title {
+    font-size: 1.125rem;
+  }
+
+  a.main-list-collections__card:hover .main-list-collections__title {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+  }
+
+  .main-list-collections__pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .main-list-collections__pagination :is(a, span) {
+    padding: 0.25rem 0.75rem;
+    color: inherit;
+  }
+
+  .main-list-collections__pagination .current {
+    font-weight: bold;
+  }
+
+  .main-list-collections a:focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.main_list_collections",
+  "tag": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["list-collections"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Collections"
+    },
+    {
+      "type": "select",
+      "id": "sort",
+      "label": "t:labels.sort_collections_by",
+      "options": [
+        { "value": "alphabetical", "label": "t:options.sort_collections.alphabetical" },
+        { "value": "date_reversed", "label": "t:options.sort_collections.date_reversed" },
+        { "value": "date", "label": "t:options.sort_collections.date" }
+      ],
+      "default": "alphabetical"
+    },
+    {
+      "type": "range",
+      "id": "collections_per_page",
+      "label": "t:labels.collections_per_page",
+      "min": 4,
+      "max": 48,
+      "step": 4,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "t:labels.columns_on_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 3
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.main_list_collections"
+    }
+  ]
+}
+{% endschema %}
