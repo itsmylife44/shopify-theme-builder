@@ -36,7 +36,7 @@ describe('Section Catalog theme check', () => {
 })
 
 describe('Base Theme templates', () => {
-  const baseTheme = path.join(projectDir, 'base-theme')
+  const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
   // The pages the Studio doesn't compose: each ships a basic layout that takes a Brand color scheme.
   const basicPages = ['404', 'article', 'blog', 'cart', 'list-collections', 'page', 'password', 'search']
 

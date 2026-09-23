@@ -19,6 +19,12 @@
       "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
       "computedHash": "cd61afd28f594e8b6712b61749209cbb4466e3eec4e4223793bbd97fc85c1b63"
     },
+    "theme-tooling": {
+      "source": "itsmylife44/shopify-theme-builder",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/theme-tooling/SKILL.md",
+      "computedHash": "b626b85e046927878b03c27067d6fabfe210fcdccc65fcc4bb300da5ffe07512"
+    },
     "typescript-advanced-types": {
       "source": "wshobson/agents",
       "sourceType": "github",

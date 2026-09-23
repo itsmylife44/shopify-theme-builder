@@ -4,12 +4,12 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { ViteDevServer } from 'vite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parseJSON } from '@shopify/theme-check-node'
-import { startStudio, type Offense } from '../studio/server/studio.mjs'
+import { startStudio, type Offense } from '../skills/shopify-theme-builder/studio/server/studio.mjs'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
+type StudioServer = Awaited<ReturnType<typeof startStudio>>
 const cleanup: (() => Promise<void> | void)[] = []
 
 afterEach(async () => {
@@ -25,7 +25,7 @@ function tempDir(prefix: string) {
 /** A fresh Theme folder built from the Base Theme. */
 function fixtureTheme() {
   const theme = tempDir('theme-')
-  cpSync(path.join(projectDir, 'base-theme'), theme, { recursive: true })
+  cpSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme'), theme, { recursive: true })
   return theme
 }
 
@@ -87,7 +87,7 @@ async function openStudio(
     storePassword,
   }: { catalog?: string; cli?: string; store?: string; storePassword?: string } = {},
 ) {
-  const server: ViteDevServer = await startStudio({ theme, catalog, port: 0, cli, store, storePassword })
+  const server: StudioServer = await startStudio({ theme, catalog, port: 0, cli, store, storePassword })
   cleanup.unshift(() => server.close())
   const url = server.resolvedUrls?.local[0]
   if (!url) throw new Error('Studio server has no local URL')
@@ -419,9 +419,18 @@ describe('Studio API: logo', () => {
   })
 })
 
+describe('Studio stylesheet', () => {
+  it("keeps its copy of shadcn's tailwind.css equal to the installed shadcn's", () => {
+    const copy = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/studio/src/shadcn-tailwind.css'), 'utf8')
+    const installed = readFileSync(path.join(projectDir, 'node_modules/shadcn/dist/tailwind.css'), 'utf8')
+    // The copy starts with a two-line comment saying where it comes from.
+    expect(copy.split('\n').slice(2).join('\n')).toBe(installed)
+  })
+})
+
 describe('studio command', () => {
   function studio(...args: string[]) {
-    const result = spawnSync('node', [path.join(projectDir, 'studio/bin/studio.mjs'), ...args], {
+    const result = spawnSync('node', [path.join(projectDir, 'skills/shopify-theme-builder/studio/bin/studio.mjs'), ...args], {
       encoding: 'utf8',
       // A refused folder exits at once; a started Studio would run forever.
       timeout: 10_000,
@@ -817,7 +826,7 @@ describe('Studio API: home page', () => {
 
   it('offers and adds every real catalog home section with a color scheme and a clean Theme Check', async () => {
     const theme = fixtureTheme()
-    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
     const types = ['hero', 'featured-collection', 'image-with-text', 'rich-text', 'logo-list', 'testimonials', 'faq', 'newsletter']
     expect((await studio.readTheme()).catalog.home).toEqual(types.toSorted())
     let body
@@ -828,8 +837,8 @@ describe('Studio API: home page', () => {
 
   it('never offers the real catalog header or footer for the home page', async () => {
     const theme = fixtureTheme()
-    cpSync(path.join(projectDir, 'catalog'), theme, { recursive: true })
-    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    cpSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog'), theme, { recursive: true })
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
     const { catalog } = await studio.readTheme()
     for (const page of ['home', 'product', 'collection']) {
       expect(catalog[page]).toContain('hero')
@@ -858,7 +867,7 @@ describe('Studio API: product page', () => {
 
   it('composes a product page from the real catalog\'s main product and related products with a clean Theme Check', async () => {
     const theme = fixtureTheme()
-    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
     const { catalog } = await studio.readTheme()
     const types = ['main-product', 'related-products']
     expect(catalog.product).toEqual(expect.arrayContaining(types))
@@ -877,7 +886,7 @@ describe('Studio API: product page', () => {
 describe('Studio API: collection page', () => {
   it('composes a collection page from the real catalog\'s main collection with a clean Theme Check', async () => {
     const theme = fixtureTheme()
-    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'catalog') })
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
     const { catalog } = await studio.readTheme()
     expect(catalog.collection).toContain('main-collection')
     expect(catalog.home).not.toContain('main-collection')
