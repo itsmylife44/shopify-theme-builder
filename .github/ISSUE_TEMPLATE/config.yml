@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions
+    url: https://github.com/itsmylife44/shopify-theme-builder/discussions
+    about: Ask how to use the skill or the Studio in Discussions.
+  - name: Security vulnerability
+    url: https://github.com/itsmylife44/shopify-theme-builder/security/advisories/new
+    about: Report it privately, never in a public issue.
