@@ -47,6 +47,7 @@
     "logo_list": "Logo list",
     "collection_product_grid": "Collection product grid",
     "main_product": "Main product",
+    "main_cart": "Main cart",
     "related_products": "Related products",
     "rich_text": "Rich text",
     "testimonials": "Testimonials",
@@ -98,6 +99,8 @@
     "enable_sorting": "Enable sorting",
     "products_per_page": "Products per page",
     "show_dynamic_checkout_buttons": "Show dynamic checkout buttons",
+    "show_accelerated_checkout_buttons": "Show accelerated checkout buttons",
+    "show_order_note": "Show order note",
     "quote": "Quote",
     "author": "Author",
     "author_detail": "Author detail"

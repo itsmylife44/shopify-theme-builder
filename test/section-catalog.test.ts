@@ -65,6 +65,37 @@ describe('Contact page', () => {
   })
 })
 
+describe('Cart page', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-cart.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('ships a cart template with the main cart, only for cart templates', () => {
+    const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/cart.json'), 'utf8'))
+    expect(order.map((id: string) => sections[id].type)).toEqual(['main-cart'])
+    expect(schema.enabled_on).toEqual({ templates: ['cart'] })
+    expect(schema.limit).toBe(1)
+  })
+
+  it('shows accelerated checkout buttons, an optional note, discounts, unit prices and an empty state', () => {
+    expect(source).toMatch(/{%-? if additional_checkout_buttons[^%]*%}\s*<div[^>]*>\s*{{ content_for_additional_checkout_buttons }}/)
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'show_additional_checkout_buttons', default: true }))
+    expect(source).toContain('name="note"')
+    expect(source).toContain('section.settings.show_note')
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'show_note', type: 'checkbox' }))
+    expect(source).toContain('item.line_level_discount_allocations')
+    expect(source).toContain('cart.cart_level_discount_applications')
+    expect(source).toContain('item.unit_price_measurement')
+    expect(source).toContain('routes.all_products_collection_url')
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/main-cart.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/templates/cart.json')
+  })
+})
+
 describe('Base Theme templates', () => {
   const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
   // The pages the Studio doesn't compose: each ships a basic layout that takes a Brand color scheme.

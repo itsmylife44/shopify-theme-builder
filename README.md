@@ -92,9 +92,10 @@ Every section follows the Brand through theme settings, has its own color scheme
 | Home | Hero (image or video) · Featured collection · Image with text · Rich text · Testimonials · Logo list · FAQ · Newsletter |
 | Product | Main product (media, variants, add to cart) · Related products |
 | Collection | Product grid with filters and sorting |
+| Cart | Main cart (discounts, order note, Shop Pay and other accelerated checkout buttons) |
 | Every page | Header · Footer (menus, email signup, payment icons) |
 
-Every other page (cart, search, blog, 404 …) uses Skeleton's own layout, styled by the same Brand.
+Every other page (search, blog, 404 …) uses Skeleton's own layout, styled by the same Brand.
 
 ## Prerequisites
 
