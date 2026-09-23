@@ -48,7 +48,21 @@ type Frame = { url: string; paths: Record<Page, string>; editor: Record<Page, st
 type Tab = 'sections' | 'brand' | 'checks'
 type Device = 'desktop' | 'mobile'
 
-const pageNames: Record<Page, string> = { home: 'Home', product: 'Product', collection: 'Collection' }
+// In the page switcher's order; a Record would list 404 first.
+const pageItems: { value: Page; label: string }[] = [
+  { value: 'home', label: 'Home' },
+  { value: 'product', label: 'Product' },
+  { value: 'collection', label: 'Collection' },
+  { value: 'page', label: 'Page' },
+  { value: 'contact', label: 'Contact' },
+  { value: 'cart', label: 'Cart' },
+  { value: 'search', label: 'Search' },
+  { value: 'blog', label: 'Blog' },
+  { value: 'article', label: 'Article' },
+  { value: '404', label: '404' },
+  { value: 'collections', label: 'Collections list' },
+]
+const pageNames = Object.fromEntries(pageItems.map((item) => [item.value, item.label])) as Record<Page, string>
 
 /** The Studio: the page's sections on the left, the live preview in the middle, the selected section on the right. */
 export function App() {
@@ -118,19 +132,20 @@ export function App() {
     <div className="flex h-screen flex-col bg-background">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b px-3">
         <span className="font-heading font-medium">Studio</span>
-        <nav aria-label="Pages" className="flex rounded-md border p-0.5">
-          {(Object.keys(pageNames) as Page[]).map((name) => (
-            <Button
-              key={name}
-              size="sm"
-              variant={page === name ? 'secondary' : 'ghost'}
-              aria-current={page === name ? 'page' : undefined}
-              onClick={() => openPage(name)}
-            >
-              {pageNames[name]}
-            </Button>
-          ))}
-        </nav>
+        <Select items={pageItems} value={page} onValueChange={(next) => next !== null && openPage(next)}>
+          <SelectTrigger size="sm" aria-label="Page" className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {pageItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <div className="ml-auto flex items-center gap-2">
           <UndoRedo history={state.history} onSaved={showState} />
           <PreviewBadge preview={preview} />

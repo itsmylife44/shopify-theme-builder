@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The Studio composes every page, not only home, product and collection: a page, the contact page, cart, search, blog, article, 404 and the collections list, picked in the top bar and shown in the preview on a real URL of the store (its first page, blog and article). The API takes them as `<page>` (`page`, `contact`, `cart`, `search`, `blog`, `article`, `404`, `collections`), and offers each page the catalog sections its template takes, like the contact form on page templates only.
 - The collections list page shows every collection as a card (image or placeholder, and title), sorted alphabetically or by date through a setting, with pagination; new Themes use it.
 - The 404 page shows a heading and text the Creator writes, a search form and a link back to the shop; new Themes use it.
 - The article page shows the article's image, title, date, author (behind a setting), content and tag links, and, when the blog allows comments, its comments with pagination and a comment form that says when a comment was posted or awaits approval; new Themes use it.

@@ -114,13 +114,44 @@ export function startFrameProxy(target) {
 
 /**
  * The paths of the pages the Studio composes, on the store behind theme dev. The product page shows the
- * store's first product; `/products` alone would be a 404.
+ * store's first product, `/products` alone would be a 404; the page, blog and article pages show the first
+ * of the store's sitemaps, and the contact page that page through its contact template.
  * @param {string} previewUrl
  */
 export async function pagePaths(previewUrl) {
-  const product = await fetch(new URL('/products.json?limit=1', previewUrl))
-    .then((response) => response.json())
-    .then((body) => body.products?.[0]?.handle)
-    .catch(() => undefined)
-  return { home: '/', product: product ? `/products/${product}` : '/collections/all', collection: '/collections/all' }
+  /** @param {string} path */
+  const read = (path) =>
+    fetch(new URL(path, previewUrl))
+      .then((response) => (response.ok ? response.text() : ''))
+      .catch(() => '')
+  const [products, pages, blogs] = await Promise.all([read('/products.json?limit=1'), read('/sitemap_pages_1.xml'), read('/sitemap_blogs_1.xml')])
+  let product
+  try {
+    product = JSON.parse(products).products?.[0]?.handle
+  } catch {}
+  /**
+   * The path of the first URL in a sitemap that has as many segments as `depth`.
+   * @param {string} sitemap
+   * @param {number} depth
+   */
+  const first = (sitemap, depth) =>
+    [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)]
+      .map(([, loc]) => URL.parse(loc)?.pathname)
+      .find((path) => path?.split('/').length === depth + 1)
+  // ponytail: a store without pages or a blog shows its 404 page there, until the Creator adds one in the admin.
+  const page = first(pages, 2) ?? '/pages/contact'
+  const blog = first(blogs, 2) ?? '/blogs/news'
+  return {
+    home: '/',
+    product: product ? `/products/${product}` : '/collections/all',
+    collection: '/collections/all',
+    page,
+    contact: `${page}?view=contact`,
+    cart: '/cart',
+    search: '/search?q=',
+    blog,
+    article: first(blogs, 3) ?? blog,
+    404: '/studio-page-not-found',
+    collections: '/collections',
+  }
 }

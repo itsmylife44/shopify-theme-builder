@@ -646,6 +646,14 @@ const pages = /** @type {const} */ ({
   home: 'templates/index.json',
   product: 'templates/product.json',
   collection: 'templates/collection.json',
+  page: 'templates/page.json',
+  contact: 'templates/page.contact.json',
+  cart: 'templates/cart.json',
+  search: 'templates/search.json',
+  blog: 'templates/blog.json',
+  article: 'templates/article.json',
+  '404': 'templates/404.json',
+  collections: 'templates/list-collections.json',
 })
 
 // The section groups every page shares, whose sections the Studio edits.
@@ -1200,7 +1208,8 @@ function readSchema(file) {
  */
 function goesOn(sectionFile, template) {
   const enabledOn = readSchema(sectionFile)?.enabled_on
-  const type = path.basename(template, '.json')
+  // An alternate template like page.contact takes the sections of its type.
+  const type = path.basename(template, '.json').split('.')[0]
   return !enabledOn || (enabledOn.templates ?? []).some((/** @type {string} */ other) => other === '*' || other === type)
 }
 
