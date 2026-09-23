@@ -1,0 +1,142 @@
+{% comment %}A line or two of oversized type, with optional small text and a link, for Directions that make type the hero.{% endcomment %}
+{% liquid
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign heading_tag = 'h1'
+  endif
+%}
+
+<div
+  class="type-banner full-width color-{{ section.settings.color_scheme }}"
+  style="--text-align: {{ section.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }};"
+>
+  <div class="type-banner__inner">
+    {% if section.settings.heading != blank %}
+      <{{ heading_tag }} class="type-banner__heading text-{{ section.settings.size }}">
+        {{- section.settings.heading | escape | newline_to_br -}}
+      </{{ heading_tag }}>
+    {% endif %}
+    {% if section.settings.text != blank or section.settings.link_label != blank %}
+      <div class="type-banner__footer">
+        {% if section.settings.text != blank %}
+          <p class="type-banner__text text-small">{{ section.settings.text }}</p>
+        {% endif %}
+        {% if section.settings.link_label != blank %}
+          <a class="type-banner__link text-label" href="{{ section.settings.link | default: routes.all_products_collection_url }}">
+            {{- section.settings.link_label | escape -}}
+          </a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .type-banner {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .type-banner__inner {
+    grid-column: 2;
+    display: grid;
+    justify-items: var(--text-align);
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+    text-align: var(--text-align);
+  }
+
+  .type-banner__heading {
+    margin: 0;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+
+  .type-banner__footer {
+    display: grid;
+    justify-items: var(--text-align);
+    gap: var(--space-sm);
+    max-width: var(--width-prose);
+  }
+
+  .type-banner__text {
+    margin: 0;
+  }
+
+  .type-banner__link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-size-min);
+    color: inherit;
+    text-underline-offset: var(--space-2xs);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.type_banner",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "text_alignment",
+      "id": "alignment",
+      "label": "t:labels.alignment",
+      "default": "left"
+    },
+    {
+      "type": "textarea",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "info": "t:info.type_banner_heading",
+      "default": "Made slowly,\nworn for years"
+    },
+    {
+      "type": "select",
+      "id": "size",
+      "label": "t:labels.type_size",
+      "options": [
+        {
+          "value": "display",
+          "label": "t:options.type_size.display"
+        },
+        {
+          "value": "h1",
+          "label": "t:options.type_size.h1"
+        },
+        {
+          "value": "h2",
+          "label": "t:options.type_size.h2"
+        }
+      ],
+      "default": "display"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "text",
+      "label": "t:labels.text"
+    },
+    {
+      "type": "text",
+      "id": "link_label",
+      "label": "t:labels.link_label",
+      "default": "Shop all"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "t:labels.link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.type_banner"
+    }
+  ]
+}
+{% endschema %}

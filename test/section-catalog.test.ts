@@ -992,6 +992,41 @@ describe('Image gallery', () => {
   })
 })
 
+describe('Type banner', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/type-banner.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+
+  it('is a catalog section with a description, a color scheme and a preset', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toMatch(/class="type-banner full-width color-{{ section\.settings\.color_scheme }}"/)
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.type_banner' }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('sets a line or two of type at the display size or a step below, with the line break the Merchant types', () => {
+    expect(settings.heading.type).toBe('textarea')
+    expect(source).toMatch(/{{-? section\.settings\.heading \| escape \| newline_to_br -?}}/)
+    expect(settings.size.options.map((option: { value: string }) => option.value)).toEqual(['display', 'h1', 'h2'])
+    expect(settings.size.default).toBe('display')
+    expect(source).toContain('class="type-banner__heading text-{{ section.settings.size }}"')
+  })
+
+  it('makes the heading the page heading only as the first section', () => {
+    expect(source).toMatch(/assign heading_tag = 'h2'\s+if section\.index == 1\s+assign heading_tag = 'h1'/)
+    expect(source).toContain('<{{ heading_tag }} class="type-banner__heading')
+  })
+
+  it('shows optional small text and a link under the type', () => {
+    expect(settings.text.type).toBe('inline_richtext')
+    expect(source).toMatch(/<p class="type-banner__text text-small">{{ section\.settings\.text }}<\/p>/)
+    expect(settings.link_label.type).toBe('text')
+    expect(settings.link.type).toBe('url')
+    expect(source).toMatch(/<a class="type-banner__link text-label" href="{{ section\.settings\.link[^"]*}}">/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
