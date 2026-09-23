@@ -140,3 +140,28 @@ describe('Header search', () => {
     expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'show_search', type: 'checkbox', default: true }))
   })
 })
+
+describe('Country and language selector', () => {
+  const catalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
+  const header = readFileSync(path.join(catalog, 'header.liquid'), 'utf8')
+  const headerSchema = JSON.parse(header.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it.each(['footer', 'header'])('lets customers pick a country and a language in the %s, without JavaScript', (name) => {
+    const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
+    const form = source.slice(source.indexOf("{% form 'localization'"), source.indexOf('{% endform %}', source.indexOf("{% form 'localization'")))
+    expect(form).toMatch(/{%-? if localization\.available_countries\.size > 1 -?%}\s*<label[^>]*>[^<]*<\/label>\s*<select[^>]*name="country_code"/)
+    expect(form).toContain('{{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})')
+    expect(form).toMatch(/{%-? if localization\.available_languages\.size > 1 -?%}\s*<label[^>]*>[^<]*<\/label>\s*<select[^>]*name="language_code"/)
+    expect(form).toContain('lang="{{ language.iso_code }}"')
+    expect(form).toContain('{{ language.endonym_name | capitalize }}')
+    expect(form).toMatch(/<button type="submit"/)
+    // Both sections can render the form on one page, so each needs its own id instead of the default localization_form.
+    expect(source).toContain(`{% form 'localization', id: '${name[0].toUpperCase()}${name.slice(1)}Localization'`)
+    expect(source).not.toContain('{% javascript %}')
+  })
+
+  it('shows the selector in the header only when the Merchant turns it on', () => {
+    expect(header).toMatch(/{%-? if section\.settings\.show_localization -?%}\s*{%-? if localization\.available_countries\.size > 1 or localization\.available_languages\.size > 1 -?%}\s*{% form 'localization'/)
+    expect(headerSchema.settings).toContainEqual(expect.objectContaining({ id: 'show_localization', type: 'checkbox', default: false }))
+  })
+})

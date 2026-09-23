@@ -1,4 +1,4 @@
-{% comment %}The shop's header: the logo or shop name, the menu, the search link, the account link and the cart.{% endcomment %}
+{% comment %}The shop's header: the logo or shop name, the menu, the country and language selectors, the search link, the account link and the cart.{% endcomment %}
 <header class="header full-width color-{{ section.settings.color_scheme }}">
   <div class="header__inner">
     <a class="header__logo" href="{{ routes.root_url }}">
@@ -42,6 +42,44 @@
     {% endif %}
 
     <div class="header__icons">
+      {% if section.settings.show_localization %}
+        {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
+          {% form 'localization', id: 'HeaderLocalization', class: 'header__localization' %}
+            {% if localization.available_countries.size > 1 %}
+              <label class="visually-hidden" for="HeaderCountry">{{ 'localization.country' | t }}</label>
+              <select id="HeaderCountry" name="country_code">
+                {% for country in localization.available_countries %}
+                  <option
+                    value="{{ country.iso_code }}"
+                    {% if country.iso_code == localization.country.iso_code %}
+                      selected
+                    {% endif %}
+                  >
+                    {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
+                  </option>
+                {% endfor %}
+              </select>
+            {% endif %}
+            {% if localization.available_languages.size > 1 %}
+              <label class="visually-hidden" for="HeaderLanguage">{{ 'localization.language' | t }}</label>
+              <select id="HeaderLanguage" name="language_code">
+                {% for language in localization.available_languages %}
+                  <option
+                    value="{{ language.iso_code }}"
+                    lang="{{ language.iso_code }}"
+                    {% if language.iso_code == localization.language.iso_code %}
+                      selected
+                    {% endif %}
+                  >
+                    {{ language.endonym_name | capitalize }}
+                  </option>
+                {% endfor %}
+              </select>
+            {% endif %}
+            <button type="submit">{{ 'localization.update' | t }}</button>
+          {% endform %}
+        {% endif %}
+      {% endif %}
       {% if section.settings.show_search %}
         <a class="header__search" href="{{ routes.search_url }}" aria-label="{{ 'header.search' | t }}">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
@@ -89,7 +127,9 @@
     text-decoration: none;
   }
 
-  .header a:focus-visible {
+  .header a:focus-visible,
+  .header select:focus-visible,
+  .header button:focus-visible {
     outline: 2px solid currentcolor;
     outline-offset: 2px;
   }
@@ -137,6 +177,34 @@
 
   .header__icons svg {
     width: 2rem;
+  }
+
+  .header__localization {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .header__localization select,
+  .header__localization button {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid currentcolor;
+    border-radius: var(--style-border-radius-inputs);
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .header .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .header__search {
@@ -206,6 +274,13 @@
       "id": "show_search",
       "label": "t:labels.show_search",
       "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_localization",
+      "label": "t:labels.show_localization",
+      "info": "t:info.header_show_localization",
+      "default": false
     }
   ],
   "presets": [
