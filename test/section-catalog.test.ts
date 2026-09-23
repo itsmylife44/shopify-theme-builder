@@ -96,6 +96,40 @@ describe('Cart page', () => {
   })
 })
 
+describe('Search page', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-search.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('ships a search template with the main search, only for search templates', () => {
+    const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/search.json'), 'utf8'))
+    expect(order.map((id: string) => sections[id].type)).toEqual(['main-search'])
+    expect(schema.enabled_on).toEqual({ templates: ['search'] })
+    expect(schema.limit).toBe(1)
+  })
+
+  it('filters and sorts the results, keeping the search terms', () => {
+    expect(source).toContain('{% for filter in search.filters %}')
+    expect(source).toContain('filter_value.param_name')
+    expect(source).toContain('url_to_remove')
+    expect(source).toContain('{% for option in search.sort_options %}')
+    expect(source).toMatch(/<input type="hidden" name="q" value="{{ search.terms \| escape }}">/)
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'enable_filtering', type: 'checkbox' }))
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'enable_sorting', type: 'checkbox' }))
+  })
+
+  it('shows products, articles and pages', () => {
+    for (const type of ['product', 'article', 'page']) expect(source).toContain(`{% when '${type}' %}`)
+    expect(source).toContain('{% case result.object_type %}')
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/main-search.liquid')
+    expect(skill).toContain('<skill-dir>/catalog/templates/search.json')
+  })
+})
+
 describe('Unit prices', () => {
   const sections = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
   const read = (name: string) => readFileSync(path.join(sections, `${name}.liquid`), 'utf8')
@@ -108,7 +142,7 @@ describe('Unit prices', () => {
     expect(info).toContain("'product.unit_price' | t")
   })
 
-  it.each(['featured-collection', 'main-collection', 'related-products'])('shows the unit price on %s cards', (name) => {
+  it.each(['featured-collection', 'main-collection', 'main-search', 'related-products'])('shows the unit price on %s cards', (name) => {
     const source = read(name)
     expect(source).toContain('.selected_or_first_available_variant %}')
     expect(source).toContain('unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement')
