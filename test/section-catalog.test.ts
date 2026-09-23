@@ -600,6 +600,31 @@ describe('Video', () => {
   })
 })
 
+describe('Blog posts', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/blog-posts.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="blog-posts full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.blog_posts' }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows the latest articles of a blog with image, title, date and excerpt, with placeholders until a blog is picked', () => {
+    const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+    expect(settings.blog.type).toBe('blog')
+    expect(settings.posts_to_show.type).toBe('range')
+    expect(source).toContain('for article in featured_blog.articles limit: section.settings.posts_to_show')
+    expect(source).toContain('article.image')
+    expect(source).toContain('article.title')
+    expect(source).toContain("article.published_at | time_tag: format: 'date'")
+    expect(source).toContain('article.excerpt_or_content')
+    expect(source).toMatch(/'image' \| placeholder_svg_tag/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

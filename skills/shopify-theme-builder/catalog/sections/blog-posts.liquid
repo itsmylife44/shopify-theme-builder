@@ -1,0 +1,193 @@
+{% comment %}The latest articles of a blog, with image, title, date and excerpt.{% endcomment %}
+{% liquid
+  assign featured_blog = section.settings.blog
+  assign show_articles = false
+  if featured_blog != blank and featured_blog.articles_count > 0
+    assign show_articles = true
+  endif
+%}
+
+<div class="blog-posts full-width color-{{ section.settings.color_scheme }}">
+  <div class="blog-posts__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="blog-posts__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ul
+      class="blog-posts__grid"
+      role="list"
+      style="--columns: {{ section.settings.columns }};"
+    >
+      {% if show_articles %}
+        {% for article in featured_blog.articles limit: section.settings.posts_to_show %}
+          <li class="blog-posts__card">
+            <a class="blog-posts__image" href="{{ article.url }}" tabindex="-1" aria-hidden="true">
+              {% if article.image %}
+                {{
+                  article.image
+                  | image_url: width: 1200
+                  | image_tag: widths: '400, 600, 800, 1200', sizes: '(min-width: 750px) 33vw, 100vw', loading: 'lazy'
+                }}
+              {% else %}
+                {{ 'image' | placeholder_svg_tag: 'blog-posts__placeholder' }}
+              {% endif %}
+            </a>
+            <h3 class="blog-posts__title">
+              <a href="{{ article.url }}">{{ article.title | escape }}</a>
+            </h3>
+            <p class="blog-posts__date">{{ article.published_at | time_tag: format: 'date' }}</p>
+            <p class="blog-posts__excerpt">{{ article.excerpt_or_content | strip_html | truncatewords: 30 }}</p>
+          </li>
+        {% endfor %}
+      {% else %}
+        {% for i in (1..section.settings.posts_to_show) %}
+          <li class="blog-posts__card">
+            <div class="blog-posts__image">
+              {{ 'image' | placeholder_svg_tag: 'blog-posts__placeholder' }}
+            </div>
+            <h3 class="blog-posts__title">{{ 'blog_posts.article_title' | t }}</h3>
+          </li>
+        {% endfor %}
+      {% endif %}
+    </ul>
+  </div>
+</div>
+
+{% stylesheet %}
+  .blog-posts {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .blog-posts__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .blog-posts__heading {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+  }
+
+  .blog-posts__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem 1.5rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .blog-posts__grid {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+  }
+
+  .blog-posts__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .blog-posts__image {
+    display: block;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+  }
+
+  .blog-posts__image img,
+  .blog-posts__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .blog-posts__placeholder {
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .blog-posts__title {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .blog-posts__title a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .blog-posts__title a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
+  }
+
+  .blog-posts__date {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.7;
+  }
+
+  .blog-posts__excerpt {
+    margin: 0;
+  }
+
+  .blog-posts a:focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.blog_posts",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "From the blog"
+    },
+    {
+      "type": "blog",
+      "id": "blog",
+      "label": "t:labels.blog"
+    },
+    {
+      "type": "range",
+      "id": "posts_to_show",
+      "label": "t:labels.posts_to_show",
+      "min": 1,
+      "max": 12,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "t:labels.columns_on_desktop",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 3
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.blog_posts"
+    }
+  ]
+}
+{% endschema %}
