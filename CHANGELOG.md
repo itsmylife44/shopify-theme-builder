@@ -53,6 +53,10 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 - The product page offers a product's subscriptions (selling plans) next to one-time purchase, prices it with the chosen plan and adds it to the cart with that plan; the cart shows each line's plan.
 - The product page shows the vendor (with a setting to hide it), pickup availability at local pickup locations for the selected variant, and the Shop Pay Installments banner.
 
+### Fixed
+
+- The Studio's preview no longer ends up on the store's password page after a few hours. When `theme dev`'s storefront session expires (the store answers 401, or redirects to `/password`), the Studio restarts `theme dev`. While it restarts, the top bar and `GET /api/preview` show `reconnecting`, and then the preview reloads. A session that expires again within a minute is left as it is, so the Studio never keeps restarting.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.

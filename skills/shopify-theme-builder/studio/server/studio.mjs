@@ -94,7 +94,10 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         storePassword,
         onChange: (state) => server.ws.send('studio:preview', state),
       })
-      const frame = await startFrameProxy(() => (preview.state.status === 'running' ? preview.state.url : undefined))
+      const frame = await startFrameProxy(
+        () => (preview.state.status === 'running' ? preview.state.url : undefined),
+        () => preview.reconnect(),
+      )
       const stop = () => preview.stop()
       process.on('exit', stop)
       server.httpServer?.once('close', () => {
