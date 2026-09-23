@@ -632,6 +632,83 @@ describe('Studio API: Directions', () => {
     expect(unknown.body.error).toContain('One, Two, Three')
     expect(readSettingsData(theme).current).not.toEqual(expect.any(String))
   }, 30_000)
+
+  const contract = [
+    '# Directions',
+    '',
+    '## Quiet',
+    '',
+    'A calm shop that lets',
+    'the olive oil speak.',
+    '',
+    '- Serif headings, tight tracking',
+    '- Square shapes',
+    '',
+    '### Rules',
+    '',
+    '- Do: leave space. Don\'t: fill it.',
+    '',
+    '## Loud',
+    '',
+    'Big type, bold color.',
+    '',
+  ].join('\n')
+
+  it("lists the Theme's Directions with the thesis and key choices DIRECTION.md gives them, and the one in the preview", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    expect((await studio.readTheme()).directions).toEqual([])
+    await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+    await studio.send('PUT', 'api/directions/Loud', { template: heroHome })
+    await studio.send('PUT', 'api/directions/Plain', { template: heroHome })
+    writeFileSync(path.join(theme, 'DIRECTION.md'), contract)
+    const { body } = await studio.send('PUT', 'api/directions/current', { name: 'Loud' })
+    expect(body.directions).toEqual([
+      { name: 'Quiet', thesis: 'A calm shop that lets the olive oil speak.', choices: ['Serif headings, tight tracking', 'Square shapes'], showing: false, chosen: false },
+      { name: 'Loud', thesis: 'Big type, bold color.', choices: [], showing: true, chosen: false },
+      // A Direction DIRECTION.md doesn't describe shows by name.
+      { name: 'Plain', thesis: '', choices: [], showing: false, chosen: false },
+    ])
+    expect(errors(body.validation)).toEqual([])
+  }, 30_000)
+
+  it('chooses a Direction: the preview shows it and DIRECTION.md names it, in one undo step', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.send('PUT', 'api/directions/Quiet', { settings: { shape_family: 'square' }, template: heroHome })
+    await studio.send('PUT', 'api/directions/Loud', { template: heroHome })
+    writeFileSync(path.join(theme, 'DIRECTION.md'), contract)
+
+    const { status, body } = await studio.send('PUT', 'api/directions/chosen', { name: 'Quiet' })
+    expect(status).toBe(200)
+    expect(readSettingsData(theme).current).toBe('Quiet')
+    expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toBe(contract.replace('# Directions\n\n', '# Directions\n\nChosen: Quiet\n\n'))
+    expect(body.directions.map(({ name, showing, chosen }: { name: string; showing: boolean; chosen: boolean }) => ({ name, showing, chosen }))).toEqual([
+      { name: 'Quiet', showing: true, chosen: true },
+      { name: 'Loud', showing: false, chosen: false },
+    ])
+    expect(errors(body.validation)).toEqual([])
+
+    // Tuned after choosing, it stays chosen; choosing another replaces the mark.
+    expect((await studio.setStyle({ shape_family: 'round' })).body.directions[0]).toMatchObject({ showing: false, chosen: true })
+    await studio.send('PUT', 'api/directions/chosen', { name: 'Loud' })
+    expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toContain('Chosen: Loud\n\n## Quiet')
+    await studio.send('POST', 'api/undo')
+    expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toContain('Chosen: Quiet\n')
+    expect(readSettingsData(theme).current).toMatchObject({ shape_family: 'round' })
+  }, 30_000)
+
+  it('writes DIRECTION.md when the Theme has none, and chooses only a Direction it has', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+    const unknown = await studio.send('PUT', 'api/directions/chosen', { name: 'Loud' })
+    expect(unknown.status).toBe(400)
+    expect(unknown.body.error).toContain('Quiet')
+    expect(existsSync(path.join(theme, 'DIRECTION.md'))).toBe(false)
+    await studio.send('PUT', 'api/directions/chosen', { name: 'Quiet' })
+    expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toBe('Chosen: Quiet\n')
+  }, 30_000)
 })
 
 describe('Studio API: logo', () => {
