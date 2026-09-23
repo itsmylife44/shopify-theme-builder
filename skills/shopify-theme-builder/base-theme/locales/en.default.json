@@ -60,6 +60,7 @@
     "apply": "Apply",
     "clear_all": "Clear all",
     "empty": "This collection has no products yet.",
+    "load_more": "Load more",
     "no_results": "No products match these filters.",
     "pagination": "Pagination",
     "price_from": "From",

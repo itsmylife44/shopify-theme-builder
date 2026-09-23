@@ -220,6 +220,43 @@ describe('Search page', () => {
   })
 })
 
+describe('Collection and search results', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+
+  for (const name of ['main-collection', 'main-search']) {
+    const source = readFileSync(path.join(skillDir, `catalog/sections/${name}.liquid`), 'utf8')
+
+    it(`${name}: filters take several values, and applied ones show as removable chips with Clear all, scrolling sideways on mobile`, () => {
+      expect(source).toMatch(/type="checkbox"\s+name="{{ filter_value\.param_name }}"/)
+      expect(source).toContain('<a href="{{ filter_value.url_to_remove }}">')
+      expect(source).toContain('<a href="{{ filter.url_to_remove }}">')
+      expect(source).toMatch(/<a href="{{ clear_url }}">{{ 'collection\.clear_all' \| t }}<\/a>/)
+      expect(source).toMatch(new RegExp(`@media \\(max-width: 749px\\) {[^@]*\\.${name}__active {[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto;`))
+    })
+
+    it(`${name}: loads the next page with a Load more link on mobile through the Section Rendering API, keeping page links without JavaScript`, () => {
+      expect(source).toMatch(/<ul\s+class="[\w-]+__grid"\s+role="list"\s+data-load-more-grid/)
+      expect(source).toMatch(/<load-more class="[\w-]+__more" data-section-id="{{ section\.id }}">/)
+      expect(source).toMatch(
+        /{% if paginate\.next %}\s*<a class="button button--secondary [\w-]+__load-more" href="{{ paginate\.next\.url }}" data-load-more>/,
+      )
+      expect(source).toContain("{{- 'collection.load_more' | t -}}")
+      expect(source).toContain('{{ paginate | default_pagination }}')
+      // Without JavaScript the element never upgrades: the page links show and the Load more link doesn't.
+      expect(source).toMatch(new RegExp(`\\.${name}__load-more {\\s*display: none;`))
+      expect(source).toMatch(/@media \(max-width: 749px\) {[^@]*load-more:defined [^{]*__load-more {\s*display: flex;/)
+      expect(source).toContain("url.searchParams.set('section_id', this.dataset.sectionId)")
+      expect(source).toContain('grid.append(...items)')
+      expect(source).toContain("customElements.define('load-more'")
+    })
+  }
+
+  it('labels the Load more link', () => {
+    expect(locale.collection.load_more).toBe('Load more')
+  })
+})
+
 describe('Blog page', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const source = readFileSync(path.join(skillDir, 'catalog/sections/main-blog.liquid'), 'utf8')

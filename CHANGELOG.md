@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Load more on the collection and search pages on mobile: a "Load more" button under the grid adds the next page of results in place, fetched through the Section Rendering API, and moves focus to the first new result; each press adds one page, the Products (or Results) per page setting, which now says 15 to 30 works best. Desktop, and any device without JavaScript, keeps the page links. The applied filter chips and Clear all scroll sideways in one row on mobile instead of wrapping.
+
 - Thumbnails under the product page's media on mobile. The strip scrolls sideways, shows four and a half thumbnails so a cut-off one signals more, and marks the one being shown; tapping a thumbnail brings its media into view. Swiping, keyboard scrolling and the switch to the variant's image stay as they were. Desktop keeps its grid of all media.
 
 - A shipping note and collapsible content on the product page, as Base Theme blocks the main product takes in any order. The shipping note is a short shipping and returns summary next to the buy button, followed by links to the shop's shipping and refund policies when they're set. Collapsible content is a native `<details>` showing the product description or the Merchant's own text, open on desktop and collapsed on mobile, and hidden from customers while it's empty. A newly added main product starts with a shipping note and collapsible description, materials, care and shipping; the description no longer shows as one fixed block of text below the blocks.
