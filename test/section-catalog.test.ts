@@ -625,6 +625,31 @@ describe('Blog posts', () => {
   })
 })
 
+describe('Image gallery', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/image-gallery.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset with images', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="image-gallery full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.image_gallery', blocks: [{ type: 'image' }, { type: 'image' }, { type: 'image' }] }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows a grid of images, each with an optional caption and link, and a placeholder without an image', () => {
+    const settings = Object.fromEntries(schema.blocks[0].settings.map((setting: { id?: string }) => [setting.id, setting]))
+    expect(settings.image.type).toBe('image_picker')
+    expect(settings.caption.type).toBe('text')
+    expect(settings.link.type).toBe('url')
+    expect(source).toContain('{% for block in section.blocks %}')
+    expect(source).toContain('{{ block.shopify_attributes }}')
+    expect(source).toContain('<figcaption')
+    expect(source).toContain('href="{{ block.settings.link }}"')
+    expect(source).toContain("{{ 'image' | placeholder_svg_tag")
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
