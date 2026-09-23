@@ -272,3 +272,25 @@ describe('Country and language selector', () => {
     expect(headerSchema.settings).toContainEqual(expect.objectContaining({ id: 'show_localization', type: 'checkbox', default: false }))
   })
 })
+
+describe('Product recommendations', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('loads related or complementary products through the recommendations endpoint', () => {
+    const intent = schema.settings.find((setting: { id: string }) => setting.id === 'intent')
+    expect(intent.options.map((option: { value: string }) => option.value)).toEqual(['related', 'complementary'])
+    expect(intent.default).toBe('related')
+    expect(source).toContain('{{ routes.product_recommendations_url }}?product_id={{ product.id }}')
+    expect(source).toContain('&intent={{ section.settings.intent }}')
+  })
+
+  it('offers a complementary products preset', () => {
+    expect(schema.presets).toContainEqual(expect.objectContaining({ settings: expect.objectContaining({ intent: 'complementary' }) }))
+  })
+
+  it('renders nothing outside the Theme Editor when there are no recommendations', () => {
+    expect(source).toContain('{% if recommendations.products_count > 0 or show_placeholders %}')
+    expect(source).toMatch(/recommendations\.products_count == 0 and request\.design_mode/)
+  })
+})
