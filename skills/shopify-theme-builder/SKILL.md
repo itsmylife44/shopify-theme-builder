@@ -113,7 +113,9 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    | `PUT /api/<page>/sections/<id>/order` | `{"order": ["<block id>", …]}`, every block id of the section exactly once |
    | `GET /api/store` | none; the store's `collections`, `products` and `menus`, each as `{"handle", "title"}` |
    | `PUT /api/<page>/order` | `{"order": ["<id>", …]}`, every section id of the page exactly once; a new section is added at the end, so move it with this |
-   | `GET /api/theme` | none; the current state, with the header and footer groups' sections under `header` and `footer`, the catalog sections each page can take under `catalog` and the Custom Sections under `custom` |
+   | `GET /api/theme` | none; the current state, with the header and footer groups' sections under `header` and `footer`, the catalog sections each page can take under `catalog`, the Custom Sections under `custom`, and under `history` whether `undo` and `redo` have a step |
+   | `POST /api/undo` | none; puts back the files the latest Studio write changed (at most 50 steps, kept until the Studio stops). It refuses, naming the file, when that file changed outside the Studio since, and never undoes those edits |
+   | `POST /api/redo` | none; writes again what `POST /api/undo` put back, until a new write |
 
    The calls on `/api/<page>/sections/<id>` (`GET`, `PATCH` and the block calls) also take `header` or `footer` as `<page>`, for the sections of the header and footer groups every page shares, like the footer's newsletter and menus.
 
