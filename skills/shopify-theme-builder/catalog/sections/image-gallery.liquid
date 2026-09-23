@@ -28,7 +28,7 @@
               {% endif %}
             </div>
             {% if block.settings.caption != blank %}
-              <figcaption class="image-gallery__caption">{{ block.settings.caption | escape }}</figcaption>
+              <figcaption class="image-gallery__caption text-small">{{ block.settings.caption | escape }}</figcaption>
             {% endif %}
             {% if block.settings.link != blank %}
               </a>
@@ -56,7 +56,6 @@
   }
 
   .image-gallery__heading {
-    font-size: clamp(1.5rem, 3vw, 2.25rem);
     text-align: center;
   }
 
@@ -118,7 +117,6 @@
 
   .image-gallery__caption {
     margin-block-start: 0.5rem;
-    font-size: 0.875rem;
   }
 {% endstylesheet %}
 

@@ -40,7 +40,7 @@
   {% if section.settings.heading != blank or section.settings.text != blank or section.settings.button_label != blank %}
     <div class="hero__content">
       {% if section.settings.heading != blank %}
-        <{{ heading_tag }} class="hero__heading">{{ section.settings.heading }}</{{ heading_tag }}>
+        <{{ heading_tag }} class="hero__heading text-display">{{ section.settings.heading }}</{{ heading_tag }}>
       {% endif %}
       {% if section.settings.text != blank %}
         <div class="hero__text">{{ section.settings.text }}</div>
@@ -95,15 +95,6 @@
     padding: 2rem;
     background-color: var(--color-background);
     color: var(--color-foreground);
-  }
-
-  .hero__heading {
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    line-height: 1.1;
-  }
-
-  .hero__text {
-    line-height: 1.5;
   }
 
   .hero__button {

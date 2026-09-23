@@ -37,7 +37,7 @@
 
 {%- if settings.show_breadcrumbs and current_title != blank -%}
   <nav class="breadcrumbs" aria-label="{{ 'breadcrumbs.label' | t }}">
-    <ol class="breadcrumbs__list" role="list">
+    <ol class="breadcrumbs__list text-small" role="list">
       <li><a href="{{ routes.root_url }}">{{ 'breadcrumbs.home' | t }}</a></li>
       {%- if parent_title != blank -%}
         <li><a href="{{ parent_url }}">{{ parent_title | escape }}</a></li>
@@ -81,7 +81,6 @@
     width: min(calc(var(--page-width) - var(--page-margin) * 2), calc(100% - var(--page-margin) * 2));
     margin-inline: auto;
     padding-block-start: 1rem;
-    font-size: 0.875rem;
   }
 
   .breadcrumbs__list {

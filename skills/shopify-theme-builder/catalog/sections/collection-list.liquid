@@ -26,7 +26,7 @@
                   {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'collection-list__placeholder' }}
                 {% endif %}
               </span>
-              <span class="collection-list__title">{{ collection.title | escape }}</span>
+              <span class="collection-list__title text-h5">{{ collection.title | escape }}</span>
             </a>
           </li>
         {% endfor %}
@@ -37,7 +37,7 @@
             <span class="collection-list__image">
               {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'collection-list__placeholder' }}
             </span>
-            <span class="collection-list__title">{{ 'collection_list.collection_title' | t }}</span>
+            <span class="collection-list__title text-h5">{{ 'collection_list.collection_title' | t }}</span>
           </li>
         {% endfor %}
       {% endif %}
@@ -58,10 +58,6 @@
     align-items: center;
     gap: 2rem;
     padding-block: 3rem;
-  }
-
-  .collection-list__heading {
-    font-size: clamp(1.5rem, 3vw, 2.25rem);
   }
 
   .collection-list__grid {
@@ -104,10 +100,6 @@
   .collection-list__placeholder {
     background-color: rgb(from var(--color-foreground) r g b / 0.08);
     fill: rgb(from var(--color-foreground) r g b / 0.4);
-  }
-
-  .collection-list__title {
-    font-size: 1.125rem;
   }
 
   a.collection-list__card:hover .collection-list__title {

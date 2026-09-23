@@ -22,7 +22,7 @@
                 {{ 'image' | placeholder_svg_tag: 'placeholder' }}
               {% endif %}
             </a>
-            <h2>{{ article.title | link_to: article.url }}</h2>
+            <h2 class="text-h4">{{ article.title | link_to: article.url }}</h2>
             {% assign date = article.published_at | time_tag: format: 'date' %}
             {% assign author = article.author | escape %}
             <p>{{ 'blog.article_metadata_html' | t: date: date, author: author }}</p>
@@ -57,10 +57,6 @@
     width: 100%;
     aspect-ratio: 3 / 2;
     object-fit: cover;
-  }
-
-  .blog__article h2 {
-    font-size: 1.25rem;
   }
 
   .blog__article h2 a {

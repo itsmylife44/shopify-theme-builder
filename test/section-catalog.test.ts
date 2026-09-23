@@ -1053,6 +1053,35 @@ describe('Right-to-left languages', () => {
   })
 })
 
+describe('Type scale', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const files = (dir: string) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => path.join(dir, file))
+  const styles = ['display', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'body', 'small', 'label']
+
+  it('defines one type scale, with line heights for headings and body, in the CSS variables', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    for (const style of styles) expect(variables).toMatch(new RegExp(`--font-size-${style}:`))
+    expect(variables).toMatch(/--line-height-heading:/)
+    expect(variables).toMatch(/--line-height-body:/)
+  })
+
+  it('gives every text style a shared class in critical.css, sized only from the scale', () => {
+    const critical = read('base-theme/assets/critical.css')
+    for (const style of styles) expect(critical).toMatch(new RegExp(`\\.text-${style}\\b`))
+    for (const [, value] of critical.matchAll(/(?:font-size|line-height)\s*:\s*([^;]+);/g)) expect(value).toMatch(/^var\(--/)
+  })
+
+  it('leaves font sizes and line heights to the shared text styles in every section, block and snippet', () => {
+    for (const file of [...files('base-theme'), ...files('catalog')]) {
+      expect(read(file), file).not.toMatch(/[\s;{"'](font-size|line-height)\s*:/)
+    }
+  })
+})
+
 describe('Catalog updates', () => {
   const skill = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/SKILL.md'), 'utf8')
   const step = skill.match(/^## 7\. Update the catalog sections\n([\s\S]*?)^## /m)?.[1] ?? ''

@@ -25,7 +25,7 @@
             {% endif %}
           </div>
           {% if block.settings.heading != blank %}
-            <h3 class="multicolumn__column-heading">{{ block.settings.heading }}</h3>
+            <h3 class="multicolumn__column-heading text-h4">{{ block.settings.heading }}</h3>
           {% endif %}
           {% if block.settings.text != blank %}
             <div class="multicolumn__text">{{ block.settings.text }}</div>
@@ -52,7 +52,6 @@
   }
 
   .multicolumn__heading {
-    font-size: clamp(1.5rem, 3vw, 2.25rem);
     text-align: center;
   }
 
@@ -110,7 +109,6 @@
 
   .multicolumn__column-heading {
     margin: 0;
-    font-size: 1.25rem;
   }
 
   .multicolumn__text > :first-child {

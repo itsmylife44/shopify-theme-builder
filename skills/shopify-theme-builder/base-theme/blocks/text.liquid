@@ -6,7 +6,7 @@
 {% enddoc %}
 
 <div
-  class="text {{ block.settings.text_style }}"
+  class="text {{ block.settings.text_style }}{% if block.settings.text_style == 'text--title' %} text-h2{% elsif block.settings.text_style == 'text--subtitle' %} text-h3{% endif %}"
   style="--text-align: {{ block.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }}"
   {{ block.shopify_attributes }}
 >
@@ -18,11 +18,7 @@
     text-align: var(--text-align);
   }
   .text--title {
-    font-size: 2rem;
     font-weight: 700;
-  }
-  .text--subtitle {
-    font-size: 1.5rem;
   }
 {% endstylesheet %}
 
