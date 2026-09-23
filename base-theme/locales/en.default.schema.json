@@ -33,7 +33,23 @@
     "text": "Text",
     "theme": "Theme",
     "typography": "Typography",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "faq": "FAQ",
+    "question": "Question",
+    "featured_collection": "Featured collection",
+    "newsletter": "Newsletter",
+    "payments": "Payments",
+    "menu": "Menu",
+    "hero": "Hero",
+    "media": "Media",
+    "image_with_text": "Image with text",
+    "logo_list": "Logo list",
+    "collection_product_grid": "Collection product grid",
+    "main_product": "Main product",
+    "related_products": "Related products",
+    "rich_text": "Rich text",
+    "testimonials": "Testimonials",
+    "testimonial": "Testimonial"
   },
   "labels": {
     "alignment": "Alignment",
@@ -62,10 +78,38 @@
     "social_x": "X",
     "social_youtube": "YouTube",
     "text_style": "Text style",
-    "text": "Text"
+    "text": "Text",
+    "heading": "Heading",
+    "question": "Question",
+    "answer": "Answer",
+    "collection": "Collection",
+    "products_to_show": "Products to show",
+    "columns_on_desktop": "Columns on desktop",
+    "show_link_to_the_collection": "Show link to the collection",
+    "show_newsletter_signup": "Show newsletter signup",
+    "image": "Image",
+    "video": "Video",
+    "button_link": "Button link",
+    "image_position_on_desktop": "Image position on desktop",
+    "logo": "Logo",
+    "show_collection_description": "Show collection description",
+    "enable_filtering": "Enable filtering",
+    "enable_sorting": "Enable sorting",
+    "products_per_page": "Products per page",
+    "show_dynamic_checkout_buttons": "Show dynamic checkout buttons",
+    "quote": "Quote",
+    "author": "Author",
+    "author_detail": "Author detail"
   },
   "info": {
-    "logo_asset": "Set by the Studio. A logo picked above takes precedence."
+    "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
+    "footer_show_newsletter": "Subscribers are added to your customer list with email marketing consent.",
+    "social_links_setting": "Social links come from the theme settings, under Social media.",
+    "logo_setting": "The logo comes from the theme settings, under Logo.",
+    "hero_video": "Plays muted on a loop in place of the image, with controls to pause it.",
+    "logo_list_image": "The image's alt text names the logo for screen readers.",
+    "main_collection_enable_filtering": "Set up filters in the Shopify admin with the Search & Discovery app.",
+    "testimonials_author_detail": "For example a city or \"Verified buyer\"."
   },
   "options": {
     "alignment": {
@@ -89,6 +133,6 @@
       "title": "Title",
       "subtitle": "Subtitle",
       "normal": "Normal text"
-    },
+    }
   }
 }

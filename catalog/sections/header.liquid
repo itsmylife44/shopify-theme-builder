@@ -158,7 +158,7 @@
 
 {% schema %}
 {
-  "name": "Header",
+  "name": "t:general.header",
   "tag": "section",
   "enabled_on": {
     "groups": ["header"]
@@ -168,29 +168,29 @@
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "paragraph",
-      "content": "The logo comes from the theme settings, under Logo."
+      "content": "t:info.logo_setting"
     },
     {
       "type": "link_list",
       "id": "menu",
-      "label": "Menu",
+      "label": "t:labels.menu",
       "default": "main-menu"
     },
     {
       "type": "link_list",
       "id": "customer_account_menu",
-      "label": "Customer account menu",
+      "label": "t:labels.customer_account_menu",
       "default": "customer-account-main-menu"
     }
   ],
   "presets": [
     {
-      "name": "Header"
+      "name": "t:general.header"
     }
   ]
 }

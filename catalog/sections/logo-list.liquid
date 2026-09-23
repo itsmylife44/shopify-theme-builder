@@ -65,40 +65,40 @@
 
 {% schema %}
 {
-  "name": "Logo list",
+  "name": "t:general.logo_list",
   "tag": "section",
   "max_blocks": 24,
   "settings": [
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
-      "label": "Heading",
+      "label": "t:labels.heading",
       "default": "As featured in"
     }
   ],
   "blocks": [
     {
       "type": "logo",
-      "name": "Logo",
+      "name": "t:general.logo",
       "settings": [
         {
           "type": "image_picker",
           "id": "image",
-          "label": "Logo",
-          "info": "The image's alt text names the logo for screen readers."
+          "label": "t:labels.logo",
+          "info": "t:info.logo_list_image"
         }
       ]
     }
   ],
   "presets": [
     {
-      "name": "Logo list",
+      "name": "t:general.logo_list",
       "blocks": [
         { "type": "logo" },
         { "type": "logo" },
