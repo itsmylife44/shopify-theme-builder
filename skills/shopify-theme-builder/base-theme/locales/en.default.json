@@ -181,6 +181,9 @@
   "comparison_table": {
     "label": "Comparison table"
   },
+  "press_quotes": {
+    "link": "Read the article in {{ publication }}"
+  },
   "lookbook": {
     "hotspot": "Show {{ product }}"
   },
