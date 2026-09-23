@@ -1,6 +1,90 @@
-{% comment %}The shop's header: the logo or shop name, the menu, the country and language selectors, the search link, the account link and the cart.{% endcomment %}
+{% comment %}The shop's header: the logo or shop name, the menu with dropdowns and a mobile drawer, the country and language selectors, the search link, the account link and the cart.{% endcomment %}
+{% capture menu_items %}
+  {% for link in section.settings.menu.links %}
+    <li>
+      {% if link.links.size > 0 %}
+        <details class="header__submenu" name="header-submenu">
+          <summary class="header__menu-link">{{ link.title | escape }}</summary>
+          <ul class="header__submenu-list" role="list">
+            {% for child in link.links %}
+              <li>
+                <a
+                  class="header__menu-link"
+                  href="{{ child.url }}"
+                  {% if child.current %}
+                    aria-current="page"
+                  {% endif %}
+                >
+                  {{- child.title | escape -}}
+                </a>
+                {% if child.links.size > 0 %}
+                  <ul class="header__submenu-list" role="list">
+                    {% for grandchild in child.links %}
+                      <li>
+                        <a
+                          class="header__menu-link"
+                          href="{{ grandchild.url }}"
+                          {% if grandchild.current %}
+                            aria-current="page"
+                          {% endif %}
+                        >
+                          {{- grandchild.title | escape -}}
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% else %}
+        <a
+          class="header__menu-link"
+          href="{{ link.url }}"
+          {% if link.current %}
+            aria-current="page"
+          {% endif %}
+        >
+          {{- link.title | escape -}}
+        </a>
+      {% endif %}
+    </li>
+  {% endfor %}
+{% endcapture %}
+
 <header class="header full-width color-{{ section.settings.color_scheme }}">
-  <div class="header__inner">
+  <header-menu class="header__inner">
+    {% if section.settings.menu.links.size > 0 %}
+      <button
+        type="button"
+        class="header__menu-button"
+        aria-haspopup="dialog"
+        aria-controls="HeaderDrawer"
+        aria-label="{{ 'header.menu' | t }}"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+          <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="M3 5.5h14M3 10h14M3 14.5h14" />
+        </svg>
+      </button>
+      <dialog id="HeaderDrawer" class="header__drawer" aria-label="{{ 'header.main_menu' | t }}">
+        <div class="header__drawer-inner">
+          <form method="dialog">
+            <button class="header__drawer-close" aria-label="{{ 'header.close_menu' | t }}">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+                <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m5 5 10 10M15 5 5 15" />
+              </svg>
+            </button>
+          </form>
+          <nav aria-label="{{ 'header.main_menu' | t }}">
+            <ul class="header__menu-list" role="list">
+              {{ menu_items }}
+            </ul>
+          </nav>
+        </div>
+      </dialog>
+    {% endif %}
+
     <a class="header__logo" href="{{ routes.root_url }}">
       {% if settings.logo %}
         {{
@@ -24,19 +108,7 @@
     {% if section.settings.menu.links.size > 0 %}
       <nav class="header__menu" aria-label="{{ 'header.main_menu' | t }}">
         <ul class="header__menu-list" role="list">
-          {% for link in section.settings.menu.links %}
-            <li>
-              <a
-                class="header__menu-link"
-                href="{{ link.url }}"
-                {% if link.current %}
-                  aria-current="page"
-                {% endif %}
-              >
-                {{- link.title | escape -}}
-              </a>
-            </li>
-          {% endfor %}
+          {{ menu_items }}
         </ul>
       </nav>
     {% endif %}
@@ -102,7 +174,7 @@
         {% endif %}
       </a>
     </div>
-  </div>
+  </header-menu>
 </header>
 
 {% stylesheet %}
@@ -128,6 +200,7 @@
   }
 
   .header a:focus-visible,
+  .header summary:focus-visible,
   .header select:focus-visible,
   .header button:focus-visible {
     outline: 2px solid currentcolor;
@@ -151,14 +224,15 @@
   }
 
   .header__menu {
-    order: 3;
-    flex-basis: 100%;
+    display: none;
   }
 
-  .header__menu-list {
+  .header__menu-list,
+  .header__submenu-list {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem 1.5rem;
+    margin: 0;
     padding: 0;
     list-style: none;
   }
@@ -167,6 +241,108 @@
   .header__menu-link:hover {
     text-decoration: underline;
     text-underline-offset: 0.3em;
+  }
+
+  .header__submenu {
+    position: relative;
+  }
+
+  .header__submenu summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .header__submenu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .header__submenu summary::after {
+    content: '';
+    width: 0.4em;
+    height: 0.4em;
+    border-block-end: 1px solid currentcolor;
+    border-inline-end: 1px solid currentcolor;
+    rotate: 45deg;
+    translate: 0 -0.15em;
+  }
+
+  .header__submenu[open] summary::after {
+    rotate: 225deg;
+    translate: 0 0.15em;
+  }
+
+  .header__submenu-list {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .header__submenu-list .header__submenu-list {
+    margin-block-start: 0.75rem;
+    padding-inline-start: 1rem;
+  }
+
+  .header__menu .header__submenu > .header__submenu-list {
+    position: absolute;
+    inset-block-start: calc(100% + 1rem);
+    inset-inline-start: -1rem;
+    z-index: 10;
+    min-width: 12rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, currentcolor 15%, transparent);
+    background-color: var(--color-background);
+  }
+
+  .header__menu-button,
+  .header__drawer-close {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .header__menu-button svg,
+  .header__drawer-close svg {
+    width: 2rem;
+  }
+
+  .header__drawer {
+    width: min(20rem, 85vw);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  .header__drawer::backdrop {
+    background-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+
+  .header__drawer-inner {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .header__drawer .header__menu-list {
+    flex-direction: column;
+    gap: 1rem;
+    font-size: 1.125rem;
+  }
+
+  .header__drawer .header__submenu > .header__submenu-list {
+    margin-block-start: 1rem;
+    padding-inline-start: 1rem;
   }
 
   .header__icons {
@@ -232,11 +408,51 @@
 
   @media (min-width: 750px) {
     .header__menu {
-      order: 0;
-      flex-basis: auto;
+      display: block;
+    }
+
+    .header__menu-button {
+      display: none;
     }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  class HeaderMenu extends HTMLElement {
+    connectedCallback() {
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      const drawer = this.querySelector('.header__drawer');
+      this.querySelector('.header__menu-button')?.addEventListener('click', () => drawer.showModal(), { signal });
+      drawer?.addEventListener('click', (event) => event.target === drawer && drawer.close(), { signal });
+      this.addEventListener(
+        'keydown',
+        (event) => {
+          const open = event.key === 'Escape' && event.target.closest('.header__menu details[open]');
+          if (!open) return;
+          open.open = false;
+          open.querySelector('summary').focus();
+        },
+        { signal }
+      );
+      document.addEventListener(
+        'click',
+        (event) => {
+          for (const details of this.querySelectorAll('.header__menu details[open]')) {
+            if (!details.contains(event.target)) details.open = false;
+          }
+        },
+        { signal }
+      );
+    }
+
+    disconnectedCallback() {
+      this.controller.abort();
+    }
+  }
+
+  if (!customElements.get('header-menu')) customElements.define('header-menu', HeaderMenu);
+{% endjavascript %}
 
 {% schema %}
 {

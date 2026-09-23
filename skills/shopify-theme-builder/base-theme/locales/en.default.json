@@ -91,7 +91,9 @@
       "one": "Cart, {{ count }} item",
       "other": "Cart, {{ count }} items"
     },
+    "close_menu": "Close menu",
     "main_menu": "Main menu",
+    "menu": "Menu",
     "search": "Search"
   },
   "localization": {
