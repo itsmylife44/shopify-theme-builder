@@ -209,7 +209,7 @@
 
 {% schema %}
 {
-  "name": "Footer",
+  "name": "t:general.footer",
   "tag": "section",
   "enabled_on": {
     "groups": ["footer"]
@@ -220,62 +220,62 @@
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "header",
-      "content": "Newsletter"
+      "content": "t:general.newsletter"
     },
     {
       "type": "checkbox",
       "id": "show_newsletter",
-      "label": "Show newsletter signup",
-      "info": "Subscribers are added to your customer list with email marketing consent.",
+      "label": "t:labels.show_newsletter_signup",
+      "info": "t:info.footer_show_newsletter",
       "default": true
     },
     {
       "type": "text",
       "id": "newsletter_heading",
-      "label": "Heading",
+      "label": "t:labels.heading",
       "default": "Subscribe to our emails"
     },
     {
       "type": "text",
       "id": "newsletter_button_label",
-      "label": "Button label",
+      "label": "t:labels.button_label",
       "default": "Subscribe"
     },
     {
       "type": "paragraph",
-      "content": "Social links come from the theme settings, under Social media."
+      "content": "t:info.social_links_setting"
     },
     {
       "type": "header",
-      "content": "Payments"
+      "content": "t:general.payments"
     },
     {
       "type": "checkbox",
       "id": "show_payment_icons",
-      "label": "Show payment icons",
+      "label": "t:labels.show_payment_icons",
       "default": true
     }
   ],
   "blocks": [
     {
       "type": "menu",
-      "name": "Menu",
+      "name": "t:general.menu",
       "settings": [
         {
           "type": "text",
           "id": "heading",
-          "label": "Heading",
+          "label": "t:labels.heading",
           "default": "Quick links"
         },
         {
           "type": "link_list",
           "id": "menu",
-          "label": "Menu",
+          "label": "t:labels.menu",
           "default": "footer"
         }
       ]
@@ -283,7 +283,7 @@
   ],
   "presets": [
     {
-      "name": "Footer",
+      "name": "t:general.footer",
       "blocks": [
         {
           "type": "menu"

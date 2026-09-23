@@ -103,57 +103,57 @@
 
 {% schema %}
 {
-  "name": "Image with text",
+  "name": "t:general.image_with_text",
   "tag": "section",
   "settings": [
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "image_picker",
       "id": "image",
-      "label": "Image"
+      "label": "t:labels.image"
     },
     {
       "type": "select",
       "id": "image_position",
-      "label": "Image position on desktop",
+      "label": "t:labels.image_position_on_desktop",
       "options": [
-        { "value": "left", "label": "Left" },
-        { "value": "right", "label": "Right" }
+        { "value": "left", "label": "t:options.alignment.left" },
+        { "value": "right", "label": "t:options.alignment.right" }
       ],
       "default": "left"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
-      "label": "Heading",
+      "label": "t:labels.heading",
       "default": "Image with text"
     },
     {
       "type": "richtext",
       "id": "text",
-      "label": "Text",
+      "label": "t:labels.text",
       "default": "<p>Pair text with an image to tell the story of your brand or a product.</p>"
     },
     {
       "type": "text",
       "id": "button_label",
-      "label": "Button label",
+      "label": "t:labels.button_label",
       "default": "Learn more"
     },
     {
       "type": "url",
       "id": "button_link",
-      "label": "Button link"
+      "label": "t:labels.button_link"
     }
   ],
   "presets": [
     {
-      "name": "Image with text"
+      "name": "t:general.image_with_text"
     }
   ]
 }

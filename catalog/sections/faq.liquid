@@ -63,38 +63,38 @@
 
 {% schema %}
 {
-  "name": "FAQ",
+  "name": "t:general.faq",
   "tag": "section",
   "max_blocks": 50,
   "settings": [
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
-      "label": "Heading",
+      "label": "t:labels.heading",
       "default": "Frequently asked questions"
     }
   ],
   "blocks": [
     {
       "type": "question",
-      "name": "Question",
+      "name": "t:general.question",
       "settings": [
         {
           "type": "text",
           "id": "question",
-          "label": "Question",
+          "label": "t:labels.question",
           "default": "Ask a question customers often have"
         },
         {
           "type": "richtext",
           "id": "answer",
-          "label": "Answer",
+          "label": "t:labels.answer",
           "default": "<p>Answer it clearly, so customers don't need to contact you.</p>"
         }
       ]
@@ -102,7 +102,7 @@
   ],
   "presets": [
     {
-      "name": "FAQ",
+      "name": "t:general.faq",
       "blocks": [
         { "type": "question" },
         { "type": "question" },

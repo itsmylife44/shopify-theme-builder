@@ -414,7 +414,7 @@
 
 {% schema %}
 {
-  "name": "Collection product grid",
+  "name": "t:general.collection_product_grid",
   "tag": "section",
   "limit": 1,
   "enabled_on": {
@@ -424,32 +424,32 @@
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "checkbox",
       "id": "show_description",
-      "label": "Show collection description",
+      "label": "t:labels.show_collection_description",
       "default": true
     },
     {
       "type": "checkbox",
       "id": "enable_filtering",
-      "label": "Enable filtering",
-      "info": "Set up filters in the Shopify admin with the Search & Discovery app.",
+      "label": "t:labels.enable_filtering",
+      "info": "t:info.main_collection_enable_filtering",
       "default": true
     },
     {
       "type": "checkbox",
       "id": "enable_sorting",
-      "label": "Enable sorting",
+      "label": "t:labels.enable_sorting",
       "default": true
     },
     {
       "type": "range",
       "id": "products_per_page",
-      "label": "Products per page",
+      "label": "t:labels.products_per_page",
       "min": 8,
       "max": 48,
       "step": 4,
@@ -458,7 +458,7 @@
     {
       "type": "range",
       "id": "columns",
-      "label": "Columns on desktop",
+      "label": "t:labels.columns_on_desktop",
       "min": 2,
       "max": 5,
       "step": 1,
@@ -467,7 +467,7 @@
   ],
   "presets": [
     {
-      "name": "Collection product grid"
+      "name": "t:general.collection_product_grid"
     }
   ]
 }

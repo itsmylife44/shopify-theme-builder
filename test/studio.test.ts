@@ -710,10 +710,18 @@ describe('Studio API: home page', () => {
     writeFileSync(localeFile, JSON.stringify(locale, null, 2))
     const shopLanguage = path.join(theme, 'locales/it.json')
     writeFileSync(shopLanguage, JSON.stringify({ ...locale, cart: { ...locale.cart, title: 'Carrello' } }, null, 2))
+    // Theme Editor labels too: the older Base Theme had no Heading label.
+    const schemaLocaleFile = path.join(theme, 'locales/en.default.schema.json')
+    const schemaLocale = parseJSON(readFileSync(schemaLocaleFile, 'utf8'))
+    delete schemaLocale.labels.heading
+    writeFileSync(schemaLocaleFile, JSON.stringify(schemaLocale, null, 2))
+    const shopSchemaLanguage = path.join(theme, 'locales/it.schema.json')
+    writeFileSync(shopSchemaLanguage, JSON.stringify({ ...schemaLocale, labels: { ...schemaLocale.labels, text: 'Testo' } }, null, 2))
     const catalog = fixtureCatalog()
     writeFileSync(
       path.join(catalog, 'sections/links.liquid'),
-      '<nav aria-label="{{ \'header.main_menu\' | t }}"></nav>\n{% schema %}{"name": "Links", "presets": [{"name": "Links"}]}{% endschema %}\n',
+      '<nav aria-label="{{ \'header.main_menu\' | t }}"></nav>\n' +
+        '{% schema %}{"name": "Links", "settings": [{"type": "text", "id": "heading", "label": "t:labels.heading"}], "presets": [{"name": "Links"}]}{% endschema %}\n',
     )
 
     const { status, body } = await (await openStudio(theme, { catalog })).addSection('links')
@@ -722,6 +730,9 @@ describe('Studio API: home page', () => {
     const italian = parseJSON(readFileSync(shopLanguage, 'utf8'))
     expect(italian.header.main_menu).toBe('Main menu')
     expect(italian.cart.title).toBe('Carrello')
+    const italianSchema = parseJSON(readFileSync(shopSchemaLanguage, 'utf8'))
+    expect(italianSchema.labels.heading).toBe('Heading')
+    expect(italianSchema.labels.text).toBe('Testo')
   })
 
   it('leaves the Theme\'s locale and settings files untouched when they have everything', async () => {

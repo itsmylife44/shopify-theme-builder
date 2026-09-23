@@ -85,52 +85,52 @@
 
 {% schema %}
 {
-  "name": "Testimonials",
+  "name": "t:general.testimonials",
   "tag": "section",
   "max_blocks": 12,
   "settings": [
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
-      "label": "Heading",
+      "label": "t:labels.heading",
       "default": "What our customers say"
     }
   ],
   "blocks": [
     {
       "type": "testimonial",
-      "name": "Testimonial",
+      "name": "t:general.testimonial",
       "settings": [
         {
           "type": "richtext",
           "id": "quote",
-          "label": "Quote",
+          "label": "t:labels.quote",
           "default": "<p>Share what a customer loved about your products.</p>"
         },
         {
           "type": "text",
           "id": "author",
-          "label": "Author",
+          "label": "t:labels.author",
           "default": "Customer name"
         },
         {
           "type": "text",
           "id": "author_detail",
-          "label": "Author detail",
-          "info": "For example a city or \"Verified buyer\"."
+          "label": "t:labels.author_detail",
+          "info": "t:info.testimonials_author_detail"
         }
       ]
     }
   ],
   "presets": [
     {
-      "name": "Testimonials",
+      "name": "t:general.testimonials",
       "blocks": [
         { "type": "testimonial" },
         { "type": "testimonial" },

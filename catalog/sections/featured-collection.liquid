@@ -146,30 +146,30 @@
 
 {% schema %}
 {
-  "name": "Featured collection",
+  "name": "t:general.featured_collection",
   "tag": "section",
   "settings": [
     {
       "type": "color_scheme",
       "id": "color_scheme",
-      "label": "Color scheme",
+      "label": "t:labels.color_scheme",
       "default": "scheme-1"
     },
     {
       "type": "inline_richtext",
       "id": "heading",
-      "label": "Heading",
+      "label": "t:labels.heading",
       "default": "Featured products"
     },
     {
       "type": "collection",
       "id": "collection",
-      "label": "Collection"
+      "label": "t:labels.collection"
     },
     {
       "type": "range",
       "id": "products_to_show",
-      "label": "Products to show",
+      "label": "t:labels.products_to_show",
       "min": 2,
       "max": 12,
       "step": 1,
@@ -178,7 +178,7 @@
     {
       "type": "range",
       "id": "columns",
-      "label": "Columns on desktop",
+      "label": "t:labels.columns_on_desktop",
       "min": 2,
       "max": 5,
       "step": 1,
@@ -187,13 +187,13 @@
     {
       "type": "checkbox",
       "id": "show_view_all",
-      "label": "Show link to the collection",
+      "label": "t:labels.show_link_to_the_collection",
       "default": true
     }
   ],
   "presets": [
     {
-      "name": "Featured collection"
+      "name": "t:general.featured_collection"
     }
   ]
 }
