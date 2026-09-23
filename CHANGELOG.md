@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A slideshow section shows full-width slides, each with an image, heading, text and button, that customers step through with previous and next buttons, the arrow keys or a swipe. Autoplay is off by default; when on, customers can pause it, and it stops on hover and focus and doesn't play under reduced motion. Shopify's placeholders show until images are picked.
 - A featured product section shows one product picked in the Theme Editor on any page, with its image, price, a variant picker, quantity and add to cart, optional dynamic checkout buttons, and app blocks; Shopify's product placeholder until a product is picked.
 - A collection list section shows a grid of collections picked in the Theme Editor, each with its image and title, and Shopify's collection placeholders until some are picked.
 - An announcement bar above the header shows short messages, like free shipping or a sale, each with an optional link; several messages rotate (with previous and next buttons, pausing on hover and focus, and not rotating on their own under reduced motion) or stack. New Themes have it in the header group.
