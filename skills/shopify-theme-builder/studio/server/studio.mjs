@@ -1114,18 +1114,18 @@ function readSection(theme, file, id) {
 }
 
 /**
- * Resolves a schema's `t:` keys: from the shop language's schema locale when the Theme has one, else from
- * English, then from the Base Theme (whose keys a newly copied catalog section may use).
+ * Resolves a schema's `t:` keys: from the Theme's default schema locale (`<code>.default.schema.json`), then
+ * from English, then from the Base Theme (whose keys a newly copied catalog section may use).
  * @param {string} theme
  * @returns {(text: string) => string}
  */
 function schemaTranslator(theme) {
   const names = readdirSync(path.join(theme, 'locales')).filter((name) => name.endsWith('.schema.json'))
-  const shopLanguage = names.find((name) => !name.startsWith('en.default.'))
-  const locales = [
-    ...[shopLanguage, 'en.default.schema.json'].flatMap((name) => (name && names.includes(name) ? [readJSON(theme, `locales/${name}`)] : [])),
-    readJSON(baseTheme, 'locales/en.default.schema.json'),
-  ]
+  const shopDefault = names.find((name) => name.endsWith('.default.schema.json'))
+  const locales = [shopDefault, 'en.default.schema.json', 'en.schema.json']
+    .filter((name) => name && names.includes(name))
+    .map((name) => readJSON(theme, `locales/${name}`))
+  locales.push(readJSON(baseTheme, 'locales/en.default.schema.json'))
   return (text) => {
     if (!text.startsWith('t:')) return text
     const keys = text.slice(2).split('.')

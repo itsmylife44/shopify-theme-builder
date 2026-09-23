@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer as createHttpServer } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -522,6 +522,30 @@ describe('Studio API: section settings', () => {
       ],
       media: [],
     })
+  })
+
+  /** Writes a schema locale that is the Base Theme's English one with an Italian Testimonials name and Heading label. */
+  function writeItalianSchema(theme: string, name: string) {
+    const schema = parseJSON(readFileSync(path.join(theme, 'locales/en.default.schema.json'), 'utf8'))
+    const italian = { ...schema, general: { ...schema.general, testimonials: 'Testimonianze' }, labels: { ...schema.labels, heading: 'Titolo' } }
+    writeFileSync(path.join(theme, `locales/${name}`), JSON.stringify(italian, null, 2))
+  }
+
+  it("shows labels in the shop's default language, not in an added one", async () => {
+    const { theme, studio, id } = await withTestimonials()
+    writeItalianSchema(theme, 'it.schema.json')
+    const { body } = await studio.send('GET', `api/home/sections/${id}`)
+    expect(body.name).toBe('Testimonials')
+    expect(body.settings[0].label).toBe('Heading')
+  })
+
+  it('shows labels in Italian when Italian is the default language', async () => {
+    const { theme, studio, id } = await withTestimonials()
+    writeItalianSchema(theme, 'it.default.schema.json')
+    renameSync(path.join(theme, 'locales/en.default.schema.json'), path.join(theme, 'locales/en.schema.json'))
+    const { body } = await studio.send('GET', `api/home/sections/${id}`)
+    expect(body.name).toBe('Testimonianze')
+    expect(body.settings[0].label).toBe('Titolo')
   })
 
   it("writes a section's and its blocks' text settings into the page's template", async () => {
