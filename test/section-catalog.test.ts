@@ -527,6 +527,23 @@ describe('Product page requirements', () => {
     expect(source).toContain("customElements.define('product-model'")
   })
 
+  it('shows scrollable thumbnails under the swipeable media on mobile, the current one marked, a partial last one when more exist', () => {
+    const gallery = info.slice(info.indexOf('<media-gallery'), info.indexOf('</media-gallery>'))
+    expect(gallery).toMatch(/<ul class="main-product__media" role="list" tabindex="0"/)
+    const thumbnails = gallery.slice(gallery.indexOf('{% if ordered_media.size > 1 %}'))
+    expect(thumbnails).toMatch(/<ul class="main-product__thumbnails" role="list" aria-label="{{ 'product\.media_thumbnails' \| t }}">\s*{% for media in ordered_media %}/)
+    expect(thumbnails).toMatch(/<button\s+type="button"\s+class="main-product__thumbnail"\s+aria-label="{{ 'product\.show_media' \| t: index: forloop\.index, count: forloop\.length }}"/)
+    expect(thumbnails).toContain('{% if forloop.first %}aria-current="true"{% endif %}')
+    expect(thumbnails).toContain("media.preview_image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: ''")
+    // Four and a half thumbnails fill the strip, so a cut-off fifth signals more.
+    expect(source).toMatch(/\.main-product__thumbnails {[^}]*grid-auto-columns: calc\(\(100% - 4 \* var\(--space-xs\)\) \/ 4\.5\);[^}]*overflow-x: auto;/)
+    expect(source).toMatch(/@media \(min-width: 750px\) {[^@]*\.main-product__thumbnails {\s*display: none;/)
+    expect(source).toMatch(/\.main-product__thumbnail\[aria-current='true'\] {/)
+    expect(source).toContain("customElements.define('media-gallery'")
+    expect(source).toContain('.scrollIntoView(')
+    expect(source).toContain("setAttribute('aria-current', 'true')")
+  })
+
   it('shows the selling plan of each cart line', () => {
     const cart = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-cart.liquid'), 'utf8')
     expect(cart).toContain('{% if item.selling_plan_allocation %}')

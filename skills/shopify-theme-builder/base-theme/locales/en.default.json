@@ -121,6 +121,7 @@
   "product": {
     "add_to_cart": "Add to cart",
     "media": "Product media",
+    "media_thumbnails": "Product media thumbnails",
     "one_time_purchase": "One-time purchase",
     "per_delivery": "{{ price }} per delivery",
     "pickup_available": "Pickup available",
@@ -130,6 +131,7 @@
     "quantity": "Quantity",
     "regular_price": "Regular price",
     "sale_price": "Sale price",
+    "show_media": "Show media {{ index }} of {{ count }}",
     "sold_out": "Sold out",
     "unavailable": "Unavailable",
     "unit_price": "Unit price",

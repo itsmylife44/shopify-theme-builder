@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Thumbnails under the product page's media on mobile. The strip scrolls sideways, shows four and a half thumbnails so a cut-off one signals more, and marks the one being shown; tapping a thumbnail brings its media into view. Swiping, keyboard scrolling and the switch to the variant's image stay as they were. Desktop keeps its grid of all media.
+
 - A shipping note and collapsible content on the product page, as Base Theme blocks the main product takes in any order. The shipping note is a short shipping and returns summary next to the buy button, followed by links to the shop's shipping and refund policies when they're set. Collapsible content is a native `<details>` showing the product description or the Merchant's own text, open on desktop and collapsed on mobile, and hidden from customers while it's empty. A newly added main product starts with a shipping note and collapsible description, materials, care and shipping; the description no longer shows as one fixed block of text below the blocks.
 
 - Density and page width in the Theme Editor's Layout group. Density (compact, normal or airy) spaces every section 48, 80 or 112px above and below on desktop, half that on mobile, and widens the gaps of every grid of cards, images and testimonials with it through a new `--grid-gap` (and `--grid-row-gap`) in `snippets/css-variables.liquid`; normal is the default, so sections get more room than before. Page width is now narrow, normal (the default, today's width) or wide, replacing the old two-value select: a Theme that had it set falls back to normal.

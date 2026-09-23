@@ -30,44 +30,62 @@
     data-url="{{ product.url }}"
     data-section="{{ section.id }}"
   >
-    <ul class="main-product__media" role="list" tabindex="0" aria-label="{{ 'product.media' | t }}">
-      {% for media in ordered_media %}
-        <li class="main-product__media-item">
-          {% case media.media_type %}
-            {% when 'image' %}
-              {% liquid
-                assign loading = 'lazy'
-                assign fetchpriority = 'auto'
-                if forloop.first
-                  assign loading = 'eager'
-                  assign fetchpriority = 'high'
-                endif
-              %}
-              {{
-                media.preview_image
-                | image_url: width: 1500
-                | image_tag:
-                  widths: '375, 550, 750, 1100, 1500',
-                  sizes: '(min-width: 750px) 50vw, 100vw',
-                  loading: loading,
-                  fetchpriority: fetchpriority
-              }}
-            {% when 'model' %}
-              <product-model class="main-product__model">
-                {{ media | model_viewer_tag }}
-              </product-model>
-            {% when 'external_video' %}
-              {{ media | external_video_tag: loading: 'lazy' }}
-            {% else %}
-              {{ media | media_tag: image_size: '1500x' }}
-          {% endcase %}
-        </li>
-      {% else %}
-        <li class="main-product__media-item">
-          {{ 'product-1' | placeholder_svg_tag: 'placeholder main-product__placeholder' }}
-        </li>
-      {% endfor %}
-    </ul>
+    <media-gallery class="main-product__gallery">
+      <ul class="main-product__media" role="list" tabindex="0" aria-label="{{ 'product.media' | t }}">
+        {% for media in ordered_media %}
+          <li class="main-product__media-item">
+            {% case media.media_type %}
+              {% when 'image' %}
+                {% liquid
+                  assign loading = 'lazy'
+                  assign fetchpriority = 'auto'
+                  if forloop.first
+                    assign loading = 'eager'
+                    assign fetchpriority = 'high'
+                  endif
+                %}
+                {{
+                  media.preview_image
+                  | image_url: width: 1500
+                  | image_tag:
+                    widths: '375, 550, 750, 1100, 1500',
+                    sizes: '(min-width: 750px) 50vw, 100vw',
+                    loading: loading,
+                    fetchpriority: fetchpriority
+                }}
+              {% when 'model' %}
+                <product-model class="main-product__model">
+                  {{ media | model_viewer_tag }}
+                </product-model>
+              {% when 'external_video' %}
+                {{ media | external_video_tag: loading: 'lazy' }}
+              {% else %}
+                {{ media | media_tag: image_size: '1500x' }}
+            {% endcase %}
+          </li>
+        {% else %}
+          <li class="main-product__media-item">
+            {{ 'product-1' | placeholder_svg_tag: 'placeholder main-product__placeholder' }}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if ordered_media.size > 1 %}
+        <ul class="main-product__thumbnails" role="list" aria-label="{{ 'product.media_thumbnails' | t }}">
+          {% for media in ordered_media %}
+            <li>
+              <button
+                type="button"
+                class="main-product__thumbnail"
+                aria-label="{{ 'product.show_media' | t: index: forloop.index, count: forloop.length }}"
+                {% if forloop.first %}aria-current="true"{% endif %}
+              >
+                {{ media.preview_image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: '', width: 80, height: 80, sizes: '5rem', loading: 'lazy' }}
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </media-gallery>
 
     <div class="main-product__details">
       {% if section.settings.show_vendor and product.vendor != blank %}
@@ -378,6 +396,40 @@
   }
 
   if (!customElements.get('product-model')) customElements.define('product-model', ProductModel);
+
+  class MediaGallery extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('.main-product__media');
+      this.strip = this.querySelector('.main-product__thumbnails');
+      if (!this.strip) return;
+      this.thumbnails = [...this.strip.querySelectorAll('.main-product__thumbnail')];
+      this.thumbnails.forEach((thumbnail, index) =>
+        thumbnail.addEventListener('click', () =>
+          this.list.children[index].scrollIntoView({
+            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            block: 'nearest',
+            inline: 'start',
+          })
+        )
+      );
+      this.list.addEventListener('scroll', this.onScroll, { passive: true });
+    }
+
+    onScroll = () => {
+      const [first, second] = this.list.children;
+      const index = Math.round(Math.abs(this.list.scrollLeft / (second.offsetLeft - first.offsetLeft)));
+      const current = this.thumbnails[index];
+      if (!current || current.hasAttribute('aria-current')) return;
+      this.thumbnails.forEach((thumbnail) => thumbnail.removeAttribute('aria-current'));
+      current.setAttribute('aria-current', 'true');
+      const strip = this.strip.getBoundingClientRect();
+      const box = current.getBoundingClientRect();
+      if (box.left < strip.left) this.strip.scrollBy(box.left - strip.left, 0);
+      if (box.right > strip.right) this.strip.scrollBy(box.right - strip.right, 0);
+    };
+  }
+
+  if (!customElements.get('media-gallery')) customElements.define('media-gallery', MediaGallery);
 {% endjavascript %}
 
 {% stylesheet %}
@@ -427,6 +479,54 @@
 
   .main-product__media-item {
     scroll-snap-align: start;
+  }
+
+  .main-product__gallery {
+    display: block;
+    min-width: 0;
+  }
+
+  .main-product__thumbnails {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 4 * var(--space-xs)) / 4.5);
+    gap: var(--space-xs);
+    margin: 0;
+    padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  @media (min-width: 750px) {
+    .main-product__thumbnails {
+      display: none;
+    }
+  }
+
+  .main-product__thumbnail {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: var(--style-border-radius-media);
+    background: none;
+    cursor: pointer;
+    opacity: var(--opacity-muted);
+  }
+
+  .main-product__thumbnail[aria-current='true'] {
+    outline: var(--focus-ring-width) solid currentcolor;
+    opacity: 1;
+  }
+
+  .main-product__thumbnail img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--style-border-radius-media);
   }
 
   .main-product__media-item img,
