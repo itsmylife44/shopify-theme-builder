@@ -7,7 +7,7 @@
 %}
 {% if section.blocks.size > 0 %}
   <slide-show
-    class="slideshow full-width color-{{ section.settings.color_scheme }}"
+    class="slideshow full-width slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"
     role="region"
     aria-roledescription="carousel"
     aria-label="{{ 'slideshow.label' | t }}"
@@ -28,9 +28,20 @@
           elsif forloop.first and section.index <= 3
             assign loading = 'eager'
           endif
+
+          assign sizes = '100vw'
+          if block.settings.content_style == 'split'
+            assign sizes = '(min-width: 750px) 50vw, 100vw'
+          endif
+
+          assign position = block.settings.content_position | split: '_'
+          assign content_block = position.first | replace: 'top', 'start' | replace: 'middle', 'center' | replace: 'bottom', 'end'
+          assign content_inline = position.last | replace: 'left', 'start' | replace: 'right', 'end'
+          assign overlay_opacity = block.settings.overlay_opacity | divided_by: 100.0
         %}
         <div
-          class="slideshow__slide"
+          class="slideshow__slide slideshow__slide--{{ block.settings.content_style }}"
+          style="--content-block: {{ content_block }}; --content-inline: {{ content_inline }}; --overlay-opacity: {{ overlay_opacity }};"
           role="group"
           aria-roledescription="slide"
           aria-label="{{ 'slideshow.slide' | t: index: forloop.index, count: forloop.length }}"
@@ -47,7 +58,7 @@
                 | image_tag:
                   class: 'slideshow__image',
                   widths: '750, 1100, 1500, 2200, 3000, 3840',
-                  sizes: '100vw',
+                  sizes: sizes,
                   loading: loading,
                   fetchpriority: fetchpriority
               }}
@@ -137,13 +148,28 @@
     outline-offset: calc(var(--focus-ring-offset) * -1);
   }
 
+  .slideshow--small {
+    --slide-height: clamp(20rem, 45svh, 32rem);
+  }
+
+  .slideshow--medium {
+    --slide-height: clamp(24rem, 60svh, 40rem);
+  }
+
+  .slideshow--large {
+    --slide-height: clamp(28rem, 75svh, 48rem);
+  }
+
+  .slideshow--full_screen {
+    --slide-height: 100svh;
+  }
+
   .slideshow__slide {
     position: relative;
     flex: 0 0 100%;
     display: grid;
     grid-template-columns: var(--content-grid);
-    align-items: center;
-    min-height: clamp(28rem, 75vh, 48rem);
+    min-height: var(--slide-height);
     padding-block: var(--section-spacing);
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -164,14 +190,64 @@
   .slideshow__content {
     position: relative;
     grid-column: 2;
+    align-self: var(--content-block);
+    justify-self: var(--content-inline);
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: var(--content-inline);
     gap: var(--space-md);
     max-width: var(--width-text);
+    text-align: var(--content-inline);
+  }
+
+  .slideshow__slide--boxed .slideshow__content {
     padding: var(--space-xl);
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+
+  .slideshow__slide--bare .slideshow__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-background);
+    opacity: var(--overlay-opacity);
+    pointer-events: none;
+  }
+
+  .slideshow__slide--split {
+    min-height: 0;
+    padding-block: 0;
+  }
+
+  .slideshow__slide--split .slideshow__media {
+    position: relative;
+    grid-column: 1 / -1;
+    min-height: calc(var(--slide-height) / 2);
+  }
+
+  .slideshow__slide--split .slideshow__image {
+    position: absolute;
+    inset: 0;
+  }
+
+  .slideshow__slide--split .slideshow__content {
+    padding-block: var(--section-spacing);
+  }
+
+  @media (min-width: 750px) {
+    .slideshow__slide--split {
+      grid-template-columns: 1fr 1fr;
+      min-height: var(--slide-height);
+    }
+
+    .slideshow__slide--split .slideshow__media {
+      grid-column: 1;
+    }
+
+    .slideshow__slide--split .slideshow__content {
+      padding-inline: var(--space-2xl);
+    }
   }
 
   .slideshow__controls {
@@ -314,6 +390,22 @@
       "default": "scheme-1"
     },
     {
+      "type": "header",
+      "content": "t:general.layout"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "label": "t:labels.height",
+      "options": [
+        { "value": "small", "label": "t:options.height.small" },
+        { "value": "medium", "label": "t:options.height.medium" },
+        { "value": "large", "label": "t:options.height.large" },
+        { "value": "full_screen", "label": "t:options.height.full_screen" }
+      ],
+      "default": "large"
+    },
+    {
       "type": "checkbox",
       "id": "autoplay",
       "label": "t:labels.autoplay",
@@ -341,6 +433,46 @@
           "type": "image_picker",
           "id": "image",
           "label": "t:labels.image"
+        },
+        {
+          "type": "select",
+          "id": "content_position",
+          "label": "t:labels.content_position",
+          "options": [
+            { "value": "top_left", "label": "t:options.content_position.top_left" },
+            { "value": "top_center", "label": "t:options.content_position.top_center" },
+            { "value": "top_right", "label": "t:options.content_position.top_right" },
+            { "value": "middle_left", "label": "t:options.content_position.middle_left" },
+            { "value": "middle_center", "label": "t:options.content_position.middle_center" },
+            { "value": "middle_right", "label": "t:options.content_position.middle_right" },
+            { "value": "bottom_left", "label": "t:options.content_position.bottom_left" },
+            { "value": "bottom_center", "label": "t:options.content_position.bottom_center" },
+            { "value": "bottom_right", "label": "t:options.content_position.bottom_right" }
+          ],
+          "default": "middle_left"
+        },
+        {
+          "type": "select",
+          "id": "content_style",
+          "label": "t:labels.content_style",
+          "options": [
+            { "value": "bare", "label": "t:options.content_style.bare" },
+            { "value": "boxed", "label": "t:options.content_style.boxed" },
+            { "value": "split", "label": "t:options.content_style.split" }
+          ],
+          "default": "boxed"
+        },
+        {
+          "type": "range",
+          "id": "overlay_opacity",
+          "label": "t:labels.overlay_opacity",
+          "info": "t:info.hero_overlay_opacity",
+          "visible_if": "{{ block.settings.content_style == 'bare' }}",
+          "min": 0,
+          "max": 90,
+          "step": 10,
+          "unit": "%",
+          "default": 30
         },
         {
           "type": "inline_richtext",
@@ -372,6 +504,47 @@
     {
       "name": "t:general.slideshow",
       "blocks": [{ "type": "slide" }, { "type": "slide" }]
+    },
+    {
+      "name": "t:general.slideshow_full_screen",
+      "settings": { "height": "full_screen" },
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": { "content_position": "middle_center", "content_style": "bare", "overlay_opacity": 40 }
+        },
+        {
+          "type": "slide",
+          "settings": { "content_position": "middle_center", "content_style": "bare", "overlay_opacity": 40 }
+        }
+      ]
+    },
+    {
+      "name": "t:general.slideshow_split",
+      "settings": { "height": "medium" },
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": { "content_style": "split" }
+        },
+        {
+          "type": "slide",
+          "settings": { "content_style": "split" }
+        }
+      ]
+    },
+    {
+      "name": "t:general.slideshow_text_on_image",
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": { "content_position": "bottom_left", "content_style": "bare", "overlay_opacity": 20 }
+        },
+        {
+          "type": "slide",
+          "settings": { "content_position": "bottom_left", "content_style": "bare", "overlay_opacity": 20 }
+        }
+      ]
     }
   ]
 }

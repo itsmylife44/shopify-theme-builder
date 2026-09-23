@@ -865,16 +865,95 @@ describe('Featured product', () => {
   })
 })
 
+// The layout variants the hero and each slide share: the height, where the content sits and how it sits on the media.
+const values = (setting: { options: { value: string }[] }) => setting.options.map((option) => option.value)
+// A preset's value fits its setting: one of its options, or a step of its range.
+const fits = (setting: { options?: { value: string }[]; min?: number; max?: number; step?: number }, value: unknown) =>
+  setting.options ? values(setting as { options: { value: string }[] }).includes(value as string) : Number(value) >= setting.min! && Number(value) <= setting.max! && (Number(value) - setting.min!) % (setting.step ?? 1) === 0
+const positions = ['top', 'middle', 'bottom'].flatMap((row) => ['left', 'center', 'right'].map((column) => `${row}_${column}`))
+
+describe('Hero', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/hero.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a color scheme and a preset that keeps the boxed layout', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets[0]).toEqual({ name: 't:general.hero' })
+  })
+
+  it('offers four heights, nine content positions and three content styles, defaulting to the boxed layout', () => {
+    expect(values(settings.height)).toEqual(['small', 'medium', 'large', 'full_screen'])
+    expect(settings.height.default).toBe('large')
+    expect(values(settings.content_position)).toEqual(positions)
+    expect(settings.content_position.default).toBe('middle_left')
+    expect(values(settings.content_style)).toEqual(['bare', 'boxed', 'split'])
+    expect(settings.content_style.default).toBe('boxed')
+    for (const height of values(settings.height)) expect(css).toContain(`.hero--${height} {`)
+  })
+
+  it('shows the overlay opacity only for bare text, as a layer of the color scheme background over the media', () => {
+    expect(settings.overlay_opacity).toMatchObject({ type: 'range', min: 0, unit: '%', visible_if: "{{ section.settings.content_style == 'bare' }}" })
+    expect(css).toMatch(/\.hero--bare \.hero__media::after {[^}]*background-color: var\(--color-background\);[^}]*opacity: var\(--overlay-opacity\);/)
+  })
+
+  it('places the content in logical directions, so a right-to-left shop mirrors it', () => {
+    expect(source).toMatch(/replace: 'left', 'start' \| replace: 'right', 'end'/)
+    expect(css).toMatch(/\.hero__content {[^}]*align-self: var\(--content-block\);[^}]*justify-self: var\(--content-inline\);/)
+  })
+
+  it('sizes the image for half the viewport when it sits beside the content', () => {
+    expect(source).toContain("assign sizes = '(min-width: 750px) 50vw, 100vw'")
+    expect(css).toMatch(/@media \(min-width: 750px\) {\s*\.hero--split {[^}]*grid-template-columns: 1fr 1fr;/)
+  })
+
+  it('offers each layout as a named preset', () => {
+    expect(schema.presets.length).toBeGreaterThanOrEqual(4)
+    for (const preset of schema.presets.slice(1)) {
+      expect(preset.name).toMatch(/^t:general\.hero_/)
+      for (const [id, value] of Object.entries(preset.settings)) expect(fits(settings[id], value), `${id}: ${value}`).toBe(true)
+    }
+    expect(schema.presets.map((preset: { settings?: { content_style?: string } }) => preset.settings?.content_style ?? 'boxed')).toEqual(
+      expect.arrayContaining(['bare', 'boxed', 'split']),
+    )
+  })
+})
+
 describe('Slideshow', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/slideshow.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const slide = Object.fromEntries(schema.blocks[0].settings.map((setting: { id?: string }) => [setting.id, setting]))
 
   it('is a catalog section with a description, a color scheme and a preset with slides', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
-    expect(source).toContain('class="slideshow full-width color-{{ section.settings.color_scheme }}"')
+    expect(source).toContain('class="slideshow full-width slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.slideshow', blocks: [{ type: 'slide' }, { type: 'slide' }] }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.slideshow', blocks: [{ type: 'slide' }, { type: 'slide' }] })
     expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('offers the hero heights for the slideshow, and the content positions and styles for each slide', () => {
+    expect(values(settings.height)).toEqual(['small', 'medium', 'large', 'full_screen'])
+    expect(settings.height.default).toBe('large')
+    expect(values(slide.content_position)).toEqual(positions)
+    expect(values(slide.content_style)).toEqual(['bare', 'boxed', 'split'])
+    expect(slide.content_style.default).toBe('boxed')
+    expect(slide.overlay_opacity).toMatchObject({ type: 'range', visible_if: "{{ block.settings.content_style == 'bare' }}" })
+  })
+
+  it('offers each layout as a named preset with two slides', () => {
+    expect(schema.presets.length).toBeGreaterThanOrEqual(4)
+    for (const preset of schema.presets.slice(1)) {
+      expect(preset.name).toMatch(/^t:general\.slideshow_/)
+      expect(preset.blocks).toHaveLength(2)
+      for (const block of preset.blocks) {
+        for (const [id, value] of Object.entries(block.settings ?? {})) expect(fits(slide[id], value), `${id}: ${value}`).toBe(true)
+      }
+    }
   })
 
   it('shows full-width slides, each with an image, heading, text and button, and a placeholder without an image', () => {

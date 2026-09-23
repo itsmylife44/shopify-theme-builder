@@ -17,7 +17,7 @@ A Direction decides each axis below. Three Directions must **differ on at least 
 | Cards | Product card anatomy | `card_image_ratio` (1 / 1, 4 / 5, 2 / 3), `card_style` (plain, bordered, surface), `card_text_alignment`, `card_hover` (none, second_image, zoom) |
 | Media | How photos sit on the page | `media_treatment` (full_bleed, or framed: contained on a tint, for cut-outs), `media_tint` |
 | Motion | A character, not decoration | `motion` (none; subtle: 0.25s fades; expressive: 1s rises and slow image zooms). Always off under reduced motion |
-| Composition | The home page: which sections, in what order, on which color schemes | The Direction's `template` |
+| Composition | The home page: which sections, in what order, on which color schemes, and how the hero sits | The Direction's `template`; a `hero` or `slideshow` takes a `height` (small, medium, large, full_screen), and the hero or each slide a `content_position` (`top_left` to `bottom_right`) and `content_style` (bare text over the media with an `overlay_opacity`, boxed, or split beside the media) |
 | Signature | The one memorable element; everything around it stays quiet | A section in the `template`, like `type-banner`, `editorial-split`, `marquee`, `spec-tiles`, `lookbook`, `timeline`, `process-steps` or `comparison-table` |
 
 `GET /api/theme` lists every style setting under `style` with its options and range. What the brief pins (colors, fonts) is the same in all three Directions; they differ on the other axes.
