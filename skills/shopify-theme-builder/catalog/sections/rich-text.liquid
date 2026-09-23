@@ -1,7 +1,7 @@
 {% comment %}A heading, text and a button, for a message or a story.{% endcomment %}
 <div
   class="rich-text full-width color-{{ section.settings.color_scheme }}"
-  style="--text-align: {{ section.settings.alignment }};"
+  style="--text-align: {{ section.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }};"
 >
   <div class="rich-text__inner">
     {% if section.settings.heading != blank %}

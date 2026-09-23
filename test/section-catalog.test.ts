@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -490,5 +490,36 @@ describe('Structured data', () => {
     const settings = parseJSON(readFileSync(path.join(baseTheme, 'config/settings_schema.json'), 'utf8'))
     const all = settings.flatMap((group: { settings?: object[] }) => group.settings ?? [])
     expect(all).toContainEqual(expect.objectContaining({ id: 'show_breadcrumbs', type: 'checkbox', default: true }))
+  })
+})
+
+describe('Right-to-left languages', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const files = (dir: string, ext: string) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith(ext))
+      .map((file) => path.join(dir, file))
+
+  it.each(['base-theme/layout/theme.liquid', 'base-theme/layout/password.liquid', 'base-theme/templates/gift_card.liquid'])(
+    'sets the page direction from the locale in %s',
+    (file) => {
+      expect(readFileSync(path.join(skillDir, file), 'utf8')).toContain(
+        '<html lang="{{ request.locale.iso_code }}" dir="{{ request.locale.direction }}">',
+      )
+    },
+  )
+
+  it('styles the Base Theme and the Section Catalog with logical properties, so layouts mirror', () => {
+    for (const file of [...files('base-theme', '.liquid'), ...files('catalog', '.liquid'), ...files('base-theme', '.css')]) {
+      const source = readFileSync(path.join(skillDir, file), 'utf8')
+      expect(source, file).not.toMatch(/[\s;{](left|right|(margin|padding|border)-(left|right))\s*:/)
+      expect(source, file).not.toMatch(/[\s;{](margin|padding):\s*[^\s;]+\s+[^\s;]+\s+[^\s;]+\s+[^\s;]+\s*;/)
+    }
+  })
+
+  it.each(['base-theme/blocks/text.liquid', 'catalog/sections/rich-text.liquid'])('aligns text to the start or end of the line in %s', (file) => {
+    expect(readFileSync(path.join(skillDir, file), 'utf8')).toMatch(
+      /--text-align: {{ (block|section)\.settings\.alignment \| replace: 'left', 'start' \| replace: 'right', 'end' }}/,
+    )
   })
 })
