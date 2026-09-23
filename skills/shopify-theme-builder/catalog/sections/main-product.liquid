@@ -5,6 +5,7 @@
   assign media_first = product.media | where: 'id', featured_media.id
   assign media_rest = product.media | reject: 'id', featured_media.id
   assign ordered_media = media_first | concat: media_rest
+  assign models = product.media | where: 'media_type', 'model'
   assign selling_plan_allocation = current_variant.selected_selling_plan_allocation
   if product.requires_selling_plan and selling_plan_allocation == nil
     assign selling_plan_allocation = current_variant.selling_plan_allocations.first
@@ -18,6 +19,11 @@
   endif
 %}
 
+{% if models != empty %}
+  {% # theme-check-disable-next-line RemoteAsset %}
+  {{ 'https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.css' | stylesheet_tag }}
+{% endif %}
+
 <div class="main-product full-width color-{{ section.settings.color_scheme }}">
   <product-info
     class="main-product__inner"
@@ -27,22 +33,29 @@
     <ul class="main-product__media" role="list" tabindex="0" aria-label="{{ 'product.media' | t }}">
       {% for media in ordered_media %}
         <li class="main-product__media-item">
-          {% if media.media_type == 'image' %}
-            {% liquid
-              if forloop.first
-                assign loading = 'eager'
-              else
-                assign loading = 'lazy'
-              endif
-            %}
-            {{
-              media.preview_image
-              | image_url: width: 1500
-              | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: loading
-            }}
-          {% else %}
-            {{ media | media_tag: image_size: '1500x' }}
-          {% endif %}
+          {% case media.media_type %}
+            {% when 'image' %}
+              {% liquid
+                if forloop.first
+                  assign loading = 'eager'
+                else
+                  assign loading = 'lazy'
+                endif
+              %}
+              {{
+                media.preview_image
+                | image_url: width: 1500
+                | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: loading
+              }}
+            {% when 'model' %}
+              <product-model class="main-product__model">
+                {{ media | model_viewer_tag }}
+              </product-model>
+            {% when 'external_video' %}
+              {{ media | external_video_tag: loading: 'lazy' }}
+            {% else %}
+              {{ media | media_tag: image_size: '1500x' }}
+          {% endcase %}
         </li>
       {% else %}
         <li class="main-product__media-item">
@@ -270,6 +283,24 @@
   }
 
   if (!customElements.get('product-info')) customElements.define('product-info', ProductInfo);
+
+  class ProductModel extends HTMLElement {
+    connectedCallback() {
+      window.Shopify?.loadFeatures?.([
+        {
+          name: 'model-viewer-ui',
+          version: '1.0',
+          onLoad: (errors) => {
+            const viewer = this.querySelector('model-viewer');
+            if (errors || !viewer || this.ui) return;
+            this.ui = new Shopify.ModelViewerUI(viewer);
+          },
+        },
+      ]);
+    }
+  }
+
+  if (!customElements.get('product-model')) customElements.define('product-model', ProductModel);
 {% endjavascript %}
 
 {% stylesheet %}
@@ -331,6 +362,17 @@
 
   .main-product__media-item iframe {
     aspect-ratio: 16 / 9;
+  }
+
+  .main-product__model {
+    display: block;
+    aspect-ratio: 1;
+  }
+
+  .main-product__model .shopify-model-viewer-ui,
+  .main-product__model model-viewer {
+    width: 100%;
+    height: 100%;
   }
 
   .main-product__placeholder {
