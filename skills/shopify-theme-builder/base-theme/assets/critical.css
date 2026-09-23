@@ -91,6 +91,31 @@ h6 {
   font-weight: var(--font-heading--weight);
 }
 
+/* Every focused control shows a ring in its color scheme's text color. */
+:focus-visible {
+  outline: 2px solid var(--color-foreground);
+  outline-offset: 2px;
+}
+
+.skip-to-content {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.skip-to-content:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /** Section layout utilities */
 
 /**
@@ -184,11 +209,6 @@ h6 {
   border: 1px solid currentcolor;
   background: transparent;
   color: inherit;
-}
-
-.basic-page :is(a, button, input, textarea):focus-visible {
-  outline: 2px solid var(--color-foreground);
-  outline-offset: 2px;
 }
 
 .basic-page__text {
