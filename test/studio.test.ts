@@ -455,7 +455,7 @@ describe('studio command', () => {
     const result = studio('--theme', fixtureTheme())
     expect(result.code).toBe(1)
     expect(result.stderr).toContain('--store <shop>.myshopify.com')
-    expect(result.stderr).toContain('shopify store create dev')
+    expect(result.stderr).toContain('shopify store create dev --demo-data')
   })
 })
 
