@@ -83,7 +83,7 @@ async function openStudio(
   {
     catalog = fixtureCatalog(),
     cli = fakeShopify(),
-    store,
+    store = 'example.myshopify.com',
     storePassword,
   }: { catalog?: string; cli?: string; store?: string; storePassword?: string } = {},
 ) {
@@ -431,7 +431,7 @@ describe('studio command', () => {
 
   it('refuses a folder that is not a Theme', () => {
     const dir = tempDir('not-a-theme-')
-    const result = studio('--theme', dir)
+    const result = studio('--theme', dir, '--store', 'example.myshopify.com')
     expect(result.code).toBe(1)
     expect(result.stderr).toContain(`${dir} is not a Shopify theme`)
   })
@@ -440,7 +440,7 @@ describe('studio command', () => {
     const dir = tempDir('no-home-')
     mkdirSync(path.join(dir, 'layout'))
     writeFileSync(path.join(dir, 'layout/theme.liquid'), '{{ content_for_layout }}')
-    const result = studio('--theme', dir)
+    const result = studio('--theme', dir, '--store', 'example.myshopify.com')
     expect(result.code).toBe(1)
     expect(result.stderr).toContain(`${dir} is not a Shopify theme: templates/index.json is missing.`)
   })
@@ -449,6 +449,13 @@ describe('studio command', () => {
     const result = studio()
     expect(result.code).toBe(1)
     expect(result.stderr).toContain('Usage: studio --theme <dir>')
+  })
+
+  it('requires --store, so theme dev never falls back to the store the CLI used last', () => {
+    const result = studio('--theme', fixtureTheme())
+    expect(result.code).toBe(1)
+    expect(result.stderr).toContain('--store <shop>.myshopify.com')
+    expect(result.stderr).toContain('shopify store create dev')
   })
 })
 
@@ -905,6 +912,15 @@ describe('Studio: live preview', () => {
       expect.stringMatching(/^\d+$/),
     ])
     await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
+  })
+
+  it('refuses to start without a store, so theme dev never runs on the store the CLI used last', async () => {
+    const cli = fakeShopify()
+    // @ts-expect-error: store is required.
+    await expect(startStudio({ theme: fixtureTheme(), catalog: fixtureCatalog(), port: 0, cli })).rejects.toThrow(
+      'needs a store',
+    )
+    expect(existsSync(path.join(path.dirname(cli), 'run.json'))).toBe(false)
   })
 
   const loginPrompt =

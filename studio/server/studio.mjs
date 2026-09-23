@@ -14,10 +14,12 @@ const defaultCatalog = fileURLToPath(new URL('../../catalog', import.meta.url))
 const baseTheme = fileURLToPath(new URL('../../base-theme', import.meta.url))
 
 /**
- * Starts the Studio for a Theme folder, with `shopify theme dev` for its preview. Nothing is written into the Theme.
- * @param {{ theme: string, catalog?: string, port?: number, cli?: string, store?: string, storePassword?: string }} options
+ * Starts the Studio for a Theme folder, with `shopify theme dev` on `store` for its preview. Nothing is written into the Theme.
+ * @param {{ theme: string, store: string, catalog?: string, port?: number, cli?: string, storePassword?: string }} options
  */
 export async function startStudio({ theme, catalog = defaultCatalog, port, cli = 'shopify', store, storePassword }) {
+  // Without a store theme dev would use the store the CLI used last, maybe another Theme's development theme.
+  if (!store) throw new Error('The Studio needs a store (<shop>.myshopify.com) for the preview.')
   theme = path.resolve(theme)
   for (const file of ['layout/theme.liquid', ...Object.values(pages)]) {
     if (!existsSync(path.join(theme, file))) throw new Error(`${theme} is not a Shopify theme: ${file} is missing.`)
@@ -34,7 +36,7 @@ export async function startStudio({ theme, catalog = defaultCatalog, port, cli =
 /**
  * @param {string} theme
  * @param {string} catalog
- * @param {{ cli: string, store?: string, storePassword?: string }} preview
+ * @param {{ cli: string, store: string, storePassword?: string }} preview
  * @returns {import('vite').Plugin}
  */
 function studioApi(theme, catalog, { cli, store, storePassword }) {
