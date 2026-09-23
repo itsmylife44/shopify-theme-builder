@@ -149,6 +149,7 @@
         <ul
           class="main-collection__grid"
           role="list"
+          data-load-more-grid
           style="--columns: {{ section.settings.columns }};"
         >
           {% if show_placeholders %}
@@ -176,9 +177,16 @@
       {% endif %}
 
       {% if paginate.pages > 1 %}
-        <nav class="main-collection__pagination" aria-label="{{ 'collection.pagination' | t }}">
-          {{ paginate | default_pagination }}
-        </nav>
+        <load-more class="main-collection__more" data-section-id="{{ section.id }}">
+          {% if paginate.next %}
+            <a class="button button--secondary main-collection__load-more" href="{{ paginate.next.url }}" data-load-more>
+              {{- 'collection.load_more' | t -}}
+            </a>
+          {% endif %}
+          <nav class="main-collection__pagination" aria-label="{{ 'collection.pagination' | t }}">
+            {{ paginate | default_pagination }}
+          </nav>
+        </load-more>
       {% endif %}
     {% endpaginate %}
   </div>
@@ -196,6 +204,51 @@
 
   if (!customElements.get('collection-facets')) {
     customElements.define('collection-facets', CollectionFacets);
+  }
+
+  class LoadMore extends HTMLElement {
+    connectedCallback() {
+      this.addEventListener('click', (event) => {
+        const link = event.target.closest('[data-load-more]');
+        if (!link) return;
+        event.preventDefault();
+        this.load(link);
+      });
+    }
+
+    async load(link) {
+      if (this.loading) return;
+      this.loading = true;
+      const url = new URL(link.href);
+      url.searchParams.set('section_id', this.dataset.sectionId);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(response.statusText);
+        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const items = [...html.querySelector('[data-load-more-grid]').children];
+        const grid = this.parentElement.querySelector('[data-load-more-grid]');
+        grid.append(...items);
+        const next = html.querySelector('[data-load-more]');
+        if (next) {
+          const nextUrl = new URL(next.getAttribute('href'), link.href);
+          nextUrl.searchParams.delete('section_id');
+          link.href = nextUrl;
+        } else {
+          link.remove();
+          this.dataset.done = '';
+        }
+        this.querySelector('nav').replaceWith(html.querySelector('load-more nav'));
+        items[0]?.querySelector('a:not([tabindex="-1"]), button')?.focus();
+      } catch {
+        window.location.assign(link.href);
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+
+  if (!customElements.get('load-more')) {
+    customElements.define('load-more', LoadMore);
   }
 {% endjavascript %}
 
@@ -341,6 +394,16 @@
   }
 
 
+  .main-collection__more {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .main-collection__more .main-collection__load-more {
+    display: none;
+  }
+
   .main-collection__pagination {
     display: flex;
     justify-content: center;
@@ -354,6 +417,25 @@
 
   .main-collection__pagination .current {
     font-weight: bold;
+  }
+
+  @media (max-width: 749px) {
+    .main-collection__active {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+    }
+
+    .main-collection__active a {
+      white-space: nowrap;
+    }
+
+    load-more:defined .main-collection__load-more {
+      display: flex;
+    }
+
+    load-more:defined:is(:has(.main-collection__load-more), [data-done]) .main-collection__pagination {
+      display: none;
+    }
   }
 
 
@@ -397,6 +479,7 @@
       "type": "range",
       "id": "products_per_page",
       "label": "t:labels.products_per_page",
+      "info": "t:info.main_collection_products_per_page",
       "min": 8,
       "max": 48,
       "step": 4,

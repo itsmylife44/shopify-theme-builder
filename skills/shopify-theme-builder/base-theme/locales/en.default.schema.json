@@ -185,6 +185,7 @@
     "hero_video": "Plays muted on a loop in place of the image, with controls to pause it.",
     "logo_list_image": "The image's alt text names the logo for screen readers.",
     "main_collection_enable_filtering": "Set up filters in the Shopify admin with the Search & Discovery app.",
+    "main_collection_products_per_page": "Also how many each Load more adds on mobile. 15 to 30 works best.",
     "testimonials_author_detail": "For example a city or \"Verified buyer\".",
     "header_show_localization": "Shown only when the shop sells in more than one country or language. The footer always shows them.",
     "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app.",
