@@ -7,7 +7,7 @@
 
 <div
   class="text {{ block.settings.text_style }}"
-  style="--text-align: {{ block.settings.alignment }}"
+  style="--text-align: {{ block.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }}"
   {{ block.shopify_attributes }}
 >
   {{ block.settings.text }}
