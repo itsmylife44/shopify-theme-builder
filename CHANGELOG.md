@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- An editorial split section for brand stories: a tall image beside a long text column, the image on either side on desktop and held in view while the text scrolls past it. The first paragraph can open with a drop cap (three lines tall, set with `initial-letter` in the heading font) and an optional pull quote follows the text at a heading size between two thin rules. Every size, gap, width, radius and media treatment comes from the style system.
+
 - A type banner section for Directions that make type the hero: a line or two of oversized type at the display size (or a step below, h1 or h2), broken where the Merchant presses Enter, with optional small text and a link under it, a color scheme and an alignment. Every size, gap and width comes from the style system, so it follows the Merchant's type scale and density.
 
 - A Motion setting in the Theme Editor: none, subtle (the default) or expressive. Subtle fades each section in over 0.25s as it scrolls into view and eases hovers; expressive raises sections about 2rem over 1s and zooms card images slowly. One small shared script, `assets/reveal.js`, reveals the sections with an IntersectionObserver and never hides one already in view on load, so the first viewport and its hero or main product image never animate. Customers who reduce motion on their device get none. Sections take the new `--motion-duration`, `--motion-duration-reveal`, `--motion-duration-zoom`, `--motion-easing` and `--motion-rise` variables from `snippets/css-variables.liquid`.

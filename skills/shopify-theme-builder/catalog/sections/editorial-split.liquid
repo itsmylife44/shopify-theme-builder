@@ -1,0 +1,197 @@
+{% comment %}A tall image beside a long text column, with a drop cap or a pull quote, for brand stories.{% endcomment %}
+<div class="editorial-split full-width editorial-split--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}">
+  <div class="editorial-split__inner">
+    <div class="editorial-split__media">
+      {% if section.settings.image != blank %}
+        {{
+          section.settings.image
+          | image_url: width: 1500
+          | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 40vw, 100vw', loading: 'lazy'
+        }}
+      {% else %}
+        {{ 'image' | placeholder_svg_tag: 'placeholder editorial-split__placeholder' }}
+      {% endif %}
+    </div>
+
+    <div class="editorial-split__content">
+      {% if section.settings.heading != blank %}
+        <h2 class="editorial-split__heading">{{ section.settings.heading }}</h2>
+      {% endif %}
+      {% if section.settings.text != blank %}
+        <div class="editorial-split__text{% if section.settings.drop_cap %} editorial-split__text--drop-cap{% endif %}">
+          {{ section.settings.text }}
+        </div>
+      {% endif %}
+      {% if section.settings.quote != blank %}
+        <blockquote class="editorial-split__quote text-h3">
+          <p>{{ section.settings.quote }}</p>
+        </blockquote>
+      {% endif %}
+      {% if section.settings.button_label != blank %}
+        <a
+          class="button"
+          href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
+        >
+          {{- section.settings.button_label | escape -}}
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .editorial-split {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .editorial-split__inner {
+    grid-column: 2;
+    display: grid;
+    align-items: start;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+  }
+
+  @media (min-width: 750px) {
+    .editorial-split__inner {
+      grid-template-columns: 2fr 3fr;
+      gap: var(--space-2xl);
+    }
+
+    .editorial-split--image-right .editorial-split__inner {
+      grid-template-columns: 3fr 2fr;
+    }
+
+    .editorial-split--image-right .editorial-split__media {
+      order: 1;
+    }
+
+    .editorial-split__media {
+      position: sticky;
+      inset-block-start: var(--space-xl);
+    }
+  }
+
+  .editorial-split__media {
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
+  .editorial-split__media img,
+  .editorial-split__placeholder {
+    width: 100%;
+    height: 100%;
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
+  }
+
+  .editorial-split__content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-lg);
+    max-width: var(--width-prose);
+  }
+
+  .editorial-split__heading {
+    margin: 0;
+  }
+
+  .editorial-split__text--drop-cap > p:first-child::first-letter {
+    -webkit-initial-letter: 3;
+    initial-letter: 3;
+    margin-inline-end: var(--space-xs);
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+  }
+
+  .editorial-split__quote {
+    margin: 0;
+    padding-block: var(--space-lg);
+    border-block: var(--border-width) solid var(--color-border-subtle);
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    text-wrap: balance;
+  }
+
+  .editorial-split__quote p {
+    margin: 0;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.editorial_split",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "t:labels.image_position_on_desktop",
+      "options": [
+        { "value": "left", "label": "t:options.alignment.left" },
+        { "value": "right", "label": "t:options.alignment.right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Our story"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Tell the story behind your brand: where it started, who makes what you sell, and why it's made the way it is.</p><p>Give it room. This column is made for a few paragraphs, read at an easy pace beside a single tall image.</p>"
+    },
+    {
+      "type": "checkbox",
+      "id": "drop_cap",
+      "label": "t:labels.drop_cap",
+      "default": true
+    },
+    {
+      "type": "inline_richtext",
+      "id": "quote",
+      "label": "t:labels.quote",
+      "info": "t:info.editorial_split_quote",
+      "default": "Made slowly, by people who care how it's made."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.button_link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.editorial_split"
+    }
+  ]
+}
+{% endschema %}

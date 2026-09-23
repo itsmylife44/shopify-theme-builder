@@ -80,7 +80,8 @@
     "collapsible_content": "Collapsible content",
     "product_cards": "Product cards",
     "motion": "Motion",
-    "type_banner": "Type banner"
+    "type_banner": "Type banner",
+    "editorial_split": "Editorial split"
   },
   "labels": {
     "alignment": "Alignment",
@@ -179,7 +180,8 @@
     "media_tint": "Tint behind images",
     "motion": "Animations",
     "type_size": "Type size",
-    "link_label": "Link label"
+    "link_label": "Link label",
+    "drop_cap": "Drop cap on the first paragraph"
   },
   "info": {
     "density": "The space above and below every section and between the items of a grid.",
@@ -209,7 +211,8 @@
     "media_treatment": "Full-bleed crops each image to fill its box. Framed shows the whole image, inset in its box on the tint.",
     "media_tint": "Suits cut-out product photos: their white background takes the tint. Pick a light color, or clear it for none.",
     "motion": "Subtle fades sections in as they scroll into view and eases hovers. Expressive raises them and zooms images slowly. Always off for customers who reduce motion on their device, and never on what shows first.",
-    "type_banner_heading": "A line or two. Press Enter where the line should break."
+    "type_banner_heading": "A line or two. Press Enter where the line should break.",
+    "editorial_split_quote": "A pull quote after the text, at a heading size. Leave it empty for none."
   },
   "options": {
     "alignment": {
