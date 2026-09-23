@@ -499,6 +499,32 @@
     ]
   },
   {
+    "name": "t:general.motion",
+    "settings": [
+      {
+        "type": "select",
+        "id": "motion",
+        "label": "t:labels.motion",
+        "info": "t:info.motion",
+        "options": [
+          {
+            "value": "none",
+            "label": "t:options.motion.none"
+          },
+          {
+            "value": "subtle",
+            "label": "t:options.motion.subtle"
+          },
+          {
+            "value": "expressive",
+            "label": "t:options.motion.expressive"
+          }
+        ],
+        "default": "subtle"
+      }
+    ]
+  },
+  {
     "name": "t:general.social_media",
     "settings": [
       {

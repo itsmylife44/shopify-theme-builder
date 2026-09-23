@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A Motion setting in the Theme Editor: none, subtle (the default) or expressive. Subtle fades each section in over 0.25s as it scrolls into view and eases hovers; expressive raises sections about 2rem over 1s and zooms card images slowly. One small shared script, `assets/reveal.js`, reveals the sections with an IntersectionObserver and never hides one already in view on load, so the first viewport and its hero or main product image never animate. Customers who reduce motion on their device get none. Sections take the new `--motion-duration`, `--motion-duration-reveal`, `--motion-duration-zoom`, `--motion-easing` and `--motion-rise` variables from `snippets/css-variables.liquid`.
+
 - Load more on the collection and search pages on mobile: a "Load more" button under the grid adds the next page of results in place, fetched through the Section Rendering API, and moves focus to the first new result; each press adds one page, the Products (or Results) per page setting, which now says 15 to 30 works best. Desktop, and any device without JavaScript, keeps the page links. The applied filter chips and Clear all scroll sideways in one row on mobile instead of wrapping.
 
 - Thumbnails under the product page's media on mobile. The strip scrolls sideways, shows four and a half thumbnails so a cut-off one signals more, and marks the one being shown; tapping a thumbnail brings its media into view. Swiping, keyboard scrolling and the switch to the variant's image stay as they were. Desktop keeps its grid of all media.
