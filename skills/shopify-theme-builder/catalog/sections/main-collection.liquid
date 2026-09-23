@@ -154,65 +154,14 @@
           {% if show_placeholders %}
             {% for i in (1..placeholder_count) %}
               {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
-              <li class="main-collection__card">
-                <div class="main-collection__image">
-                  {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder main-collection__placeholder' }}
-                </div>
-                <p class="main-collection__product-title">{{ 'collection.product_title' | t }}</p>
-                <p class="main-collection__price">{{ 1999 | money }}</p>
+              <li>
+                {% render 'product-card', placeholder: placeholder %}
               </li>
             {% endfor %}
           {% else %}
             {% for product in collection.products %}
-              <li class="main-collection__card">
-                <a class="main-collection__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
-                  {% if product.featured_image %}
-                    {{
-                      product.featured_image
-                      | image_url: width: 1200
-                      | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
-                    }}
-                  {% else %}
-                    {{ 'product-1' | placeholder_svg_tag: 'placeholder main-collection__placeholder' }}
-                  {% endif %}
-                </a>
-                <a class="main-collection__product-title" href="{{ product.url }}">{{ product.title | escape }}</a>
-                <p class="main-collection__price">{{ product.price | money }}</p>
-                {% assign unit_variant = product.selected_or_first_available_variant %}
-                {% if unit_variant.unit_price_measurement %}
-                  <p class="main-collection__unit-price text-small">
-                    <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
-                    {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
-                  </p>
-                {% endif %}
-                {% if section.settings.show_quick_add %}
-                  {% if product.has_only_default_variant and product.requires_selling_plan == false %}
-                    <form class="main-collection__quick-add" action="{{ routes.cart_add_url }}" method="post" data-quick-add-form>
-                      <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
-                      {% if product.available %}
-                        <button
-                          type="submit"
-                          class="button main-collection__quick-add-button"
-                          aria-label="{{ 'quick_add.add_label' | t: product: product.title }}"
-                        >
-                          {{- 'quick_add.add' | t -}}
-                        </button>
-                      {% else %}
-                        <button type="button" class="button main-collection__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
-                      {% endif %}
-                    </form>
-                  {% else %}
-                    <a
-                      class="button main-collection__quick-add-button"
-                      href="{{ product.url }}"
-                      aria-haspopup="dialog"
-                      aria-label="{{ 'quick_add.choose_options_label' | t: product: product.title }}"
-                      data-quick-add
-                    >
-                      {{- 'quick_add.choose_options' | t -}}
-                    </a>
-                  {% endif %}
-                {% endif %}
+              <li>
+                {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add %}
               </li>
             {% endfor %}
           {% endif %}
@@ -380,45 +329,15 @@
     }
   }
 
-  .main-collection__card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-  }
 
-  .main-collection__image {
-    display: block;
-    aspect-ratio: 1;
-    overflow: hidden;
-  }
 
-  .main-collection__image img,
-  .main-collection__placeholder {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
 
-  .main-collection__product-title {
-    margin: 0;
-    color: inherit;
-    text-decoration: none;
-  }
 
-  a.main-collection__product-title:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.3em;
-  }
 
-  .main-collection__price,
   .main-collection__empty {
     margin: 0;
   }
 
-  .main-collection__unit-price {
-    margin: 0;
-    opacity: var(--opacity-muted);
-  }
 
   .main-collection__pagination {
     display: flex;
@@ -435,14 +354,7 @@
     font-weight: bold;
   }
 
-  .main-collection__quick-add {
-    display: contents;
-  }
 
-  .main-collection__quick-add-button {
-    align-self: start;
-    margin-block-start: auto;
-  }
 {% endstylesheet %}
 
 {% schema %}
