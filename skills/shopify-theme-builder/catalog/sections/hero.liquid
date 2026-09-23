@@ -1,11 +1,12 @@
 {% comment %}A large banner with an image or video behind a heading, text and a button.{% endcomment %}
 {% liquid
-  assign loading = 'eager'
+  assign loading = 'lazy'
   assign fetchpriority = 'auto'
   if section.index == 1
+    assign loading = 'eager'
     assign fetchpriority = 'high'
-  elsif section.index > 3
-    assign loading = 'lazy'
+  elsif section.index <= 3
+    assign loading = 'eager'
   endif
 
   assign heading_tag = 'h2'

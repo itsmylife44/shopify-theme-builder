@@ -95,12 +95,16 @@
     border-radius: var(--style-border-radius-media);
   }
 
+  .multicolumn__media--large img,
   .multicolumn__media--large .multicolumn__placeholder {
     aspect-ratio: 3 / 2;
+    object-fit: cover;
   }
 
+  .multicolumn__media--small img,
   .multicolumn__media--small .multicolumn__placeholder {
     aspect-ratio: 1;
+    object-fit: contain;
   }
 
   .multicolumn__column-heading {

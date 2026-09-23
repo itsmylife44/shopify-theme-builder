@@ -13,6 +13,7 @@
   @param {number} [width] - The highest resolution width of the image to be rendered
   @param {number} [height] - The highest resolution height of the image to be rendered
   @param {string} [crop] - The crop position of the image
+  @param {string} [sizes] - The width the image is shown at, as the `sizes` attribute; defaults to `100vw`
 
   @example
   {% render 'image', image: product.featured_image %}
@@ -24,6 +25,7 @@
     width: 1200,
     height: 800,
     crop: 'center',
+    sizes: '(min-width: 750px) 50vw, 100vw',
   %}
 {% enddoc %}
 
@@ -31,6 +33,7 @@
   unless height
     assign width = width | default: image.width
   endunless
+  assign sizes = sizes | default: '100vw'
 
   if url
     assign wrapper = 'a'
@@ -45,7 +48,7 @@
     href="{{ url }}"
   {% endif %}
 >
-  {{ image | image_url: width: width, height: height, crop: crop | image_tag }}
+  {{ image | image_url: width: width, height: height, crop: crop | image_tag: sizes: sizes }}
 </{{ wrapper }}>
 
 {% stylesheet %}

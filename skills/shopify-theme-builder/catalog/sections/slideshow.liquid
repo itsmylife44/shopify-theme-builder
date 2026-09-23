@@ -19,12 +19,14 @@
       {% for block in section.blocks %}
         {% liquid
           assign loading = 'lazy'
+          assign fetchpriority = 'auto'
           assign heading_tag = 'h2'
-          if forloop.first and section.index <= 3
-            assign loading = 'eager'
-          endif
           if forloop.first and section.index == 1
+            assign loading = 'eager'
+            assign fetchpriority = 'high'
             assign heading_tag = 'h1'
+          elsif forloop.first and section.index <= 3
+            assign loading = 'eager'
           endif
         %}
         <div
@@ -46,7 +48,8 @@
                   class: 'slideshow__image',
                   widths: '750, 1100, 1500, 2200, 3000, 3840',
                   sizes: '100vw',
-                  loading: loading
+                  loading: loading,
+                  fetchpriority: fetchpriority
               }}
             {% else %}
               {% assign placeholder = forloop.index0 | modulo: 2 | plus: 1 | prepend: 'lifestyle-' %}
