@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A `create-theme` command (`node <skill-dir>/studio/bin/create-theme.mjs <theme> --name "<shop name>" --author "<author>"`) creates the Theme folder in step 3: the Base Theme with the catalog files every Theme starts with, the Theme's name and author, and a Git repository. It refuses a folder with files. The agent no longer copies those files one by one.
 - The Studio composes every page, not only home, product and collection: a page, the contact page, cart, search, blog, article, 404 and the collections list, picked in the top bar and shown in the preview on a real URL of the store (its first page, blog and article). The API takes them as `<page>` (`page`, `contact`, `cart`, `search`, `blog`, `article`, `404`, `collections`), and offers each page the catalog sections its template takes, like the contact form on page templates only.
 - The collections list page shows every collection as a card (image or placeholder, and title), sorted alphabetically or by date through a setting, with pagination; new Themes use it.
 - The 404 page shows a heading and text the Creator writes, a search form and a link back to the shop; new Themes use it.
