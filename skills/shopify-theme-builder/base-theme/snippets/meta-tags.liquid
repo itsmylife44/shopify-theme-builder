@@ -57,6 +57,41 @@
   >
 {%- endif -%}
 
+{%- liquid
+  assign logo_url = ''
+  if settings.logo
+    assign logo_url = settings.logo | image_url: width: 600 | prepend: 'https:'
+  elsif settings.logo_asset != blank
+    assign logo_url = settings.logo_asset | asset_url | prepend: 'https:'
+  endif
+
+  assign same_as = ''
+  assign social_ids = 'instagram,facebook,tiktok,x,youtube,pinterest' | split: ','
+  for id in social_ids
+    assign key = 'social_' | append: id
+    if settings[key] != blank
+      assign link = settings[key] | json
+      if same_as != blank
+        assign same_as = same_as | append: ','
+      endif
+      assign same_as = same_as | append: link
+    endif
+  endfor
+-%}
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": {{ shop.name | json }},
+    "url": {{ shop.url | json }},
+    {%- if logo_url != blank %}
+      "logo": {{ logo_url | json }},
+    {%- endif %}
+    "sameAs": [{{ same_as }}]
+  }
+</script>
+
 {%- if request.page_type == 'product' -%}
   <script type="application/ld+json">
     {{ product | structured_data }}

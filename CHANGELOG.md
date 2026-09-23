@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Every page describes the shop to search engines as an Organization (name, logo, social links), and product, collection, article and page templates show breadcrumbs with their BreadcrumbList structured data, with a theme setting to hide them.
 - The product page of a gift card lets the customer send it to a recipient: email, optional name, message and send date, checked in the browser before it goes to the cart. The cart shows each line's properties, like the recipient.
 - The product page's variant picker supports combined listings: choosing an option value, text pill or swatch, that belongs to a sibling product opens that product.
 - A Custom Liquid section for any page and a Custom Liquid block for the product page, where the Merchant pastes their own Liquid or HTML, like an app snippet, a tracking code or an embed.
