@@ -25,14 +25,21 @@ Check each; when one fails, tell the Creator the fix and wait until it passes.
 | Studio dependencies | `<skill-dir>/node_modules` exists | Run `npm ci --omit=dev` in `<skill-dir>`; again after updating the skill. |
 | Store access | `shopify theme list --store <shop>.myshopify.com` lists themes | See below. |
 
-**Store access.** The preview renders on a real store, so the Creator needs one where they are the owner, or have a staff or collaborator account with theme permissions. Ask for its `<shop>.myshopify.com` address. Without one, a free **development store** works:
+**Store access.** The preview renders on a real store, so the Creator needs one where they are the owner, or have a staff or collaborator account with theme permissions. Ask for its `<shop>.myshopify.com` address. Without one, offer to create a free **development store** for them:
 
-- `shopify store create dev --demo-data` in the Creator's own terminal (it asks for a name, organization and plan; `--demo-data` adds sample products so the preview looks like a shop), or
-- Shopify's Dev Dashboard (https://dev.shopify.com) › Stores › Create store.
+1. Ask for the store's name (like the shop's name).
+2. Run `shopify organization list --json` for the Creator's organizations; when it lists more than one, ask which to use.
+3. Run the command below, allowing it up to 10 minutes: it waits until the store is ready, then prints its `<shop>.myshopify.com` address. Without a terminal the CLI needs all of `--name`, `--organization-id` and `--plan`, even with a single organization; `--demo-data` adds sample products so the preview looks like a shop.
+
+   ```sh
+   shopify store create dev --name "<name>" --organization-id <id> --plan basic --demo-data --json
+   ```
+
+The Creator can also create one in Shopify's Dev Dashboard (https://dev.shopify.com) › Stores › Create store.
 
 A development store can't be transferred to a Merchant; for a Merchant's shop, use the Merchant's store with a collaborator account. Give each Theme its own store: the Shopify CLI keeps one development theme per store per machine, so two Themes previewed on one store overwrite each other.
 
-When `shopify theme list` asks to log in, have the Creator run `shopify auth login` in their own terminal, then check again.
+When a `shopify` command asks to log in, have the Creator run `shopify auth login` in their own terminal, then check again.
 
 Recommend, without requiring it, Shopify's AI Toolkit (https://github.com/Shopify/Shopify-AI-Toolkit) for later Liquid work. Its `shopify-liquid` skill sends prompts and code to Shopify unless the Creator opts out: create `~/.config/shopify-ai-toolkit/opt-out` or set `OPT_OUT_INSTRUMENTATION=true`.
 

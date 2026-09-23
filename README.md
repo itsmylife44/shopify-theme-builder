@@ -20,14 +20,14 @@ This installs the skill into the current project for the agents the [skills CLI]
 
 - **Node.js 22.12** or newer, and **Git 2.28** or newer.
 - **Shopify CLI 4.8.0** or newer: `npm install -g @shopify/cli@latest`.
-- **A store** where you are the owner, or have a staff or collaborator account with theme permissions. A free development store works: `shopify store create dev --demo-data`. Give each theme its own store: the Shopify CLI keeps one development theme per store per machine.
+- **A store** where you are the owner, or have a staff or collaborator account with theme permissions. No store yet? The agent can create a free development store for you. Give each theme its own store: the Shopify CLI keeps one development theme per store per machine.
 
 The agent checks all of these first, plus the Studio's dependencies in the skill's folder (`npm ci --omit=dev`), and tells you how to fix what's missing.
 
 ## Walkthrough
 
 1. Ask your agent: *"Build me a Shopify theme for my shop. Here's my website: https://…"*
-2. The agent checks the prerequisites and asks for your store's `<shop>.myshopify.com` address. The first time, log in to the Shopify CLI with `shopify auth login` in your own terminal.
+2. The agent checks the prerequisites and asks for your store's `<shop>.myshopify.com` address, or creates a development store for you. The first time, log in to the Shopify CLI with `shopify auth login` in your own terminal.
 3. It reads your brand from the reference and asks only about what's left: colors, fonts, logo, style, the shop's language, the shop name and the theme's author.
 4. It creates the theme in a new folder with its own Git history, writes the brand, composes the pages and opens the Studio. A development store also needs its storefront password for the preview.
 5. Open the preview link in Chrome to see the real theme on your store. Adjust colors, fonts, the logo and page sections in the Studio, or ask the agent; the Studio runs Theme Check after every change.
