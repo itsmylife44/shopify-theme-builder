@@ -523,6 +523,36 @@ describe('Featured product', () => {
   })
 })
 
+describe('Slideshow', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/slideshow.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset with slides', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="slideshow full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.slideshow', blocks: [{ type: 'slide' }, { type: 'slide' }] }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows full-width slides, each with an image, heading, text and button, and a placeholder without an image', () => {
+    const ids = schema.blocks[0].settings.map((setting: { id?: string }) => setting.id)
+    expect(ids).toEqual(expect.arrayContaining(['image', 'heading', 'text', 'button_label', 'button_link']))
+    expect(source).toContain('placeholder_svg_tag')
+    expect(source).toContain('scroll-snap-type: x mandatory')
+  })
+
+  it('does not autoplay by default, and lets customers pause it and step through with buttons, keys and swipe', () => {
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'autoplay', type: 'checkbox', default: false }))
+    expect(source).toContain(`aria-label="{{ 'slideshow.previous' | t }}"`)
+    expect(source).toContain(`aria-label="{{ 'slideshow.next' | t }}"`)
+    expect(source).toContain("{{ 'slideshow.pause' | t }}")
+    expect(source).toContain("'ArrowLeft'")
+    expect(source).toContain("'ArrowRight'")
+    expect(source).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

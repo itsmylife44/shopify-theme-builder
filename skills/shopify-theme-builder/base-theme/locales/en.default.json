@@ -159,5 +159,13 @@
   },
   "collection_list": {
     "collection_title": "Example collection"
+  },
+  "slideshow": {
+    "label": "Slideshow",
+    "slide": "Slide {{ index }} of {{ count }}",
+    "previous": "Previous slide",
+    "next": "Next slide",
+    "pause": "Pause slideshow",
+    "play": "Play slideshow"
   }
 }
