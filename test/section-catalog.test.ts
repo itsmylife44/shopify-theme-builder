@@ -910,9 +910,23 @@ describe('Quick add', () => {
     expect(source).toMatch(/<form[^>]*action="{{ routes\.cart_add_url }}" method="post"[^>]*data-quick-add-form/)
     expect(source).toContain(`<input type="hidden" name="id" value="{{ ${item}.selected_or_first_available_variant.id }}">`)
     expect(source).toContain(`'quick_add.add_label' | t: product: ${item}.title`)
-    const quickAdd = read('catalog/sections/quick-add.liquid')
+    const quickAdd = read('catalog/sections/header.liquid')
     expect(quickAdd).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);/)
     expect(quickAdd).toContain("event.target.closest('[data-quick-add-form]')")
+  })
+
+  it('loads its script and styles from a section every page renders, since a section fetched through the Section Rendering API brings neither', () => {
+    const groups = ['header-group.json', 'footer-group.json'].map((file) => JSON.parse(read(`catalog/sections/${file}`)))
+    const everyPage = groups.flatMap((group) => Object.values(group.sections).map((section: any) => section.type as string))
+    const script = (name: string) => read(`catalog/sections/${name}.liquid`).match(/{% javascript %}([\s\S]*){% endjavascript %}/)?.[1] ?? ''
+    const sections = readdirSync(path.join(skillDir, 'catalog/sections')).filter((file) => file.endsWith('.liquid')).map((file) => file.replace('.liquid', ''))
+    for (const needle of ["customElements.define('quick-add-dialog'", "closest('[data-quick-add]')", "closest('[data-quick-add-form]')"]) {
+      const loaders = sections.filter((name) => script(name).includes(needle))
+      expect(loaders, needle).not.toEqual([])
+      for (const name of loaders) expect(everyPage, `${needle} in ${name}`).toContain(name)
+    }
+    expect(read('catalog/sections/header.liquid')).toMatch(/{% stylesheet %}[\s\S]*\n  \.quick-add {[\s\S]*{% endstylesheet %}/)
+    expect(read('catalog/sections/quick-add.liquid')).not.toContain('{% stylesheet %}')
   })
 
   it.each(Object.entries(cards))('links a product with variants on %s cards to its page, which quick add opens in a dialog instead', (name, item) => {
@@ -924,6 +938,7 @@ describe('Quick add', () => {
 
   describe('dialog', () => {
     const source = read('catalog/sections/quick-add.liquid')
+    const script = read('catalog/sections/header.liquid')
     const schema = parse(source)
     const locale = JSON.parse(read('base-theme/locales/en.default.json'))
 
@@ -938,22 +953,22 @@ describe('Quick add', () => {
     })
 
     it('loads through the Section Rendering API, re-renders when an option changes and falls back to the product page', () => {
-      expect(source).toContain("searchParams.set('section_id', 'quick-add')")
-      expect(source).toContain("searchParams.set('option_values', optionValues)")
-      expect(source).toContain("event.target.closest('[data-quick-add]')")
-      expect(source).toContain('location.assign(trigger.href)')
+      expect(script).toContain("searchParams.set('section_id', 'quick-add')")
+      expect(script).toContain("searchParams.set('option_values', optionValues)")
+      expect(script).toContain("event.target.closest('[data-quick-add]')")
+      expect(script).toContain('location.assign(trigger.href)')
     })
 
     it('handles focus like the cart drawer: modal, closes on the backdrop, returns focus to the card', () => {
-      expect(source).toContain('this.dialog.showModal()')
-      expect(source).toContain('event.target === this.dialog && this.dialog.close()')
-      expect(source).toMatch(/addEventListener\(\s*'close'/)
-      expect(source).toContain('this.opener?.focus()')
-      expect(source).toContain("customElements.define('quick-add-dialog'")
+      expect(script).toContain('this.dialog.showModal()')
+      expect(script).toContain('event.target === this.dialog && this.dialog.close()')
+      expect(script).toMatch(/addEventListener\(\s*'close'/)
+      expect(script).toContain('this.opener?.focus()')
+      expect(script).toContain("customElements.define('quick-add-dialog'")
     })
 
     it('hands the add to the cart drawer, which opens with focus returning to the card', () => {
-      expect(source).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);\s*this\.dialog\.close\(\);\s*drawer\.add\(event\.target, this\.opener\)/)
+      expect(script).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);\s*this\.dialog\.close\(\);\s*drawer\.add\(event\.target, this\.opener\)/)
     })
 
     it('is rendered only through the Section Rendering API, so neither the Studio nor the Theme Editor offers it', () => {
