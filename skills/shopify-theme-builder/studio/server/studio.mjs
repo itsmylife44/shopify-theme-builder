@@ -764,16 +764,18 @@ function newId(type, taken) {
 }
 
 /**
- * Adds the locale keys, theme settings and theme blocks of the Base Theme that a Theme made from an older
- * one lacks, since catalog sections use them. Nothing the Theme already has changes. The shop's language
- * gets the English text, so Theme Check's MatchingTranslations still passes until it's translated.
+ * Adds the locale keys, theme settings, theme blocks and snippets of the Base Theme that a Theme made from
+ * an older one lacks, since catalog sections use them. Nothing the Theme already has changes. The shop's
+ * language gets the English text, so Theme Check's MatchingTranslations still passes until it's translated.
  * @param {string} theme
  */
 function addMissingFromBaseTheme(theme) {
-  mkdirSync(path.join(theme, 'blocks'), { recursive: true })
-  for (const name of readdirSync(path.join(baseTheme, 'blocks'))) {
-    const own = path.join(theme, 'blocks', name)
-    if (!existsSync(own)) writeFile(own, readFileSync(path.join(baseTheme, 'blocks', name)))
+  for (const dir of ['blocks', 'snippets']) {
+    mkdirSync(path.join(theme, dir), { recursive: true })
+    for (const name of readdirSync(path.join(baseTheme, dir))) {
+      const own = path.join(theme, dir, name)
+      if (!existsSync(own)) writeFile(own, readFileSync(path.join(baseTheme, dir, name)))
+    }
   }
   const storefront = readJSON(baseTheme, 'locales/en.default.json')
   const schema = readJSON(baseTheme, 'locales/en.default.schema.json')

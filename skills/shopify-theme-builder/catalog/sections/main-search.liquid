@@ -174,54 +174,7 @@
               <li class="main-search__card">
                 {% case result.object_type %}
                   {% when 'product' %}
-                    <a class="main-search__image" href="{{ result.url }}" tabindex="-1" aria-hidden="true">
-                      {% if result.featured_image %}
-                        {{
-                          result.featured_image
-                          | image_url: width: 1200
-                          | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
-                        }}
-                      {% else %}
-                        {{ 'product-1' | placeholder_svg_tag: 'placeholder main-search__placeholder' }}
-                      {% endif %}
-                    </a>
-                    <a class="main-search__product-title" href="{{ result.url }}">{{ result.title | escape }}</a>
-                    <p class="main-search__price">{{ result.price | money }}</p>
-                    {% assign unit_variant = result.selected_or_first_available_variant %}
-                    {% if unit_variant.unit_price_measurement %}
-                      <p class="main-search__unit-price text-small">
-                        <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
-                        {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
-                      </p>
-                    {% endif %}
-                    {% if section.settings.show_quick_add %}
-                      {% if result.has_only_default_variant and result.requires_selling_plan == false %}
-                        <form class="main-search__quick-add" action="{{ routes.cart_add_url }}" method="post" data-quick-add-form>
-                          <input type="hidden" name="id" value="{{ result.selected_or_first_available_variant.id }}">
-                          {% if result.available %}
-                            <button
-                              type="submit"
-                              class="button main-search__quick-add-button"
-                              aria-label="{{ 'quick_add.add_label' | t: product: result.title }}"
-                            >
-                              {{- 'quick_add.add' | t -}}
-                            </button>
-                          {% else %}
-                            <button type="button" class="button main-search__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
-                          {% endif %}
-                        </form>
-                      {% else %}
-                        <a
-                          class="button main-search__quick-add-button"
-                          href="{{ result.url }}"
-                          aria-haspopup="dialog"
-                          aria-label="{{ 'quick_add.choose_options_label' | t: product: result.title }}"
-                          data-quick-add
-                        >
-                          {{- 'quick_add.choose_options' | t -}}
-                        </a>
-                      {% endif %}
-                    {% endif %}
+                    {% render 'product-card', product: result, show_quick_add: section.settings.show_quick_add %}
                   {% when 'article' %}
                     <a class="main-search__image" href="{{ result.url }}" tabindex="-1" aria-hidden="true">
                       {% if result.image %}
@@ -268,12 +221,8 @@
       >
         {% for i in (1..placeholder_count) %}
           {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
-          <li class="main-search__card">
-            <div class="main-search__image">
-              {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder main-search__placeholder' }}
-            </div>
-            <p class="main-search__product-title">{{ 'collection.product_title' | t }}</p>
-            <p class="main-search__price">{{ 1999 | money }}</p>
+          <li>
+            {% render 'product-card', placeholder: placeholder %}
           </li>
         {% endfor %}
       </ul>
@@ -456,15 +405,10 @@
     text-underline-offset: 0.3em;
   }
 
-  .main-search__price,
   .main-search__empty {
     margin: 0;
   }
 
-  .main-search__unit-price {
-    margin: 0;
-    opacity: var(--opacity-muted);
-  }
 
   .main-search__pagination {
     display: flex;
@@ -512,14 +456,7 @@
     opacity: var(--opacity-muted);
   }
 
-  .main-search__quick-add {
-    display: contents;
-  }
 
-  .main-search__quick-add-button {
-    align-self: start;
-    margin-block-start: auto;
-  }
 {% endstylesheet %}
 
 {% schema %}

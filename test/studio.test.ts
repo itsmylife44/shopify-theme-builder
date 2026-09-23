@@ -1418,6 +1418,14 @@ describe('Studio API: product page', () => {
     const id = body.product.find((section: { type: string }) => section.type === 'main-product').id
     expect((await studio.send('GET', `api/product/sections/${id}`)).body).toMatchObject({ blockTypes: [] })
   })
+  it('copies the Base Theme snippets a catalog section renders into a Theme that lacks them', async () => {
+    const theme = fixtureTheme()
+    rmSync(path.join(theme, 'snippets/product-card.liquid'), { force: true })
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const { body } = await studio.addSection('related-products', 'product')
+    expect(existsSync(path.join(theme, 'snippets/product-card.liquid'))).toBe(true)
+    expect(errors(body.validation)).toEqual([])
+  })
 })
 
 describe('Studio API: collection page', () => {

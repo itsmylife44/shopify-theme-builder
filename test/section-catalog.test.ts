@@ -381,11 +381,11 @@ describe('Unit prices', () => {
     expect(info).toContain("'product.unit_price' | t")
   })
 
-  it.each(['featured-collection', 'main-collection', 'main-search', 'related-products'])('shows the unit price on %s cards', (name) => {
-    const source = read(name)
-    expect(source).toContain('.selected_or_first_available_variant %}')
-    expect(source).toContain('unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement')
-    expect(source).toContain("'product.unit_price' | t")
+  it('shows the unit price on product cards', () => {
+    const card = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/snippets/product-card.liquid'), 'utf8')
+    expect(card).toContain('{% assign unit_variant = product.selected_or_first_available_variant %}')
+    expect(card).toContain('unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement')
+    expect(card).toContain("'product.unit_price' | t")
   })
 })
 
@@ -908,15 +908,17 @@ describe('Quick add', () => {
   it.each(Object.entries(cards))('has a setting to show quick add on %s cards', (name, item) => {
     const source = read(`catalog/sections/${name}.liquid`)
     expect(parse(source).settings).toContainEqual({ type: 'checkbox', id: 'show_quick_add', label: 't:labels.show_quick_add', default: true })
-    expect(source).toContain('{% if section.settings.show_quick_add %}')
-    expect(source).toContain(`{% if ${item}.has_only_default_variant and ${item}.requires_selling_plan == false %}`)
+    expect(source).toMatch(new RegExp(`{% render 'product-card', product: ${item}, show_quick_add: section\\.settings\\.show_quick_add %}`))
+    const card = read('base-theme/snippets/product-card.liquid')
+    expect(card).toContain('{% if show_quick_add %}')
+    expect(card).toContain('{% if product.has_only_default_variant and product.requires_selling_plan == false %}')
   })
 
-  it.each(Object.entries(cards))('adds a single-variant product from %s cards with a form the cart drawer takes, or a post to /cart without it', (name, item) => {
-    const source = read(`catalog/sections/${name}.liquid`)
-    expect(source).toMatch(/<form[^>]*action="{{ routes\.cart_add_url }}" method="post"[^>]*data-quick-add-form/)
-    expect(source).toContain(`<input type="hidden" name="id" value="{{ ${item}.selected_or_first_available_variant.id }}">`)
-    expect(source).toContain(`'quick_add.add_label' | t: product: ${item}.title`)
+  it('adds a single-variant product from a card with a form the cart drawer takes, or a post to /cart without it', () => {
+    const card = read('base-theme/snippets/product-card.liquid')
+    expect(card).toMatch(/<form[^>]*action="{{ routes\.cart_add_url }}" method="post"[^>]*data-quick-add-form/)
+    expect(card).toContain('<input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">')
+    expect(card).toContain("'quick_add.add_label' | t: product: product.title")
     const quickAdd = read('catalog/sections/header.liquid')
     expect(quickAdd).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);/)
     expect(quickAdd).toContain("event.target.closest('[data-quick-add-form]')")
@@ -936,11 +938,11 @@ describe('Quick add', () => {
     expect(read('catalog/sections/quick-add.liquid')).not.toContain('{% stylesheet %}')
   })
 
-  it.each(Object.entries(cards))('links a product with variants on %s cards to its page, which quick add opens in a dialog instead', (name, item) => {
-    const source = read(`catalog/sections/${name}.liquid`)
-    expect(source).toMatch(new RegExp(`<a\\s+class="button [\\w-]+__quick-add-button"\\s+href="{{ ${item}\\.url }}"\\s+aria-haspopup="dialog"`))
-    expect(source).toContain(`'quick_add.choose_options_label' | t: product: ${item}.title`)
-    expect(source).toMatch(/\s+data-quick-add\s/)
+  it('links a product with variants on a card to its page, which quick add opens in a dialog instead', () => {
+    const card = read('base-theme/snippets/product-card.liquid')
+    expect(card).toMatch(/<a\s+class="button product-card__quick-add-button"\s+href="{{ product\.url }}"\s+aria-haspopup="dialog"/)
+    expect(card).toContain("'quick_add.choose_options_label' | t: product: product.title")
+    expect(card).toMatch(/\s+data-quick-add\s/)
   })
 
   describe('dialog', () => {
@@ -1206,6 +1208,43 @@ describe('Buttons', () => {
       expect(read(file), file).not.toMatch(/basic-page__button/)
     }
     expect(read('base-theme/assets/critical.css')).not.toMatch(/\.basic-page :is\(button/)
+  })
+})
+
+describe('Product card', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const sections = ['featured-collection', 'main-collection', 'main-search', 'related-products']
+
+  it('is one Base Theme snippet with a LiquidDoc header, for a product or a placeholder', () => {
+    const card = read('base-theme/snippets/product-card.liquid')
+    expect(card).toMatch(/^{% doc %}/)
+    expect(card).toContain('@param {product} [product]')
+    expect(card).toContain('@param {number} [placeholder]')
+    expect(card).toContain('@param {boolean} [show_quick_add]')
+    expect(card).toContain("{{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}")
+  })
+
+  it.each(sections)('is what %s renders for each product, with no card markup or styles of its own', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(source).toContain("{% render 'product-card'")
+    expect(source).not.toContain('unit_price_with_measurement')
+    expect(source).not.toContain('__quick-add')
+    expect(source).not.toMatch(/\.price \| money|1999 \| money/)
+  })
+
+  it('takes its image ratio, text alignment, border and surface from variables', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    for (const name of ['image-ratio', 'text-align', 'border-width', 'padding', 'background']) {
+      expect(variables).toMatch(new RegExp(`--card-${name}:`))
+    }
+    const critical = read('base-theme/assets/critical.css')
+    expect(critical).toMatch(/\.product-card {[^}]*padding: var\(--card-padding\)/)
+    expect(critical).toMatch(/\.product-card {[^}]*border: var\(--card-border-width\) solid var\(--color-border\)/)
+    expect(critical).toMatch(/\.product-card {[^}]*background-color: var\(--card-background\)/)
+    expect(critical).toMatch(/\.product-card {[^}]*text-align: var\(--card-text-align\)/)
+    expect(critical).toMatch(/\.product-card__image {[^}]*aspect-ratio: var\(--card-image-ratio\)/)
+    expect(critical).toMatch(/\.product-card__quick-add-button {[^}]*align-self: var\(--card-text-align\)/)
   })
 })
 

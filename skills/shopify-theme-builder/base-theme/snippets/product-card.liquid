@@ -1,0 +1,74 @@
+{% doc %}
+  Renders a product card: image, title, price, unit price and an optional quick add. Without a product it
+  renders an example card with one of Shopify's product placeholders. The .product-card classes in
+  assets/critical.css style it from the --card-* variables in snippets/css-variables.liquid.
+
+  @param {product} [product] - The product; leave it out for an example card
+  @param {number} [placeholder] - Which product placeholder (1 to 6) an example card or a product without an image shows, 1 by default
+  @param {boolean} [show_quick_add] - Show an add to cart button, or a link that opens quick add for a product with variants
+
+  @example
+  {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add %}
+  {% render 'product-card', placeholder: 3 %}
+{% enddoc %}
+{% liquid
+  assign placeholder = placeholder | default: 1
+%}
+<div class="product-card">
+  {% if product %}
+    <a class="product-card__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+      {% if product.featured_image %}
+        {{
+          product.featured_image
+          | image_url: width: 1200
+          | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
+        }}
+      {% else %}
+        {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
+      {% endif %}
+    </a>
+    <a class="product-card__title" href="{{ product.url }}">{{ product.title | escape }}</a>
+    <p>{{ product.price | money }}</p>
+    {% assign unit_variant = product.selected_or_first_available_variant %}
+    {% if unit_variant.unit_price_measurement %}
+      <p class="product-card__unit-price text-small">
+        <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
+        {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
+      </p>
+    {% endif %}
+    {% if show_quick_add %}
+      {% if product.has_only_default_variant and product.requires_selling_plan == false %}
+        <form class="product-card__quick-add" action="{{ routes.cart_add_url }}" method="post" data-quick-add-form>
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          {% if product.available %}
+            <button
+              type="submit"
+              class="button product-card__quick-add-button"
+              aria-label="{{ 'quick_add.add_label' | t: product: product.title }}"
+            >
+              {{- 'quick_add.add' | t -}}
+            </button>
+          {% else %}
+            <button type="button" class="button product-card__quick-add-button" disabled>{{ 'product.sold_out' | t }}</button>
+          {% endif %}
+        </form>
+      {% else %}
+        <a
+          class="button product-card__quick-add-button"
+          href="{{ product.url }}"
+          aria-haspopup="dialog"
+          aria-label="{{ 'quick_add.choose_options_label' | t: product: product.title }}"
+          data-quick-add
+        >
+          {{- 'quick_add.choose_options' | t -}}
+        </a>
+      {% endif %}
+    {% endif %}
+  {% else %}
+    <div class="product-card__image">
+      {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
+    </div>
+    <p class="product-card__title">{{ 'product_card.product_title' | t }}</p>
+    <p>{{ 1999 | money }}</p>
+  {% endif %}
+</div>

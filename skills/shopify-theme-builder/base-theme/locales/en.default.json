@@ -64,7 +64,6 @@
     "pagination": "Pagination",
     "price_from": "From",
     "price_to": "To",
-    "product_title": "Example product",
     "remove_filter": "Remove filter: {{ filter }}",
     "sort_by": "Sort by"
   },
@@ -116,6 +115,9 @@
     "password": "Password",
     "enter": "Enter"
   },
+  "product_card": {
+    "product_title": "Example product"
+  },
   "product": {
     "add_to_cart": "Add to cart",
     "media": "Product media",
@@ -140,9 +142,6 @@
       "send_on": "Send on (optional)",
       "send_on_info": "Leave empty to send it now, or pick a date within 90 days"
     }
-  },
-  "related_products": {
-    "product_title": "Example product"
   },
   "search": {
     "article": "Article",

@@ -217,6 +217,55 @@ h6,
   cursor: not-allowed;
 }
 
+/* Product cards: the product-card snippet, shaped by the --card-* variables. Its text-align
+   value (start, center or end) also places the quick add button. */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  height: 100%;
+  padding: var(--card-padding);
+  border: var(--card-border-width) solid var(--color-border);
+  background-color: var(--card-background);
+  text-align: var(--card-text-align);
+}
+
+.product-card__image {
+  display: block;
+  aspect-ratio: var(--card-image-ratio);
+  overflow: hidden;
+}
+
+.product-card__image img,
+.product-card__placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-card__title {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.product-card__title:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.product-card__unit-price {
+  opacity: var(--opacity-muted);
+}
+
+.product-card__quick-add {
+  display: contents;
+}
+
+.product-card__quick-add-button {
+  align-self: var(--card-text-align);
+  margin-block-start: auto;
+}
+
 /** Section layout utilities */
 
 /**
