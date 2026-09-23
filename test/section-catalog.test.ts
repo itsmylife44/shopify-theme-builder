@@ -1253,6 +1253,49 @@ describe('Timeline', () => {
   })
 })
 
+describe('Process steps', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/process-steps.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const step = schema.blocks[0]
+  const blockSettings = Object.fromEntries(step.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a heading, a color scheme and a preset with a few steps', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="process-steps full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(schema.presets[0].name).toBe('t:general.process_steps')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(2)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('lists numbered steps in order, each with an image, a heading and a text', () => {
+    expect(step).toEqual(expect.objectContaining({ type: 'step', name: 't:general.step' }))
+    expect(blockSettings.image.type).toBe('image_picker')
+    expect(blockSettings.heading.type).toBe('text')
+    expect(blockSettings.text.type).toBe('richtext')
+    expect(source).toMatch(/<ol class="process-steps__list" role="list"[^>]*>\s*{% for block in section\.blocks %}\s*<li class="process-steps__item" {{ block\.shopify_attributes }}>/)
+    // The ordered list already gives screen readers each step's number, so the visible one is hidden from them.
+    expect(source).toContain('<span class="process-steps__number text-h2" aria-hidden="true">{{ forloop.index }}</span>')
+    expect(source).toContain('<div class="process-steps__text rte">')
+  })
+
+  it('shows each image, or a placeholder, in the media treatment of the style system', () => {
+    expect(source).toMatch(/{% else %}\s*{{ 'image' \| placeholder_svg_tag: 'placeholder' }}/)
+    expect(css).toMatch(/\.process-steps__media {[^}]*aspect-ratio: [^;]+;[^}]*border-radius: var\(--style-border-radius-media\);[^}]*background-color: var\(--media-background\);/)
+    expect(css).toMatch(/\.process-steps__media > \* {[^}]*padding: var\(--media-inset\);[^}]*object-fit: var\(--media-fit\);[^}]*mix-blend-mode: var\(--media-blend\);/)
+  })
+
+  it('stacks the steps on mobile and puts up to four in a row on desktop, spaced by the grid gap', () => {
+    expect(source).toContain('assign columns = section.blocks.size | at_most: 4 | at_least: 1')
+    expect(source).toContain('style="--columns: {{ columns }};"')
+    expect(css).toMatch(/\.process-steps__list {[^}]*gap: var\(--grid-row-gap\) var\(--grid-gap\);/)
+    expect(css).toMatch(/@media \(min-width: 750px\) {\s*\.process-steps__list {\s*grid-template-columns: repeat\(var\(--columns\), 1fr\);/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

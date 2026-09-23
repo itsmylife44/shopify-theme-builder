@@ -89,7 +89,9 @@
     "lookbook": "Lookbook",
     "hotspot": "Hotspot",
     "timeline": "Timeline",
-    "milestone": "Milestone"
+    "milestone": "Milestone",
+    "process_steps": "Process steps",
+    "step": "Step"
   },
   "labels": {
     "accent": "Accent",

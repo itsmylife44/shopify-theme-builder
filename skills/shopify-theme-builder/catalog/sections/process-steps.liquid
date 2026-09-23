@@ -1,0 +1,195 @@
+{% comment %}Numbered steps of how a product is made, each an image, a heading and a text.{% endcomment %}
+{% liquid
+  assign columns = section.blocks.size | at_most: 4 | at_least: 1
+  assign image_sizes = 100 | divided_by: columns | prepend: '(min-width: 750px) ' | append: 'vw, 100vw'
+%}
+<div class="process-steps full-width color-{{ section.settings.color_scheme }}">
+  <div class="process-steps__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="process-steps__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ol class="process-steps__list" role="list" style="--columns: {{ columns }};">
+      {% for block in section.blocks %}
+        <li class="process-steps__item" {{ block.shopify_attributes }}>
+          <div class="process-steps__media">
+            {% if block.settings.image != blank %}
+              {{
+                block.settings.image
+                | image_url: width: 1100
+                | image_tag: widths: '375, 550, 750, 1100', sizes: image_sizes, loading: 'lazy'
+              }}
+            {% else %}
+              {{ 'image' | placeholder_svg_tag: 'placeholder' }}
+            {% endif %}
+          </div>
+          <span class="process-steps__number text-h2" aria-hidden="true">{{ forloop.index }}</span>
+          {% if block.settings.heading != blank %}
+            <h3 class="process-steps__title text-h5">{{ block.settings.heading | escape }}</h3>
+          {% endif %}
+          {% if block.settings.text != blank %}
+            <div class="process-steps__text rte">{{ block.settings.text }}</div>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+
+{% stylesheet %}
+  .process-steps {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .process-steps__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+  }
+
+  .process-steps__heading {
+    margin: 0;
+  }
+
+  .process-steps__list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--grid-row-gap) var(--grid-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .process-steps__list {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+  }
+
+  .process-steps__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .process-steps__media {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    margin-block-end: var(--space-xs);
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
+  .process-steps__media > * {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
+  }
+
+  .process-steps__number {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .process-steps__title {
+    margin: 0;
+    overflow-wrap: break-word;
+  }
+
+  .process-steps__text {
+    max-width: var(--width-prose);
+    opacity: var(--opacity-muted);
+  }
+
+  .process-steps__text > * {
+    margin: 0;
+  }
+
+  .process-steps__text > * + * {
+    margin-block-start: var(--space-xs);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.process_steps",
+  "tag": "section",
+  "max_blocks": 8,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "How it's made"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "t:general.step",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "t:labels.heading",
+          "default": "A step"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "t:labels.text",
+          "default": "<p>Tell what happens in this step in a sentence or two.</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.process_steps",
+      "blocks": [
+        {
+          "type": "step",
+          "settings": {
+            "heading": "Sourced",
+            "text": "<p>We pick the raw materials by hand, from growers we know by name.</p>"
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "heading": "Made",
+            "text": "<p>Small batches, made in our own workshop, never rushed.</p>"
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "heading": "Checked",
+            "text": "<p>Every piece is checked by the person who made it before it ships.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
