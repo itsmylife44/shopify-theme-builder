@@ -1,6 +1,6 @@
 # Proposal: Design Directions instead of stock sections
 
-Date: 2026-09-23. Status: **proposal, waiting for the maintainer's decision**. It builds on four research docs from the same day:
+Date: 2026-09-23. Status: **accepted 2026-09-23** (ADR 0007): name "Direction", three Directions per Theme, all six phases, no cross-Creator memory. It builds on four research docs from the same day:
 
 - [`shopify-theme-design-inspection`](2026-09-23-shopify-theme-design-inspection.md): 15 top Theme Store themes measured, desktop and mobile, 8 archetypes.
 - [`anti-slop-design-method`](2026-09-23-anti-slop-design-method.md): the tells of generic AI design, and how other skills avoid them.

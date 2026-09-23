@@ -25,8 +25,12 @@ The Shopify theme the skill produces for one shop.
 _Avoid_: template, skin
 
 **Brand**:
-The visual identity applied to a Theme: colors, typography, logo and overall style.
+The visual identity applied to a Theme: colors, fonts and logo. The rest of the design is the Direction.
 _Avoid_: style guide, design tokens
+
+**Direction**:
+The design decisions on top of the Brand: type system, shape, spacing, card and media treatment, motion, layout variants and signature sections. Stored as a Theme preset plus `DIRECTION.md`; the agent writes three and the Creator picks one.
+_Avoid_: style, skin, template, design tokens
 
 **Section Catalog**:
 The fixed set of prebuilt, known-valid sections the skill composes a Theme from.
