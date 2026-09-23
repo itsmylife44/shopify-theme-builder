@@ -11,7 +11,7 @@ Issues and plans live in [GitHub Issues](https://github.com/itsmylife44/shopify-
 | `…/base-theme/` | Shopify's Skeleton theme, vendored as the Base Theme (Shopify's license, see the [README](README.md#license)) |
 | `…/catalog/sections/` | The Section Catalog |
 | `…/studio/` | The Studio: a Vite + React UI (`src/`), its Node file API and `theme dev` runner (`server/`), and the `studio` command (`bin/`) |
-| `test/` | Vitest tests for the Studio, the Section Catalog and the skill-gate hook |
+| `test/` | Vitest tests for the Studio, the Section Catalog, the skill-gate hook and the release version |
 | `scripts/check-theme.mjs` | Runs Theme Check on the Base Theme with every catalog section |
 | `test/`, `scripts/`, `docs/`, `.claude/` | Development only: never installed for a Creator |
 
@@ -74,6 +74,23 @@ Also available, not enforced: `vite` (Vite config and the Studio's server plugin
 ```sh
 npx skills add benjaminsehl/liquid-skills --skill shopify-liquid-themes -g
 ```
+
+## Releasing
+
+The skill follows [Semantic Versioning](https://semver.org): a patch for fixes, a minor version for new features, a major version for changes that break an existing Theme or the way a Creator works with the skill (while it is `0.x`, breaking changes bump the minor version). Every change a Creator would notice gets a line under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md), in the same commit.
+
+To release version `X.Y.Z`:
+
+1. In `CHANGELOG.md`, rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add a new empty `## [Unreleased]` above it, and update the compare links at the bottom.
+2. Set `X.Y.Z` in both `package.json` files and their lock files (`npm version X.Y.Z --no-git-tag-version`, once at the root and once with `--prefix skills/shopify-theme-builder`) and in the `metadata.version` of `skills/shopify-theme-builder/SKILL.md`. A test checks that all of them and the changelog agree.
+3. Commit (`Release vX.Y.Z`), push to `main` and wait for CI to pass.
+4. Tag that commit and publish the release, with the version's changelog section as its notes:
+
+   ```sh
+   git tag -a vX.Y.Z -m vX.Y.Z
+   git push origin vX.Y.Z
+   awk '/^## \[X.Y.Z\]/{f=1; next} /^## \[|^\[/{f=0} f' CHANGELOG.md | gh release create vX.Y.Z --title vX.Y.Z --notes-file -
+   ```
 
 ## Licensing of contributions
 

@@ -1,6 +1,6 @@
 {
   "name": "shopify-theme-builder",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Agent skill that lets a Creator build their own Shopify Theme by talking to a coding agent.",
   "license": "MIT",
