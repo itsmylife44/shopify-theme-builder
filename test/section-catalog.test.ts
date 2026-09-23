@@ -574,6 +574,32 @@ describe('Multicolumn', () => {
   })
 })
 
+describe('Video', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/video.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('is a catalog section with a description, a color scheme and a preset', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="video full-width color-{{ section.settings.color_scheme }}"')
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.video' }])
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('plays a Shopify-hosted, YouTube or Vimeo video behind an optional cover image, with a placeholder until one is picked', () => {
+    const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+    expect(settings.video.type).toBe('video')
+    expect(settings.video_url).toMatchObject({ type: 'video_url', accept: ['youtube', 'vimeo'] })
+    expect(settings.cover_image.type).toBe('image_picker')
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(source).toContain('| video_tag:')
+    expect(source).toContain('https://www.youtube-nocookie.com/embed/')
+    expect(source).toContain('https://player.vimeo.com/video/')
+    expect(source).toContain("{{ 'video.play' | t }}")
+    expect(source).toMatch(/'lifestyle-2' \| placeholder_svg_tag/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

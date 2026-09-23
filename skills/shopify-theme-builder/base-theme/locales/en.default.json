@@ -167,5 +167,9 @@
     "next": "Next slide",
     "pause": "Pause slideshow",
     "play": "Play slideshow"
+  },
+  "video": {
+    "play": "Play video",
+    "title": "Video"
   }
 }

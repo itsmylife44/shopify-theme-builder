@@ -6,6 +6,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A video section plays a YouTube, Vimeo or Shopify-hosted video under an optional heading. With a cover image, the video loads only when a customer presses play; YouTube videos use the privacy-enhanced mode. Shopify's placeholder shows until a video is picked.
 - A multicolumn section shows columns, each with an icon or image, a heading and text, for benefits or steps, with a column count and text alignment; Shopify's image placeholder shows until an image is picked.
 - A slideshow section shows full-width slides, each with an image, heading, text and button, that customers step through with previous and next buttons, the arrow keys or a swipe. Autoplay is off by default; when on, customers can pause it, and it stops on hover and focus and doesn't play under reduced motion. Shopify's placeholders show until images are picked.
 - A featured product section shows one product picked in the Theme Editor on any page, with its image, price, a variant picker, quantity and add to cart, optional dynamic checkout buttons, and app blocks; Shopify's product placeholder until a product is picked.

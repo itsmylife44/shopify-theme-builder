@@ -1,0 +1,218 @@
+{% comment %}A YouTube, Vimeo or Shopify-hosted video, with an optional cover image and heading.{% endcomment %}
+{% liquid
+  assign video = section.settings.video
+  assign video_url = section.settings.video_url
+  assign cover_image = section.settings.cover_image
+
+  assign title = section.settings.heading | strip_html
+  if title == blank
+    assign title = 'video.title' | t
+  endif
+
+  assign aspect_ratio = 1.7778
+  if video != blank
+    assign aspect_ratio = video.aspect_ratio
+  endif
+
+  assign autoplay = '0'
+  if cover_image != blank
+    assign autoplay = '1'
+  endif
+%}
+
+{% capture player %}
+  {% if video != blank %}
+    {{ video | video_tag: controls: true, playsinline: true, class: 'video__player' }}
+  {% elsif video_url.type == 'youtube' %}
+    <iframe
+      class="video__player"
+      src="https://www.youtube-nocookie.com/embed/{{ video_url.id }}?rel=0&autoplay={{ autoplay }}"
+      title="{{ title | escape }}"
+      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+  {% elsif video_url.type == 'vimeo' %}
+    <iframe
+      class="video__player"
+      src="https://player.vimeo.com/video/{{ video_url.id }}?dnt=1&autoplay={{ autoplay }}"
+      title="{{ title | escape }}"
+      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+      allowfullscreen
+      loading="lazy"
+    ></iframe>
+  {% endif %}
+{% endcapture %}
+
+<div class="video full-width color-{{ section.settings.color_scheme }}">
+  <div class="video__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="video__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <deferred-video class="video__media" style="--aspect-ratio: {{ aspect_ratio }};">
+      {% if video == blank and video_url == blank %}
+        {{ 'lifestyle-2' | placeholder_svg_tag: 'video__placeholder' }}
+      {% elsif cover_image != blank %}
+        <button type="button" class="video__cover" aria-label="{{ 'video.play' | t }}">
+          {{
+            cover_image
+            | image_url: width: 2400
+            | image_tag: widths: '750, 1100, 1500, 2200, 2400', sizes: '(min-width: 1200px) 1100px, 100vw', loading: 'lazy', alt: ''
+          }}
+          <span class="video__play">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M7 5v10l8-5z" />
+            </svg>
+          </span>
+        </button>
+        <template>{{ player }}</template>
+      {% else %}
+        {{ player }}
+      {% endif %}
+    </deferred-video>
+  </div>
+</div>
+
+{% stylesheet %}
+  .video {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .video__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding-block: 3rem;
+  }
+
+  .video__heading {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    text-align: center;
+  }
+
+  .video__media {
+    position: relative;
+    display: block;
+    aspect-ratio: var(--aspect-ratio);
+    overflow: hidden;
+    background-color: rgb(from var(--color-foreground) r g b / 0.08);
+  }
+
+  .video__player,
+  .video__placeholder,
+  .video__cover,
+  .video__cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .video__placeholder {
+    fill: rgb(from var(--color-foreground) r g b / 0.4);
+  }
+
+  .video__cover {
+    display: grid;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .video__cover > * {
+    grid-area: 1 / 1;
+  }
+
+  .video__cover img {
+    object-fit: cover;
+  }
+
+  .video__play {
+    place-self: center;
+    display: flex;
+    padding: 1.25rem;
+    border-radius: 50%;
+    background-color: var(--color-button);
+    color: var(--color-button-label);
+  }
+
+  .video__play svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .video__cover:focus-visible {
+    outline: 2px solid var(--color-foreground);
+    outline-offset: 2px;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  class DeferredVideo extends HTMLElement {
+    connectedCallback() {
+      this.querySelector('.video__cover')?.addEventListener(
+        'click',
+        () => {
+          this.replaceChildren(this.querySelector('template').content.cloneNode(true));
+          const player = this.querySelector('.video__player');
+          player.focus();
+          player.play?.();
+        },
+        { once: true }
+      );
+    }
+  }
+
+  if (!customElements.get('deferred-video')) customElements.define('deferred-video', DeferredVideo);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.video",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "See it in action"
+    },
+    {
+      "type": "header",
+      "content": "t:general.media"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:labels.video",
+      "info": "t:info.video_video"
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "t:labels.video_url",
+      "accept": ["youtube", "vimeo"]
+    },
+    {
+      "type": "image_picker",
+      "id": "cover_image",
+      "label": "t:labels.cover_image",
+      "info": "t:info.video_cover_image"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.video"
+    }
+  ]
+}
+{% endschema %}
