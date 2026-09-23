@@ -24,7 +24,7 @@ export async function startStudio({ theme, catalog = defaultCatalog, port, cli =
   // Without a store theme dev would use the store the CLI used last, maybe another Theme's development theme.
   if (!store) throw new Error('The Studio needs a store (<shop>.myshopify.com) for the preview.')
   theme = path.resolve(theme)
-  for (const file of ['layout/theme.liquid', ...Object.values(pages)]) {
+  for (const file of ['layout/theme.liquid', ...Object.values(pages), ...Object.values(groups)]) {
     if (!existsSync(path.join(theme, file))) throw new Error(`${theme} is not a Shopify theme: ${file} is missing.`)
   }
   const server = await createServer({
@@ -170,24 +170,27 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
           removeSection(theme, template, id)
           return readStateAfterWrite()
         })
-        route(`/api/${page}/sections/:id`, 'GET', async (_, id) => readSection(theme, template, id))
-        route(`/api/${page}/sections/:id`, 'PATCH', async (req, id) => {
-          updateSection(theme, template, id, await readBody(req))
-          return readStateAfterWrite()
-        })
         route(`/api/${page}/order`, 'PUT', async (req) => {
           reorderSections(theme, template, await readBody(req))
           return readStateAfterWrite()
         })
-        route(`/api/${page}/sections/:id/blocks`, 'POST', async (req, id) => {
+      }
+      // The header and footer groups' sections are edited like a page's, but not added, removed or reordered.
+      for (const [name, template] of Object.entries({ ...pages, ...groups })) {
+        route(`/api/${name}/sections/:id`, 'GET', async (_, id) => readSection(theme, template, id))
+        route(`/api/${name}/sections/:id`, 'PATCH', async (req, id) => {
+          updateSection(theme, template, id, await readBody(req))
+          return readStateAfterWrite()
+        })
+        route(`/api/${name}/sections/:id/blocks`, 'POST', async (req, id) => {
           addBlock(theme, template, id, await readBody(req))
           return readStateAfterWrite()
         })
-        route(`/api/${page}/sections/:id/blocks/:block`, 'DELETE', async (_, id, block) => {
+        route(`/api/${name}/sections/:id/blocks/:block`, 'DELETE', async (_, id, block) => {
           removeBlock(theme, template, id, block)
           return readStateAfterWrite()
         })
-        route(`/api/${page}/sections/:id/order`, 'PUT', async (req, id) => {
+        route(`/api/${name}/sections/:id/order`, 'PUT', async (req, id) => {
           reorderBlocks(theme, template, id, await readBody(req))
           return readStateAfterWrite()
         })
@@ -237,7 +240,8 @@ class Conflict extends HttpError {
  *   logoAsset: string | null,
  * }} Brand
  * @typedef {keyof typeof pages} Page
- * @typedef {Record<Page, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, validation: Offense[] }} ThemeState
+ * @typedef {keyof typeof groups} Group
+ * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, validation: Offense[] }} ThemeState
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
  */
 
@@ -250,6 +254,8 @@ class Conflict extends HttpError {
 async function readThemeState(theme, catalog, validation) {
   return {
     ...perPage((file) => readTemplate(theme, file)),
+    header: readTemplate(theme, groups.header),
+    footer: readTemplate(theme, groups.footer),
     catalog: perPage((file) => listSections(catalog, file)),
     custom: perPage((file) => listCustomSections(theme, catalog, file)),
     sectionInfo: readSectionInfo(theme, catalog),
@@ -521,6 +527,12 @@ const pages = /** @type {const} */ ({
   collection: 'templates/collection.json',
 })
 
+// The section groups every page shares, whose sections the Studio edits.
+const groups = /** @type {const} */ ({
+  header: 'sections/header-group.json',
+  footer: 'sections/footer-group.json',
+})
+
 /**
  * @template T
  * @param {(file: string) => T} read Reads one page from its JSON template.
@@ -737,7 +749,7 @@ function blockOrder(section) {
 /**
  * Adds a block at the end of a section, within its schema's max_blocks and the block type's limit.
  * @param {string} theme
- * @param {string} file The page's JSON template.
+ * @param {string} file The page's JSON template or section group.
  * @param {string} id
  * @param {unknown} body `{ type }`
  */
@@ -769,7 +781,7 @@ function addBlock(theme, file, id, body) {
 /**
  * Removes a block from a section. A section may be left with none.
  * @param {string} theme
- * @param {string} file The page's JSON template.
+ * @param {string} file The page's JSON template or section group.
  * @param {string} id
  * @param {string} blockId
  */
@@ -785,7 +797,7 @@ function removeBlock(theme, file, id, blockId) {
 /**
  * Puts a section's blocks in a new order, which must list each of them exactly once.
  * @param {string} theme
- * @param {string} file The page's JSON template.
+ * @param {string} file The page's JSON template or section group.
  * @param {string} id
  * @param {unknown} body `{ order }`
  */
@@ -799,7 +811,7 @@ function reorderBlocks(theme, file, id, body) {
 /**
  * Changes a page's section: its color scheme, its settings and its blocks' settings.
  * @param {string} theme
- * @param {string} file The page's JSON template.
+ * @param {string} file The page's JSON template or section group.
  * @param {string} id
  * @param {unknown} body `{ colorScheme?, settings?: { <setting id>: value }, blocks?: { <block id>: { <setting id>: value } } }`
  */
@@ -910,7 +922,7 @@ function setValues(target, values, schemaSettings, owner) {
 /**
  * A page's section with the settings the Studio edits and its blocks', labelled in the Theme's schema language.
  * @param {string} theme
- * @param {string} file The page's JSON template.
+ * @param {string} file The page's JSON template or section group.
  * @param {string} id
  * @returns {SectionDetails}
  */
@@ -1011,7 +1023,7 @@ function readSectionInfo(theme, catalog) {
 /**
  * The section with this id; a 404 when the page has none.
  * @param {Record<string, any>} template
- * @param {string} file The page's JSON template.
+ * @param {string} file The page's JSON template or section group.
  * @param {string} id
  */
 function findSection(template, file, id) {

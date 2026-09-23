@@ -14,7 +14,7 @@ import {
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
-import type { Brand, Offense, Page, SectionDetails, Setting, StoreResources, ThemeState } from '../server/studio.mjs'
+import type { Brand, Group, Offense, Page, SectionDetails, Setting, StoreResources, TemplateSection, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -384,7 +384,12 @@ function PreviewFrame({
 
 const sectionLabel = (state: ThemeState, type: string) => state.sectionInfo[type]?.name || type
 
-/** The page's sections in order between the header and the footer, and the sections the page can add. */
+/** Where a section is: the page's template, else the header or footer group every page shares; null when none has it. */
+function scopeOf(state: ThemeState, page: Page, id: string): Page | Group | null {
+  return ([page, 'header', 'footer'] as const).find((scope) => state[scope].some((section) => section.id === id)) ?? null
+}
+
+/** The header's, the page's and the footer's sections in order, and the sections the page can add. */
 function SectionsPanel({
   state,
   page,
@@ -405,6 +410,21 @@ function SectionsPanel({
   ].filter((group) => group.names.length > 0)
   const items = groups.flatMap((group) => group.names.map((name) => ({ value: name, label: sectionLabel(state, name) })))
   const [adding, setAdding] = useState<string | null>(null)
+  const item = (scope: Page | Group, section: TemplateSection) => (
+    <li key={`${scope}/${section.id}`}>
+      <button
+        type="button"
+        onClick={() => onSelect(section.id)}
+        aria-current={selectedId === section.id ? 'true' : undefined}
+        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted ${
+          selectedId === section.id ? 'bg-muted font-medium' : ''
+        }`}
+      >
+        <LayoutListIcon className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate">{sectionLabel(state, section.type)}</span>
+      </button>
+    </li>
+  )
 
   async function add() {
     const saved = await write(`/api/${page}/sections`, jsonRequest('POST', { type: adding }))
@@ -417,22 +437,11 @@ function SectionsPanel({
     <div className="flex flex-col gap-3 p-2">
       <ol className="flex flex-col gap-0.5" aria-label={`${pageNames[page]} page sections`}>
         <li className="px-2 py-1 text-xs text-muted-foreground">Header</li>
-        {state[page].map((section) => (
-          <li key={section.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(section.id)}
-              aria-current={selectedId === section.id ? 'true' : undefined}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted ${
-                selectedId === section.id ? 'bg-muted font-medium' : ''
-              }`}
-            >
-              <LayoutListIcon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">{sectionLabel(state, section.type)}</span>
-            </button>
-          </li>
-        ))}
+        {state.header.map((section) => item('header', section))}
+        <li className="px-2 py-1 text-xs text-muted-foreground">{pageNames[page]} page</li>
+        {state[page].map((section) => item(page, section))}
         <li className="px-2 py-1 text-xs text-muted-foreground">Footer</li>
+        {state.footer.map((section) => item('footer', section))}
       </ol>
       {items.length > 0 ? (
         <FieldGroup className="gap-2">
@@ -560,9 +569,12 @@ function Inspector({
   const [edits, setEdits] = useState<Record<string, Value>>({})
   const [addingBlock, setAddingBlock] = useState<string | null>(null)
   const { saving, error, write } = useWrite(onSaved)
-  const sections = state[page]
+  const scope = scopeOf(state, page, sectionId)
+  // The header and footer groups' sections are edited here, but not moved or removed.
+  const inGroup = scope === 'header' || scope === 'footer'
+  const sections = scope ? state[scope] : []
   const index = sections.findIndex((section) => section.id === sectionId)
-  const url = `/api/${page}/sections/${encodeURIComponent(sectionId)}`
+  const url = `/api/${scope ?? page}/sections/${encodeURIComponent(sectionId)}`
 
   // Read again after every change to the Theme, so the inspector shows what the files hold.
   useEffect(() => {
@@ -588,7 +600,7 @@ function Inspector({
     return (
       <InspectorFrame title={sectionLabel(state, sectionId)} onClose={onClose}>
         <p className="text-muted-foreground">
-          This section is in the header or footer, which every page shares. Edit it in Shopify's Theme Editor.
+          This section is not in the page's template nor in the header or footer group. Edit it in Shopify's Theme Editor.
         </p>
       </InspectorFrame>
     )
@@ -851,27 +863,31 @@ function Inspector({
         </Alert>
       ) : null}
       <Separator />
-      <div className="flex gap-1">
-        <Button size="sm" variant="outline" disabled={saving || index === 0} onClick={() => move(-1)}>
-          <ArrowUpIcon data-icon="inline-start" />
-          Up
-        </Button>
-        <Button size="sm" variant="outline" disabled={saving || index === sections.length - 1} onClick={() => move(1)}>
-          <ArrowDownIcon data-icon="inline-start" />
-          Down
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          className="ml-auto"
-          // Shopify needs at least one section in a JSON template.
-          disabled={saving || sections.length === 1}
-          onClick={remove}
-        >
-          <Trash2Icon data-icon="inline-start" />
-          Remove
-        </Button>
-      </div>
+      {inGroup ? (
+        <p className="text-muted-foreground">Every page shares the {scope}, so a change here shows on all of them.</p>
+      ) : (
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" disabled={saving || index === 0} onClick={() => move(-1)}>
+            <ArrowUpIcon data-icon="inline-start" />
+            Up
+          </Button>
+          <Button size="sm" variant="outline" disabled={saving || index === sections.length - 1} onClick={() => move(1)}>
+            <ArrowDownIcon data-icon="inline-start" />
+            Down
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="ml-auto"
+            // Shopify needs at least one section in a JSON template.
+            disabled={saving || sections.length === 1}
+            onClick={remove}
+          >
+            <Trash2Icon data-icon="inline-start" />
+            Remove
+          </Button>
+        </div>
+      )}
     </InspectorFrame>
   )
 }

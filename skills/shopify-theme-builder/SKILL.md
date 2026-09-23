@@ -113,7 +113,9 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    | `PUT /api/<page>/sections/<id>/order` | `{"order": ["<block id>", …]}`, every block id of the section exactly once |
    | `GET /api/store` | none; the store's `collections`, `products` and `menus`, each as `{"handle", "title"}` |
    | `PUT /api/<page>/order` | `{"order": ["<id>", …]}`, every section id of the page exactly once; a new section is added at the end, so move it with this |
-   | `GET /api/theme` | none; the current state, with the catalog sections each page can take under `catalog` and the Custom Sections under `custom` |
+   | `GET /api/theme` | none; the current state, with the header and footer groups' sections under `header` and `footer`, the catalog sections each page can take under `catalog` and the Custom Sections under `custom` |
+
+   The calls on `/api/<page>/sections/<id>` (`GET`, `PATCH` and the block calls) also take `header` or `footer` as `<page>`, for the sections of the header and footer groups every page shares, like the footer's newsletter and menus.
 
    For example: `curl -X PUT <studio>/api/brand/logo -H 'Content-Type: image/png' --data-binary @logo.png`.
 3. Compose the pages. A page keeps at least one section, so add the new sections before removing the Base Theme's `main`:
@@ -135,8 +137,8 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
 Tell the Creator, in a few lines:
 
-1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Click a section there, or in the list on the left, to change its colors, text, layout options, collections, products and links on the right, move it or remove it; add sections from the list; the Brand tab holds colors, fonts and logo.
-2. Images, and the header and footer, are edited in Shopify's Theme Editor; products and menus in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
+1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Click a section there, or in the list on the left (the header and footer included), to change its colors, text, layout options, collections, products, menus and links on the right; a page's sections can also be moved or removed; add sections from the list; the Brand tab holds colors, fonts and logo.
+2. Images are edited in Shopify's Theme Editor; products and menus in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
 5. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
