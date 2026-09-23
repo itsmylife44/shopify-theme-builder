@@ -8,6 +8,7 @@ import {
   PaletteIcon,
   PlusIcon,
   Redo2Icon,
+  SlidersHorizontalIcon,
   SmartphoneIcon,
   Trash2Icon,
   Undo2Icon,
@@ -16,7 +17,19 @@ import {
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
-import type { Brand, Group, MediaSetting, Offense, Page, SectionDetails, Setting, StoreResources, TemplateSection, ThemeState } from '../server/studio.mjs'
+import type {
+  Brand,
+  Group,
+  MediaSetting,
+  Offense,
+  Page,
+  SectionDetails,
+  Setting,
+  StoreResources,
+  StyleGroup,
+  TemplateSection,
+  ThemeState,
+} from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -45,7 +58,7 @@ import { Textarea } from '@/components/ui/textarea'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
 type Frame = { url: string; paths: Record<Page, string>; editor: Record<Page, string> | null }
-type Tab = 'sections' | 'brand' | 'checks'
+type Tab = 'sections' | 'brand' | 'style' | 'checks'
 type Device = 'desktop' | 'mobile'
 
 // In the page switcher's order; a Record would list 404 first.
@@ -168,9 +181,10 @@ export function App() {
       </header>
       <div className="flex min-h-0 flex-1">
         <aside className="flex w-76 shrink-0 flex-col border-r">
-          <div role="tablist" className="flex gap-1 border-b p-2">
+          <div role="tablist" className="grid grid-cols-4 gap-1 border-b p-2">
             <TabButton tab="sections" current={tab} onSelect={setTab} icon={<LayoutListIcon />} label="Sections" />
             <TabButton tab="brand" current={tab} onSelect={setTab} icon={<PaletteIcon />} label="Brand" />
+            <TabButton tab="style" current={tab} onSelect={setTab} icon={<SlidersHorizontalIcon />} label="Style" />
             <TabButton tab="checks" current={tab} onSelect={setTab} icon={<CircleCheckIcon />} label="Checks" />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -179,6 +193,8 @@ export function App() {
             ) : tab === 'brand' ? (
               // Keyed by the saved Brand, so the form restarts from what was written.
               <BrandPanel key={JSON.stringify(state.brand)} brand={state.brand} onSaved={showState} />
+            ) : tab === 'style' ? (
+              <StylePanel key={JSON.stringify(state.style)} style={state.style} onSaved={showState} />
             ) : (
               <ThemeCheck offenses={state.validation} />
             )}
@@ -232,7 +248,15 @@ function TabButton({
   label: string
 }) {
   return (
-    <Button role="tab" aria-selected={tab === current} size="sm" variant={tab === current ? 'secondary' : 'ghost'} onClick={() => onSelect(tab)}>
+    <Button
+      role="tab"
+      aria-selected={tab === current}
+      size="sm"
+      variant={tab === current ? 'secondary' : 'ghost'}
+      // Icon over label, so four tabs fit the sidebar.
+      className="h-auto flex-col gap-0.5 py-1.5 text-xs"
+      onClick={() => onSelect(tab)}
+    >
       {icon}
       {label}
     </Button>
@@ -726,74 +750,15 @@ function Inspector({
   }
 
   function settingField(setting: Setting, key: string) {
-    const value = edits[key] ?? editable(setting)
-    const change = (next: Value) => setEdits((current) => ({ ...current, [key]: next }))
-    const id = `setting-${key}`
-    const kind = storeKinds[setting.type]
-    let control: React.ReactNode
-    if (kind && store && !('error' in store)) {
-      control = <StorePicker id={id} value={value as string | string[]} options={store[kind]} onChange={change} />
-    } else if (setting.type === 'checkbox') {
-      return (
-        <Field key={key} orientation="horizontal">
-          <Switch id={id} checked={value === true} onCheckedChange={change} />
-          <FieldLabel htmlFor={id}>{setting.label}</FieldLabel>
-        </Field>
-      )
-    } else if (setting.type === 'range') {
-      control = (
-        <div className="flex items-center gap-3">
-          <Slider
-            aria-labelledby={`${id}-label`}
-            value={Number(value)}
-            min={setting.min}
-            max={setting.max}
-            step={setting.step}
-            onValueChange={(next) => change(next as number)}
-          />
-          <span className="shrink-0 text-muted-foreground tabular-nums">
-            {String(value)}
-            {setting.unit}
-          </span>
-        </div>
-      )
-    } else if (setting.options) {
-      control = (
-        <Select items={setting.options} value={value as string} onValueChange={(next) => next !== null && change(next)}>
-          <SelectTrigger id={id} className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {setting.options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      )
-    } else if (setting.type === 'number') {
-      const number = value === null ? '' : String(value)
-      control = <Input id={id} type="number" value={number} onChange={(event) => change(event.target.value === '' ? null : event.target.valueAsNumber)} />
-    } else if (Array.isArray(setting.value)) {
-      // Without the store's list, handles are typed, separated by commas.
-      const text = Array.isArray(value) ? value.join(', ') : (value as string)
-      control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => change(event.target.value)} />
-    } else if (setting.type === 'richtext') {
-      control = <Textarea id={id} value={value as string} rows={3} onChange={(event) => change(event.target.value)} />
-    } else {
-      const placeholder = setting.type === 'url' ? '/collections/all or https://…' : kind ? 'handle' : undefined
-      control = <Input id={id} value={value as string} placeholder={placeholder} onChange={(event) => change(event.target.value)} />
-    }
     return (
-      <Field key={key}>
-        <FieldLabel id={`${id}-label`} htmlFor={id}>
-          {setting.label}
-        </FieldLabel>
-        {control}
-      </Field>
+      <SettingField
+        key={key}
+        id={`setting-${key}`}
+        setting={setting}
+        value={edits[key] ?? editable(setting)}
+        store={store}
+        onChange={(next) => setEdits((current) => ({ ...current, [key]: next }))}
+      />
     )
   }
 
@@ -956,6 +921,108 @@ function Inspector({
   )
 }
 
+/** The control for one setting: a switch, slider, select, color, store picker or text field. */
+function SettingField({
+  id,
+  setting,
+  value,
+  store,
+  onChange: change,
+}: {
+  id: string
+  setting: Setting
+  value: Value
+  /** The store's resources, for a setting that picks one. */
+  store?: StoreResources | { error: string } | null
+  onChange: (value: Value) => void
+}) {
+  const kind = storeKinds[setting.type]
+  let control: React.ReactNode
+  if (kind && store && !('error' in store)) {
+    control = <StorePicker id={id} value={value as string | string[]} options={store[kind]} onChange={change} />
+  } else if (setting.type === 'checkbox') {
+    return (
+      <Field orientation="horizontal">
+        <Switch id={id} checked={value === true} onCheckedChange={change} />
+        <FieldLabel htmlFor={id}>{setting.label}</FieldLabel>
+      </Field>
+    )
+  } else if (setting.type === 'range') {
+    control = (
+      <div className="flex items-center gap-3">
+        <Slider
+          aria-labelledby={`${id}-label`}
+          value={Number(value)}
+          min={setting.min}
+          max={setting.max}
+          step={setting.step}
+          onValueChange={(next) => change(next as number)}
+        />
+        <span className="shrink-0 text-muted-foreground tabular-nums">
+          {String(value)}
+          {setting.unit}
+        </span>
+      </div>
+    )
+  } else if (setting.options) {
+    control = (
+      <Select items={setting.options} value={value as string} onValueChange={(next) => next !== null && change(next)}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {setting.options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    )
+  } else if (setting.type === 'color') {
+    // An empty color is none.
+    control = (
+      <div className="flex items-center gap-2">
+        <Input
+          id={id}
+          type="color"
+          className="h-7 w-9 shrink-0 p-0.5"
+          value={(value as string) || '#ffffff'}
+          onChange={(event) => change(event.target.value)}
+        />
+        <span className="text-muted-foreground">{(value as string) || 'None'}</span>
+        {value ? (
+          <Button type="button" size="xs" variant="ghost" className="ml-auto" onClick={() => change('')}>
+            Clear
+          </Button>
+        ) : null}
+      </div>
+    )
+  } else if (setting.type === 'number') {
+    const number = value === null ? '' : String(value)
+    control = <Input id={id} type="number" value={number} onChange={(event) => change(event.target.value === '' ? null : event.target.valueAsNumber)} />
+  } else if (Array.isArray(setting.value)) {
+    // Without the store's list, handles are typed, separated by commas.
+    const text = Array.isArray(value) ? value.join(', ') : (value as string)
+    control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => change(event.target.value)} />
+  } else if (setting.type === 'richtext') {
+    control = <Textarea id={id} value={value as string} rows={3} onChange={(event) => change(event.target.value)} />
+  } else {
+    const placeholder = setting.type === 'url' ? '/collections/all or https://…' : kind ? 'handle' : undefined
+    control = <Input id={id} value={value as string} placeholder={placeholder} onChange={(event) => change(event.target.value)} />
+  }
+  return (
+    <Field>
+      <FieldLabel id={`${id}-label`} htmlFor={id}>
+        {setting.label}
+      </FieldLabel>
+      {control}
+    </Field>
+  )
+}
+
 /** Picks one of the store's collections, products or menus by handle, or several for a list setting. */
 function StorePicker({
   id,
@@ -1100,6 +1167,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
   const [colorSchemes, setColorSchemes] = useState(brand.colorSchemes)
   const [headingFont, setHeadingFont] = useState(brand.headingFont)
   const [bodyFont, setBodyFont] = useState(brand.bodyFont)
+  const [accentFont, setAccentFont] = useState(brand.accentFont)
   // Changes on every logo upload, so the logo reloads even when the file name stays the same.
   const [logoVersion, setLogoVersion] = useState(Date.now)
   const { saving, error, write } = useWrite(onSaved)
@@ -1130,6 +1198,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
     if (Object.keys(changedSchemes).length > 0) changes.colorSchemes = changedSchemes
     if (headingFont !== brand.headingFont) changes.headingFont = headingFont
     if (bodyFont !== brand.bodyFont) changes.bodyFont = bodyFont
+    if (accentFont !== brand.accentFont) changes.accentFont = accentFont
     return changes
   }
 
@@ -1205,6 +1274,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
         </FieldSet>
         <FontPicker id="heading-font" label="Heading font" value={headingFont} onChange={setHeadingFont} />
         <FontPicker id="body-font" label="Body font" value={bodyFont} onChange={setBodyFont} />
+        <FontPicker id="accent-font" label="Accent font (labels, prices)" value={accentFont} onChange={setAccentFont} />
         <Field>
           <FieldLabel htmlFor="logo">Logo</FieldLabel>
           {brand.logoAsset ? (
@@ -1232,6 +1302,58 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
         <Button type="submit" className="w-full" disabled={saving}>
           {saving ? 'Saving…' : 'Save Brand'}
         </Button>
+      </div>
+    </form>
+  )
+}
+
+/** The global style settings: type, shape, buttons, spacing, cards, media and motion. */
+function StylePanel({ style, onSaved }: { style: StyleGroup[]; onSaved: (state: ThemeState) => void }) {
+  const [edits, setEdits] = useState<Record<string, Value>>({})
+  const { saving, error, write } = useWrite(onSaved)
+  const changed = Object.keys(edits).length > 0
+
+  // Only what the Creator changed is sent, so values set elsewhere (the Theme Editor, the agent) stay as they are.
+  function save(event: React.SubmitEvent<HTMLFormElement>) {
+    event.preventDefault()
+    write('/api/style', jsonRequest('PUT', edits))
+  }
+
+  return (
+    <form onSubmit={save} className="flex flex-col gap-4 p-3">
+      <FieldGroup className="gap-5">
+        {style.map((group) => (
+          <FieldSet key={group.name}>
+            <FieldLegend>{group.name}</FieldLegend>
+            <FieldGroup className="gap-3">
+              {group.settings.map((setting) => (
+                <SettingField
+                  key={setting.id}
+                  id={`style-${setting.id}`}
+                  setting={setting}
+                  value={edits[setting.id] ?? setting.value}
+                  onChange={(next) => setEdits((current) => ({ ...current, [setting.id]: next }))}
+                />
+              ))}
+            </FieldGroup>
+          </FieldSet>
+        ))}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>The style was not saved</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+      </FieldGroup>
+      <div className="sticky bottom-0 -mx-3 flex gap-2 border-t bg-background p-3">
+        <Button type="submit" className="flex-1" disabled={saving || !changed}>
+          {saving ? 'Saving…' : 'Save style'}
+        </Button>
+        {changed ? (
+          <Button type="button" variant="ghost" onClick={() => setEdits({})}>
+            Discard
+          </Button>
+        ) : null}
       </div>
     </form>
   )

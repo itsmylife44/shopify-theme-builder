@@ -59,7 +59,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 2. Tell the Creator what you took from the reference, then ask only about what it left open. Ask one question at a time. Without a reference, ask about all seven.
 3. Turn the answers into Brand values:
    - **Color schemes.** Each scheme has six hex colors (`#RRGGBB`): `background`, `text`, `button`, `button_label`, `accent` (links in running text, sale prices and badges) and `border` (inputs, dividers and bordered cards), and an optional `background_gradient` (a CSS gradient like `linear-gradient(180deg, #FAF7F2, #EFE6D8)`, or `""` to clear it). Make `scheme-1` the main light scheme and `scheme-2` its dark inverse; add `scheme-3` for a section in the Brand's accent color when it has one. Keep text-on-background, label-on-button and accent-on-background contrast at 4.5:1 or more, and border-on-background at 3:1 or more (inputs show only their border). The Studio's Brand tab flags any pair below that.
-   - **Fonts.** A heading font and a body font, each a handle from `<skill-dir>/studio/server/shopify-fonts.json` (Shopify's font library), like `work_sans_n4` (`n4` is regular 400, `n7` bold, `i4` italic). When the reference's font isn't there, pick the closest family and tell the Creator.
+   - **Fonts.** A heading font, a body font and optionally an accent font (labels and prices; it defaults to Work Sans), each a handle from `<skill-dir>/studio/server/shopify-fonts.json` (Shopify's font library), like `work_sans_n4` (`n4` is regular 400, `n7` bold, `i4` italic). When the reference's font isn't there, pick the closest family and tell the Creator.
    - **Logo.** A PNG, JPEG, WebP or SVG file, at most 2 MB. Take the file the Creator gives, or download it from their website when that site is their own brand. None is fine: the header shows the shop name.
    - **Style** (like minimal, bold, playful, luxurious) guides the fonts, the schemes and which home sections you pick in step 4.
    - **Shop languages**: every language the shop sells in, each as the ISO code Shopify admin › Settings › Languages shows (`it`, `de`, `pt-BR`), and which of them is the shop's **default language** (the one customers see first). Ask whether it sells in more than one.
@@ -98,7 +98,8 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
    | Call | Body |
    | --- | --- |
-   | `PUT /api/brand` | `{"colorSchemes": {"scheme-1": {"background": "#FFFFFF", "text": "#1A1A1A", "button": "#1A1A1A", "button_label": "#FFFFFF", "accent": "#8C2F1B", "border": "#8A8A8A"}}, "headingFont": "<handle>", "bodyFont": "<handle>"}` |
+   | `PUT /api/brand` | `{"colorSchemes": {"scheme-1": {"background": "#FFFFFF", "text": "#1A1A1A", "button": "#1A1A1A", "button_label": "#FFFFFF", "accent": "#8C2F1B", "border": "#8A8A8A"}}, "headingFont": "<handle>", "bodyFont": "<handle>", "accentFont": "<handle>"}` |
+   | `PUT /api/style` | `{"<setting id>": <value>}`, any of the global style settings `GET /api/theme` lists under `style`, grouped as Type, Shape, Buttons, Spacing, Cards, Media and Motion, each as `{"id", "type", "label", "value"}` with a range's `min`, `max` and `step` or a select's `options`; like `{"type_heading_case": "uppercase", "shape_family": "round", "density": "airy", "motion": "subtle"}`. A `color` (the media tint) takes a hex color, or `""` for none. Settings you leave out keep their value |
    | `PUT /api/brand/logo` | the image file, with its `Content-Type` (`image/png`, `image/jpeg`, `image/webp`, `image/svg+xml`) |
    | `POST /api/<page>/sections` | `{"type": "<catalog section>"}`; `<page>` is `home`, `product`, `collection`, `page`, `contact` (the `page.contact` template), `cart`, `search`, `blog`, `article`, `404` or `collections` (the collections list) |
    | `DELETE /api/<page>/sections/<id>` | none |
@@ -109,7 +110,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    | `PUT /api/<page>/sections/<id>/order` | `{"order": ["<block id>", …]}`, every block id of the section exactly once |
    | `GET /api/store` | none; the store's `collections`, `products` and `menus`, each as `{"handle", "title"}` |
    | `PUT /api/<page>/order` | `{"order": ["<id>", …]}`, every section id of the page exactly once; a new section is added at the end, so move it with this |
-   | `GET /api/theme` | none; the current state, with the header and footer groups' sections under `header` and `footer`, the catalog sections each page can take under `catalog`, the Custom Sections under `custom`, and under `history` whether `undo` and `redo` have a step |
+   | `GET /api/theme` | none; the current state, with the header and footer groups' sections under `header` and `footer`, the catalog sections each page can take under `catalog`, the Custom Sections under `custom`, the global style settings under `style`, and under `history` whether `undo` and `redo` have a step |
    | `POST /api/undo` | none; puts back the files the latest Studio write changed (at most 50 steps, kept until the Studio stops). It refuses, naming the file, when that file changed outside the Studio since, and never undoes those edits |
    | `POST /api/redo` | none; writes again what `POST /api/undo` put back, until a new write |
 
@@ -138,7 +139,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
 Tell the Creator, in a few lines:
 
-1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Pick a page (home, product, cart, blog, 404 …) in the top bar. Click a section there, or in the list on the left (the header and footer included), to change its colors, text, layout options, collections, products, menus and links on the right; a page's sections can also be moved or removed; add sections from the list; the Brand tab holds colors, fonts and logo.
+1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Pick a page (home, product, cart, blog, 404 …) in the top bar. Click a section there, or in the list on the left (the header and footer included), to change its colors, text, layout options, collections, products, menus and links on the right; a page's sections can also be moved or removed; add sections from the list; the Brand tab holds colors, fonts and logo, and the Style tab the type scale, shape, buttons, spacing, product cards, media and motion.
 2. Images and videos are picked in Shopify's Theme Editor: the selected section in the Studio shows each image and video setting, whether it's set, and a "Choose in the Theme Editor" link that opens the page in the Theme Editor on the preview's development theme, where they select that section. Products and menus are edited in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
