@@ -1,0 +1,235 @@
+{% comment %}An image with product hotspots that each open a small product card, for shoppable lookbooks.{% endcomment %}
+<div class="lookbook full-width color-{{ section.settings.color_scheme }}">
+  <div class="lookbook__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="lookbook__heading">{{ section.settings.heading | escape }}</h2>
+    {% endif %}
+
+    <div class="lookbook__media">
+      <div class="lookbook__stage">
+        {% if section.settings.image != blank %}
+          {{
+            section.settings.image
+            | image_url: width: 2400
+            | image_tag: widths: '750, 1100, 1500, 2200, 2400', sizes: '(min-width: 1200px) 1100px, 100vw', loading: 'lazy'
+          }}
+        {% else %}
+          {{ 'lifestyle-2' | placeholder_svg_tag: 'placeholder lookbook__placeholder' }}
+        {% endif %}
+
+        {% for block in section.blocks %}
+          {% liquid
+            assign product = block.settings.product
+            assign product_title = product.title
+            if product == blank
+              assign product_title = 'product_card.product_title' | t
+            endif
+          %}
+          <button
+            type="button"
+            class="lookbook__hotspot"
+            popovertarget="LookbookCard-{{ section.id }}-{{ forloop.index }}"
+            style="--hotspot-x: {{ block.settings.x }}%; --hotspot-y: {{ block.settings.y }}%; anchor-name: --lookbook-{{ section.id }}-{{ forloop.index }};"
+            aria-label="{{ 'lookbook.hotspot' | t: product: product_title }}"
+            {{ block.shopify_attributes }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+              <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="M10 5v10m-5-5h10" />
+            </svg>
+          </button>
+          <div
+            id="LookbookCard-{{ section.id }}-{{ forloop.index }}"
+            class="lookbook__card"
+            popover
+            style="position-anchor: --lookbook-{{ section.id }}-{{ forloop.index }};"
+          >
+            {% if product != blank %}
+              {% render 'product-card', product: product %}
+            {% else %}
+              {% assign placeholder = forloop.index0 | modulo: 6 | plus: 1 %}
+              {% render 'product-card', placeholder: placeholder %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .lookbook {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .lookbook__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+  }
+
+  .lookbook__heading {
+    margin: 0;
+  }
+
+  .lookbook__media {
+    padding: var(--media-inset);
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
+  }
+
+  .lookbook__stage {
+    position: relative;
+  }
+
+  .lookbook__stage > img,
+  .lookbook__placeholder {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
+  }
+
+  .lookbook__hotspot {
+    position: absolute;
+    inset-block-start: var(--hotspot-y);
+    inset-inline-start: var(--hotspot-x);
+    translate: -50% -50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: var(--space-xs);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-badges);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+
+  .lookbook__hotspot:dir(rtl) {
+    inset-inline-start: calc(100% - var(--hotspot-x));
+    translate: 50% -50%;
+  }
+
+  .lookbook__hotspot svg {
+    width: 1.25rem;
+  }
+
+  .lookbook__hotspot:has(+ .lookbook__card:popover-open) svg {
+    rotate: 45deg;
+  }
+
+  .lookbook__card {
+    inline-size: 14rem;
+    padding: var(--space-sm);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-cards);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* Without anchor positioning the card keeps the popover's default place, centered in the window. */
+  @supports (position-area: block-end) {
+    .lookbook__card {
+      inset: auto;
+      margin: var(--space-xs);
+      position-area: block-end;
+      justify-self: anchor-center;
+      position-try-fallbacks: flip-block;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .lookbook__hotspot svg {
+      transition: rotate var(--motion-duration) var(--motion-easing);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.lookbook",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Shop the look"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "hotspot",
+      "name": "t:general.hotspot",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "t:labels.product"
+        },
+        {
+          "type": "range",
+          "id": "x",
+          "label": "t:labels.horizontal_position",
+          "info": "t:info.lookbook_position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50
+        },
+        {
+          "type": "range",
+          "id": "y",
+          "label": "t:labels.vertical_position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.lookbook",
+      "blocks": [
+        {
+          "type": "hotspot",
+          "settings": {
+            "x": 30,
+            "y": 40
+          }
+        },
+        {
+          "type": "hotspot",
+          "settings": {
+            "x": 65,
+            "y": 60
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

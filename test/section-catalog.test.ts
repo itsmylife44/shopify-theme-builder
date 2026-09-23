@@ -1153,6 +1153,59 @@ describe('Spec tiles', () => {
   })
 })
 
+describe('Lookbook', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/lookbook.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const hotspot = schema.blocks[0]
+  const blockSettings = Object.fromEntries(hotspot.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, an image, a color scheme and a preset with a few hotspots', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="lookbook full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.image.type).toBe('image_picker')
+    expect(source).toContain("'lifestyle-2' | placeholder_svg_tag: 'placeholder lookbook__placeholder'")
+    expect(schema.presets[0].name).toBe('t:general.lookbook')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(1)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('places each hotspot, a product block, at an x and y position in percent of the image', () => {
+    expect(hotspot).toEqual(expect.objectContaining({ type: 'hotspot', name: 't:general.hotspot' }))
+    expect(blockSettings.product.type).toBe('product')
+    for (const id of ['x', 'y']) expect(blockSettings[id]).toEqual(expect.objectContaining({ type: 'range', min: 0, max: 100, unit: '%' }))
+    expect(source).toContain('style="--hotspot-x: {{ block.settings.x }}%; --hotspot-y: {{ block.settings.y }}%;')
+    // The image keeps its own ratio inside the media inset, so the hotspots stay where the Merchant put them.
+    expect(css).toMatch(/\.lookbook__media {[^}]*padding: var\(--media-inset\);[^}]*background-color: var\(--media-background\);/)
+    expect(css).toMatch(/\.lookbook__stage {\s*position: relative;/)
+  })
+
+  it('measures x from the left of the image in every language, since the image never mirrors', () => {
+    expect(css).toMatch(/\.lookbook__hotspot {[^}]*inset-inline-start: var\(--hotspot-x\);[^}]*translate: -50% -50%;/)
+    expect(css).toMatch(/\.lookbook__hotspot:dir\(rtl\) {\s*inset-inline-start: calc\(100% - var\(--hotspot-x\)\);\s*translate: 50% -50%;/)
+  })
+
+  it('opens a product card from a labelled button, with the keyboard too, through a native popover', () => {
+    expect(source).toMatch(
+      /<button\s+type="button"\s+class="lookbook__hotspot"\s+popovertarget="LookbookCard-{{ section\.id }}-{{ forloop\.index }}"[^>]*aria-label="{{ 'lookbook\.hotspot' \| t: product: [^}]+}}"/,
+    )
+    expect(source).toMatch(/<div\s+id="LookbookCard-{{ section\.id }}-{{ forloop\.index }}"\s+class="lookbook__card"\s+popover/)
+    expect(source).toContain("{% render 'product-card', product: product %}")
+    expect(css).toMatch(/\.lookbook__hotspot {[^}]*min-inline-size: var\(--target-size\);[^}]*min-block-size: var\(--target-size\);/)
+    const locale = JSON.parse(readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.lookbook.hotspot).toContain('{{ product }}')
+  })
+
+  it('shows the card next to its hotspot where the browser can anchor it, styled from the style system', () => {
+    expect(css).toMatch(/\.lookbook__card {[^}]*border: var\(--border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-cards\);/)
+    expect(css).toMatch(/@supports \(position-area: block-end\) {\s*\.lookbook__card {[^}]*position-area: block-end;/)
+    expect(source).toContain('anchor-name: --lookbook-{{ section.id }}-{{ forloop.index }};')
+    expect(source).toContain('style="position-anchor: --lookbook-{{ section.id }}-{{ forloop.index }};"')
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

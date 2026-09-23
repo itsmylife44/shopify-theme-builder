@@ -178,6 +178,9 @@
   "marquee": {
     "pause": "Pause scrolling text"
   },
+  "lookbook": {
+    "hotspot": "Show {{ product }}"
+  },
   "video": {
     "play": "Play video",
     "title": "Video"
