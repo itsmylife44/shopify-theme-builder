@@ -23,11 +23,20 @@ function tempDir(prefix: string) {
   return dir
 }
 
-/** A fresh Theme folder built from the Base Theme. */
+/** A fresh Theme folder built from the Base Theme, with a contact page template (SKILL.md's setup copies the catalog's). */
 function fixtureTheme() {
   const theme = tempDir('theme-')
   cpSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme'), theme, { recursive: true })
+  writeFileSync(path.join(theme, 'templates/page.contact.json'), JSON.stringify({ sections: { main: { type: 'page' } }, order: ['main'] }))
   return theme
+}
+
+/** The pages the Studio composes, in its page switcher's order. */
+const pageNames = ['home', 'product', 'collection', 'page', 'contact', 'cart', 'search', 'blog', 'article', '404', 'collections']
+
+/** The same value for every page, except the overrides. */
+function everyPage<T>(value: T, overrides: Record<string, T> = {}) {
+  return { ...Object.fromEntries(pageNames.map((page) => [page, value])), ...overrides }
 }
 
 const catalogHero =
@@ -178,14 +187,16 @@ function errors<T extends { severity: string }>(offenses: T[]) {
 }
 
 describe('Studio API: read Theme state', () => {
-  it('returns the home, product and collection sections in order, the catalog sections per page and a clean validation', async () => {
+  it('returns every page\'s sections in order, the catalog sections per page and a clean validation', async () => {
     const studio = await openStudio(fixtureTheme())
     const state = await studio.readTheme()
     expect(state.home).toEqual([{ id: 'main', type: 'hello-world' }])
     expect(state.product).toEqual([{ id: 'main', type: 'product' }])
     expect(state.collection).toEqual([{ id: 'main', type: 'collection' }])
-    expect(state.catalog).toEqual({ home: ['hero'], product: ['hero'], collection: ['hero'] })
-    expect(state.custom).toEqual({ home: [], product: [], collection: [] })
+    const types = { page: 'page', contact: 'page', cart: 'cart', search: 'search', blog: 'blog', article: 'article', 404: '404', collections: 'collections' }
+    for (const [page, type] of Object.entries(types)) expect(state[page]).toEqual([{ id: 'main', type, colorScheme: 'scheme-1' }])
+    expect(state.catalog).toEqual(everyPage(['hero']))
+    expect(state.custom).toEqual(everyPage([]))
     expect(state.validation.filter((o: { severity: string }) => o.severity === 'error')).toEqual([])
   })
 
@@ -198,11 +209,7 @@ describe('Studio API: read Theme state', () => {
     )
     const studio = await openStudio(theme)
     await studio.addSection('hero')
-    expect((await studio.readTheme()).custom).toEqual({
-      home: ['pull-quote'],
-      product: ['pull-quote', 'size-guide'],
-      collection: ['pull-quote'],
-    })
+    expect((await studio.readTheme()).custom).toEqual(everyPage(['pull-quote'], { product: ['pull-quote', 'size-guide'] }))
   })
 
   it('surfaces a Theme Check error for invalid Liquid in the Theme', async () => {
@@ -459,9 +466,8 @@ describe('studio command', () => {
   })
 
   it('refuses a Theme without a home template', () => {
-    const dir = tempDir('no-home-')
-    mkdirSync(path.join(dir, 'layout'))
-    writeFileSync(path.join(dir, 'layout/theme.liquid'), '{{ content_for_layout }}')
+    const dir = fixtureTheme()
+    rmSync(path.join(dir, home))
     const result = studio('--theme', dir, '--store', 'example.myshopify.com')
     expect(result.code).toBe(1)
     expect(result.stderr).toContain(`${dir} is not a Shopify theme: templates/index.json is missing.`)
@@ -1327,7 +1333,7 @@ describe('Studio API: product page', () => {
       '<div></div>\n{% schema %}{"name": "Gallery", "enabled_on": {"templates": ["product"]}}{% endschema %}\n',
     )
     const studio = await openStudio(theme, { catalog })
-    expect((await studio.readTheme()).catalog).toEqual({ home: ['hero'], product: ['gallery', 'hero'], collection: ['hero'] })
+    expect((await studio.readTheme()).catalog).toEqual(everyPage(['hero'], { product: ['gallery', 'hero'] }))
     const before = readFileSync(path.join(theme, home), 'utf8')
     expect((await studio.addSection('gallery')).status).toBe(400)
     expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
@@ -1379,6 +1385,46 @@ describe('Studio API: collection page', () => {
     expect(errors(body.validation)).toEqual([])
     // The product grid shows once per page.
     expect((await studio.addSection('main-collection', 'collection')).status).toBe(400)
+  })
+})
+
+describe('Studio API: the other pages', () => {
+  const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
+  const mains = {
+    contact: 'contact-form',
+    cart: 'main-cart',
+    search: 'main-search',
+    blog: 'main-blog',
+    article: 'main-article',
+    404: 'main-404',
+    collections: 'main-list-collections',
+  }
+
+  it('offers each page\'s catalog main section on that page only, and the contact form on every page template', async () => {
+    const { catalog } = await (await openStudio(fixtureTheme(), { catalog: realCatalog })).readTheme()
+    for (const [page, type] of Object.entries(mains)) {
+      const on = pageNames.filter((other) => catalog[other].includes(type))
+      expect(on).toEqual(type === 'contact-form' ? ['page', 'contact'] : [page])
+    }
+    expect(catalog.page).toContain('hero')
+  })
+
+  it('composes each page from its catalog main section with a clean Theme Check', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    for (const [page, type] of Object.entries(mains)) {
+      expect((await studio.addSection(type, page)).status).toBe(200)
+      if (page !== 'contact') expect((await studio.removeSection('main', page)).status).toBe(200)
+      // The main section shows once per page.
+      expect((await studio.addSection(type, page)).status).toBe(400)
+    }
+    const state = await studio.readTheme()
+    expect(state.contact.map((section: { type: string }) => section.type)).toEqual(['page', 'contact-form'])
+    for (const [page, type] of Object.entries(mains)) {
+      if (page !== 'contact') expect(state[page]).toEqual([expect.objectContaining({ type })])
+    }
+    expect(errors(state.validation)).toEqual([])
+    expect(readTemplate(theme, 'templates/list-collections.json').order).toHaveLength(1)
   })
 })
 
@@ -1595,6 +1641,12 @@ describe('Studio: live preview', () => {
       if (req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'X-Frame-Options': 'DENY' })
         res.end('<html><body><p>Shop</p></body></html>')
+      } else if (req.url?.startsWith('/sitemap_')) {
+        // Shopify's sitemaps list absolute URLs on the shop's domain; the blogs one lists each blog, then its articles.
+        const shop = 'https://example.myshopify.com'
+        const paths = req.url === '/sitemap_pages_1.xml' ? ['/pages/about-us', '/pages/faq'] : ['/blogs/news', '/blogs/news/hello-world']
+        res.writeHead(200, { 'Content-Type': 'application/xml' })
+        res.end(`<urlset>${paths.map((p) => `<url><loc>${shop}${p}</loc><lastmod>2026-09-23</lastmod></url>`).join('')}</urlset>`)
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end('{"products":[{"handle":"clay-mug"}]}')
@@ -1607,10 +1659,28 @@ describe('Studio: live preview', () => {
     await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
     const { status, body } = await studio.send('GET', 'api/frame')
     expect(status).toBe(200)
-    expect(body.paths).toEqual({ home: '/', product: '/products/clay-mug', collection: '/collections/all' })
+    expect(body.paths).toEqual({
+      home: '/',
+      product: '/products/clay-mug',
+      collection: '/collections/all',
+      page: '/pages/about-us',
+      contact: '/pages/about-us?view=contact',
+      cart: '/cart',
+      search: '/search?q=',
+      blog: '/blogs/news',
+      article: '/blogs/news/hello-world',
+      404: '/studio-page-not-found',
+      collections: '/collections',
+    })
     // The Theme Editor on theme dev's development theme, from the share link theme dev printed.
     const editor = 'https://theme-builder-dev-ou5grn62.myshopify.com/admin/themes/207592816979/editor'
-    expect(body.editor).toEqual({ home: `${editor}?template=index`, product: `${editor}?template=product`, collection: `${editor}?template=collection` })
+    expect(body.editor).toMatchObject({
+      home: `${editor}?template=index`,
+      product: `${editor}?template=product`,
+      collection: `${editor}?template=collection`,
+      contact: `${editor}?template=page.contact`,
+      collections: `${editor}?template=list-collections`,
+    })
     const page = await fetch(`${body.url}/`)
     expect(page.headers.get('x-frame-options')).toBeNull()
     expect(page.headers.get('access-control-allow-origin')).toBeNull()

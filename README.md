@@ -73,7 +73,7 @@ The Studio is a local app that opens next to your agent, in Google Chrome. It sh
 - **Click to edit.** Click a section in the preview, or in the list on the left. On the right, pick its color scheme, rewrite its text (and its blocks' text, like each testimonial), move it or remove it.
 - **Add sections** from the Section Catalog, or the Custom Sections your agent wrote.
 - **Brand.** Color schemes, fonts from Shopify's font library, and the logo, for the whole theme.
-- **Pages.** Home, product and collection, in the top bar.
+- **Pages.** Home, product, collection, page, contact page, cart, search, blog, article, 404 and the collections list, in the top bar.
 - **Desktop and mobile** previews, and a Theme Check status that updates after every change.
 
 <p>
