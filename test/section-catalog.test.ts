@@ -974,6 +974,73 @@ describe('Slideshow', () => {
   })
 })
 
+describe('Header layouts', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/header.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const script = source.match(/class HeaderMenu[\s\S]*?\n  }\n/)![0]
+
+  it('offers three layouts, defaulting to the logo on the left with the menu beside it', () => {
+    expect(values(settings.layout)).toEqual(['logo_left_menu_center', 'logo_center_menu_below', 'logo_left_drawer'])
+    expect(settings.layout.default).toBe('logo_left_menu_center')
+    expect(source).toContain('class="header full-width header--{{ section.settings.layout }}')
+  })
+
+  it('centers the logo with the menu on a row below it', () => {
+    expect(css).toMatch(/\.header--logo_center_menu_below \.header__inner {[^}]*display: grid;[^}]*grid-template-columns: 1fr auto 1fr;/)
+    expect(css).toMatch(/\.header--logo_center_menu_below \.header__logo {[^}]*grid-area: 1 \/ 2;/)
+    expect(css).toMatch(/\.header--logo_center_menu_below \.header__menu {[^}]*grid-area: 2 \/ 1 \/ 3 \/ -1;/)
+  })
+
+  it('keeps the menu in the drawer on desktop too, with the selectors only in the icon row there', () => {
+    expect(css).toMatch(/@media \(min-width: 750px\) {[\s\S]*\.header--logo_left_drawer \.header__menu {\s*display: none;[\s\S]*\.header--logo_left_drawer \.header__menu-button {\s*display: flex;/)
+    expect(css).toMatch(/@media \(min-width: 750px\) {[\s\S]*\.header__drawer \.header__localization {\s*display: none;/)
+  })
+
+  it('sizes the logo from a height setting', () => {
+    expect(settings.logo_height).toMatchObject({ type: 'range', unit: 'px', default: 48 })
+    expect(source).toContain('--logo-height: {{ section.settings.logo_height }}px')
+    expect(css).toMatch(/\.header__logo-image {[^}]*max-height: var\(--logo-height\);/)
+    expect(css).toMatch(/\.header__logo-image--asset {[^}]*height: var\(--logo-height\);/)
+  })
+
+  it('sticks to the top when the Merchant turns it on, hiding as customers scroll down and coming back as they scroll up or tab into it', () => {
+    expect(settings.sticky).toMatchObject({ type: 'checkbox', default: false })
+    expect(source).toMatch(/{%- if section\.settings\.sticky %} header--sticky{% endif -%}/)
+    // The section wrapper sticks, since a sticky element only sticks inside its parent.
+    expect(css).toMatch(/\.shopify-section:has\(> \.header--sticky\) {[^}]*position: sticky;[^}]*inset-block-start: 0;/)
+    expect(css).toMatch(/\.shopify-section:has\(> \.header--sticky\[data-hidden\]\) {[^}]*translate: 0 -100%;/)
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) {\s*\.shopify-section:has\(> \.header--sticky\) {\s*transition: translate var\(--motion-duration\) var\(--motion-easing\);/)
+    expect(script).toContain("this.closest('.header--sticky')")
+    expect(script).toMatch(/addEventListener\(\s*'scroll'/)
+    expect(script).toMatch(/toggleAttribute\('data-hidden'/)
+    expect(script).toMatch(/addEventListener\(\s*'focusin'/)
+  })
+
+  it('keeps anchors, focus and sticky columns clear of the sticky header while it shows', () => {
+    const read = (name: string) => readFileSync(path.join(projectDir, `skills/shopify-theme-builder/catalog/sections/${name}.liquid`), 'utf8')
+    expect(script).toContain("setProperty('--header-offset'")
+    expect(css).toMatch(/html:has\(\.header--sticky\) {\s*scroll-padding-block-start: var\(--header-offset\);/)
+    expect(read('main-product')).toMatch(/\.main-product__details {\s*position: sticky;\s*top: calc\(var\(--header-offset, 0px\) \+ 2rem\);/)
+    expect(read('editorial-split')).toMatch(/\.editorial-split__media {\s*position: sticky;\s*inset-block-start: calc\(var\(--header-offset, 0px\) \+ var\(--space-xl\)\);/)
+  })
+
+  it('offers each layout as a named preset', () => {
+    expect(schema.presets[0]).toEqual({ name: 't:general.header' })
+    expect(schema.presets.length).toBeGreaterThanOrEqual(4)
+    for (const preset of schema.presets.slice(1)) {
+      expect(preset.name).toMatch(/^t:general\.header_/)
+      for (const [id, value] of Object.entries(preset.settings)) {
+        expect(settings[id].type === 'checkbox' ? typeof value === 'boolean' : fits(settings[id], value), `${id}: ${value}`).toBe(true)
+      }
+    }
+    expect(schema.presets.map((preset: { settings?: { layout?: string } }) => preset.settings?.layout ?? 'logo_left_menu_center')).toEqual(
+      expect.arrayContaining(values(settings.layout)),
+    )
+  })
+})
+
 describe('Multicolumn', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/multicolumn.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

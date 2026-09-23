@@ -101,7 +101,10 @@
     "hero_small_banner": "Hero: small banner",
     "slideshow_full_screen": "Slideshow: full screen",
     "slideshow_split": "Slideshow: split",
-    "slideshow_text_on_image": "Slideshow: text on image"
+    "slideshow_text_on_image": "Slideshow: text on image",
+    "header_centered": "Header: centered logo",
+    "header_drawer": "Header: drawer menu",
+    "header_sticky": "Header: sticky"
   },
   "labels": {
     "accent": "Accent",
@@ -220,7 +223,9 @@
     "height": "Height",
     "content_position": "Content position",
     "content_style": "Content style",
-    "overlay_opacity": "Overlay opacity"
+    "overlay_opacity": "Overlay opacity",
+    "sticky_header": "Sticky header",
+    "logo_height": "Logo height"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -258,7 +263,9 @@
     "lookbook_position": "From the left and top edges of the image, in percent. Place it on the product in the photo.",
     "comparison_table_options": "The products or options to compare, a column each. Leave one empty to hide its column.",
     "press_quotes_logo": "Shown in place of the publication name. The name stays its text alternative.",
-    "hero_overlay_opacity": "A layer of the color scheme's background over the media, so the text stays readable."
+    "hero_overlay_opacity": "A layer of the color scheme's background over the media, so the text stays readable.",
+    "header_sticky": "Stays at the top of the page: hides as customers scroll down and comes back as they scroll up.",
+    "header_logo_height": "For a logo image. Without one, the shop name shows at a heading size."
   },
   "options": {
     "alignment": {
@@ -297,7 +304,10 @@
       "rotate": "Rotate",
       "stack": "Stack",
       "row": "Row",
-      "wall": "Wall"
+      "wall": "Wall",
+      "logo_left_menu_center": "Logo left, menu center",
+      "logo_center_menu_below": "Logo center, menu below",
+      "logo_left_drawer": "Logo left, menu in a drawer"
     },
     "cart_type": {
       "drawer": "Drawer",
