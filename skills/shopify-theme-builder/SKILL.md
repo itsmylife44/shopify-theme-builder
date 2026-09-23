@@ -167,10 +167,22 @@ When the Creator wants something no catalog section does, write a **Custom Secti
 
 When the Creator says the Theme is ready, deliver it. Delivery uploads a copy; it never publishes.
 
-1. Run `shopify theme check --path <theme>`. It must exit 0 (zero errors); fix every error first. Deliver nothing until it passes.
-2. Commit any open change in `<theme>`.
-3. Deliver it one way; the first is the default:
-   - **Push unpublished** (default), to the Merchant's store. When step 1 used a development store for the preview, ask for the Merchant's `<shop>.myshopify.com` and check access to it the same way; a development store can't be handed to a Merchant. `<theme name>` is the `theme_name` from step 3.3:
+1. Check speed and accessibility with Lighthouse, against the Theme Store's bars: performance 60 and accessibility 90, each averaged over the home, product and collection pages. Run it on the preview: `GET /api/preview` gives its `url` (start the Studio as in step 4.1 when it isn't running). Test `<url>/`, `<url>/products/<handle>` and `<url>/collections/<handle>`, with a product and a collection from `GET /api/store`, each on mobile and on desktop, writing the reports outside the Theme folder:
+
+   ```sh
+   npx lighthouse <page> --only-categories=performance,accessibility --output=json --output-path=<report>.json --quiet --chrome-flags="--headless=new"
+   npx lighthouse <page> --preset=desktop --only-categories=performance,accessibility --output=json --output-path=<report>.json --quiet --chrome-flags="--headless=new"
+   ```
+
+   Lighthouse needs Google Chrome; when it can't find it, ask the Creator to install it. A report's `categories.performance.score` and `categories.accessibility.score` run from 0 to 1 (0.9 is 90). An audit in `audits` with a `score` under 0.9 failed, and its `details.items` name the elements.
+   - **Accessibility.** Fix every failing accessibility audit in the Theme (like missing alt text, labels, contrast or heading order), then run Lighthouse again on that page. When a color that fails contrast comes from the Brand, change it with `PUT /api/brand` after telling the Creator.
+   - **Performance.** Fix what the Theme causes (like images without `width`, `height` or `loading="lazy"`, or render-blocking scripts). The local preview adds theme dev's own script, so it scores a little lower than the live shop; the store's own images and apps count too.
+
+   Tell the Creator the scores, page by page for mobile and desktop, and what you fixed. When an average stays under its bar, say what holds it back; the Theme still ships, since only the Theme Store requires the bars.
+2. Run `shopify theme check --path <theme>`. It must exit 0 (zero errors); fix every error first, including any the Lighthouse fixes brought. Deliver nothing until it passes.
+3. Commit any open change in `<theme>`.
+4. Deliver it one way; the first is the default:
+   - **Push unpublished** (default), to the Merchant's store. When the preview ran on a development store (step 1), ask for the Merchant's `<shop>.myshopify.com` and check access to it the same way; a development store can't be handed to a Merchant. `<theme name>` is the `theme_name` from step 3.3:
 
      ```sh
      shopify theme push --path <theme> --store <shop>.myshopify.com --unpublished --theme "<theme name>" --json
@@ -182,6 +194,6 @@ When the Creator says the Theme is ready, deliver it. Delivery uploads a copy; i
      1. Create an empty GitHub repository, then in `<theme>` run `git remote add origin <repo-url>` and `git push -u origin main`.
      2. In Shopify admin › Online Store › Themes › Add theme › Connect from GitHub, log in to GitHub, and pick the repository and the `main` branch. The theme arrives unpublished.
      3. From then on each push to `main` updates that theme, and changes saved in the Theme Editor are committed back to `main`: run `git pull` before editing locally.
-4. Tell the Creator that the Merchant publishes the theme in Shopify admin › Online Store › Themes, after reviewing it.
+5. Tell the Creator that the Merchant publishes the theme in Shopify admin › Online Store › Themes, after reviewing it.
 
-**Done** when Theme Check passed and the theme is on the store unpublished, the zip is ready, or the Creator has the GitHub steps, and nothing was published.
+**Done** when the Creator has the Lighthouse scores with every accessibility failure the Theme causes fixed, Theme Check passed, and the theme is on the store unpublished, the zip is ready, or the Creator has the GitHub steps, and nothing was published.
