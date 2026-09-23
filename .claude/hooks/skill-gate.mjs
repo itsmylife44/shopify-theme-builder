@@ -3,7 +3,7 @@
 //   PreToolUse (Edit|Write|MultiEdit)  -> exit 2 with a reason if a skill is missing
 //   PostToolUse (Skill)                -> records the skill the agent loaded
 //   UserPromptExpansion                -> records a skill the user typed as /skill
-// Keep the table in CLAUDE.md in sync with RULES.
+// Keep the tables in CLAUDE.md and CONTRIBUTING.md in sync with RULES.
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
