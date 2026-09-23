@@ -132,6 +132,10 @@
     "placeholder": "Search articles, pages, or products",
     "submit": "Search",
     "no_results_html": "No results found for {{ terms }}",
-    "results_for_html": "{{ count }} results found for {{ terms }}"
+    "results_for_html": "{{ count }} results found for {{ terms }}",
+    "suggestions": "Suggestions",
+    "products": "Products",
+    "pages": "Pages",
+    "search_for_html": "Search for “{{ terms }}”"
   }
 }

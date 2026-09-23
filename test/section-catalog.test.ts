@@ -253,10 +253,64 @@ describe('Header search', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/header.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
 
-  it('links to the search page from the header icons, with an accessible label and a setting to hide it', () => {
-    const icons = source.slice(source.indexOf('class="header__icons"'), source.indexOf('class="header__cart"'))
-    expect(icons).toMatch(/{%-? if section\.settings\.show_search -?%}\s*<a class="header__search" href="{{ routes\.search_url }}" aria-label="{{ 'header\.search' \| t }}">/)
+  const icons = source.slice(source.indexOf('class="header__icons"'), source.indexOf('class="header__cart"'))
+
+  it('opens a search form from the header icons, with an accessible label and a setting to hide it', () => {
+    expect(icons).toMatch(/{%-? if section\.settings\.show_search -?%}\s*<details class="header__search">\s*<summary[^>]*aria-label="{{ 'header\.search' \| t }}"/)
     expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'show_search', type: 'checkbox', default: true }))
+  })
+
+  it('falls back to the search page without JavaScript', () => {
+    expect(icons).toMatch(/<form action="{{ routes\.search_url }}" method="get" role="search"/)
+    expect(icons).toMatch(/<input[^>]*type="search"[^>]*name="q"/)
+    expect(icons).toMatch(/<button type="submit"/)
+  })
+
+  it('makes the search box an ARIA combobox that suggests results as the customer types', () => {
+    const input = icons.match(/<input[^>]*name="q"[^>]*>/)![0]
+    expect(input).toContain('role="combobox"')
+    expect(input).toContain('aria-expanded="false"')
+    expect(input).toContain('aria-autocomplete="list"')
+    expect(input).toContain('aria-controls="PredictiveSearchResults"')
+    expect(icons).toMatch(/id="PredictiveSearchResults"[^>]*role="listbox"/)
+    expect(icons).toContain('data-url="{{ routes.predictive_search_url }}"')
+    expect(source).toContain('section_id=predictive-search')
+    expect(source).toContain("customElements.define('predictive-search'")
+  })
+
+  it('moves through the suggestions with the arrow keys, opens one with Enter and closes them with Escape', () => {
+    for (const key of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) expect(source).toContain(`'${key}'`)
+    expect(source).toContain("'aria-activedescendant'")
+    expect(source).toContain("'aria-selected'")
+  })
+})
+
+describe('Predictive search', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/predictive-search.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('suggests queries, products, collections and pages as listbox options', () => {
+    expect(source).toContain('{% if predictive_search.performed %}')
+    for (const [item, type] of [['query', 'queries'], ['product', 'products'], ['collection', 'collections'], ['page', 'pages']]) {
+      expect(source).toContain(`{% for ${item} in predictive_search.resources.${type} %}`)
+    }
+    expect(source.match(/role="option"/g)!.length).toBeGreaterThanOrEqual(5)
+  })
+
+  it('ends with an option that searches for the terms on the search page', () => {
+    expect(source).toContain('{{ routes.search_url }}?q={{ predictive_search.terms | url_encode }}')
+    expect(source).toContain("'search.search_for_html' | t")
+  })
+
+  it('belongs to the header, so the Studio never offers it for a page', () => {
+    expect(schema.enabled_on).toEqual({ groups: ['header'] })
+    expect(schema.presets).toBeUndefined()
+  })
+
+  it('is copied into every new Theme by the skill', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('<skill-dir>/catalog/sections/predictive-search.liquid')
   })
 })
 
