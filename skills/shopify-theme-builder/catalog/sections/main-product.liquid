@@ -5,6 +5,17 @@
   assign media_first = product.media | where: 'id', featured_media.id
   assign media_rest = product.media | reject: 'id', featured_media.id
   assign ordered_media = media_first | concat: media_rest
+  assign selling_plan_allocation = current_variant.selected_selling_plan_allocation
+  if product.requires_selling_plan and selling_plan_allocation == nil
+    assign selling_plan_allocation = current_variant.selling_plan_allocations.first
+  endif
+  if selling_plan_allocation
+    assign price = selling_plan_allocation.price
+    assign compare_at_price = selling_plan_allocation.compare_at_price
+  else
+    assign price = current_variant.price
+    assign compare_at_price = current_variant.compare_at_price
+  endif
 %}
 
 <div class="main-product full-width color-{{ section.settings.color_scheme }}">
@@ -47,15 +58,24 @@
       <h1 class="main-product__title">{{ product.title }}</h1>
 
       <p class="main-product__price">
-        {% if current_variant.compare_at_price > current_variant.price %}
+        {% if compare_at_price > price %}
           <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
-          {{ current_variant.price | money }}
+          {{ price | money }}
           <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
-          <s class="main-product__compare-at">{{ current_variant.compare_at_price | money }}</s>
+          <s class="main-product__compare-at">{{ compare_at_price | money }}</s>
         {% else %}
-          {{ current_variant.price | money }}
+          {{ price | money }}
         {% endif %}
       </p>
+      {% if selling_plan_allocation %}
+        {% if selling_plan_allocation.per_delivery_price != selling_plan_allocation.price %}
+          {% assign per_delivery_price = selling_plan_allocation.per_delivery_price | money %}
+          <p class="main-product__plan-note">{{ 'product.per_delivery' | t: price: per_delivery_price }}</p>
+        {% endif %}
+        {% if selling_plan_allocation.selling_plan.description != blank %}
+          <p class="main-product__plan-note">{{ selling_plan_allocation.selling_plan.description | escape }}</p>
+        {% endif %}
+      {% endif %}
       {% if current_variant.unit_price_measurement %}
         <p class="main-product__unit-price">
           <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
@@ -98,6 +118,49 @@
 
       {% form 'product', product, class: 'main-product__form' %}
         <input type="hidden" name="id" value="{{ current_variant.id }}">
+        {% if product.selling_plan_groups != empty %}
+          <fieldset class="main-product__selling-plans">
+            <legend>{{ 'product.purchase_options' | t }}</legend>
+            {% unless product.requires_selling_plan %}
+              <label class="main-product__selling-plan">
+                <input
+                  id="{{ section.id }}-selling-plan"
+                  type="radio"
+                  name="selling_plan"
+                  value=""
+                  {% if selling_plan_allocation == nil %}
+                    checked
+                  {% endif %}
+                >
+                {{ 'product.one_time_purchase' | t }}
+                <span>{{ current_variant.price | money }}</span>
+              </label>
+            {% endunless %}
+            {% for group in product.selling_plan_groups %}
+              {% assign group_allocations = current_variant.selling_plan_allocations | where: 'selling_plan_group_id', group.id %}
+              {% if group_allocations != empty %}
+                <fieldset class="main-product__selling-plans">
+                  <legend>{{ group.name | escape }}</legend>
+                  {% for allocation in group_allocations %}
+                    <label class="main-product__selling-plan">
+                      <input
+                        id="{{ section.id }}-selling-plan-{{ allocation.selling_plan.id }}"
+                        type="radio"
+                        name="selling_plan"
+                        value="{{ allocation.selling_plan.id }}"
+                        {% if allocation.selling_plan.id == selling_plan_allocation.selling_plan.id %}
+                          checked
+                        {% endif %}
+                      >
+                      {{ allocation.selling_plan.name | escape }}
+                      <span>{{ allocation.per_delivery_price | money }}</span>
+                    </label>
+                  {% endfor %}
+                </fieldset>
+              {% endif %}
+            {% endfor %}
+          </fieldset>
+        {% endif %}
         {{ form | payment_terms }}
         <label class="main-product__quantity">
           {{ 'product.quantity' | t }}
@@ -160,21 +223,32 @@
     }
 
     onChange = async (event) => {
-      if (!event.target.dataset.optionValueId) return;
-      const optionValues = [...this.querySelectorAll('[data-option-value-id]:checked')]
-        .map((input) => input.dataset.optionValueId)
-        .join(',');
+      const optionValueId = event.target.dataset.optionValueId;
+      if (!optionValueId && event.target.name !== 'selling_plan') return;
+      const params = new URLSearchParams({ section_id: this.dataset.section });
+      if (optionValueId) {
+        const optionValues = [...this.querySelectorAll('[data-option-value-id]:checked')]
+          .map((input) => input.dataset.optionValueId)
+          .join(',');
+        params.set('option_values', optionValues);
+      } else {
+        params.set('variant', this.querySelector('input[name="id"]').value);
+      }
+      const sellingPlan = this.querySelector('input[name="selling_plan"]:checked')?.value;
+      if (sellingPlan) params.set('selling_plan', sellingPlan);
       this.request?.abort();
       this.request = new AbortController();
-      const url = `${this.dataset.url}?option_values=${optionValues}&section_id=${this.dataset.section}`;
-      const text = await fetch(url, { signal: this.request.signal })
+      const text = await fetch(`${this.dataset.url}?${params}`, { signal: this.request.signal })
         .then((response) => (response.ok ? response.text() : null))
         .catch(() => null);
       if (!text) return;
       const fresh = new DOMParser().parseFromString(text, 'text/html').querySelector('product-info');
       if (!fresh) return;
       const variant = fresh.querySelector('input[name="id"]')?.value;
-      if (variant) history.replaceState(null, '', `${this.dataset.url}?variant=${variant}`);
+      if (variant) {
+        const plan = sellingPlan ? `&selling_plan=${sellingPlan}` : '';
+        history.replaceState(null, '', `${this.dataset.url}?variant=${variant}${plan}`);
+      }
       const quantity = this.querySelector('input[name="quantity"]')?.value;
       const focused = event.target.id;
       this.replaceChildren(...fresh.childNodes);
@@ -287,6 +361,40 @@
     margin-block-start: -0.5rem;
     font-size: 0.875rem;
     opacity: 0.7;
+  }
+
+  .main-product__plan-note {
+    margin-block-start: -1rem;
+    font-size: 0.875rem;
+    opacity: 0.7;
+  }
+
+  .main-product__selling-plans {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .main-product__selling-plans legend {
+    margin-block-end: 0.5rem;
+  }
+
+  .main-product__selling-plans .main-product__selling-plans legend {
+    font-size: 0.875rem;
+    opacity: 0.7;
+  }
+
+  .main-product__selling-plan {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .main-product__selling-plan span {
+    margin-inline-start: auto;
   }
 
   .main-product__compare-at {

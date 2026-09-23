@@ -136,6 +136,29 @@ describe('Product page requirements', () => {
   it('shows Shop Pay Installments inside the product form', () => {
     expect(form).toContain('{{ form | payment_terms }}')
   })
+
+  it('offers one-time purchase and the selling plans of the current variant inside the product form', () => {
+    expect(form).toContain('{% if product.selling_plan_groups != empty %}')
+    expect(form).toContain('{% unless product.requires_selling_plan %}')
+    expect(form).toContain("'product.one_time_purchase' | t")
+    expect(form).toContain("current_variant.selling_plan_allocations | where: 'selling_plan_group_id', group.id")
+    expect(form).toMatch(/name="selling_plan"\s+value=""/)
+    expect(form).toMatch(/name="selling_plan"\s+value="{{ allocation.selling_plan.id }}"/)
+  })
+
+  it('prices the product with the selected plan and re-renders the product info when the plan changes', () => {
+    expect(source).toContain('assign selling_plan_allocation = current_variant.selected_selling_plan_allocation')
+    expect(info).toContain('selling_plan_allocation.per_delivery_price')
+    expect(info).toContain('selling_plan_allocation.selling_plan.description')
+    expect(source).toContain("event.target.name !== 'selling_plan'")
+    expect(source).toContain("params.set('selling_plan', sellingPlan)")
+  })
+
+  it('shows the selling plan of each cart line', () => {
+    const cart = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-cart.liquid'), 'utf8')
+    expect(cart).toContain('{% if item.selling_plan_allocation %}')
+    expect(cart).toContain('item.selling_plan_allocation.selling_plan.name | escape')
+  })
 })
 
 describe('Base Theme templates', () => {
