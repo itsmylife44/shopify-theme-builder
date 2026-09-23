@@ -9,7 +9,9 @@ You build a **Theme** for one Shopify shop with the **Creator** (the person you'
 
 `<skill-dir>` below is the folder holding this `SKILL.md`. It holds `base-theme/`, `catalog/sections/` and `studio/`. The Theme lives in its own folder outside it; the Theme's files never go in `<skill-dir>`.
 
-Talk with the Creator in their language. Work through the steps in order. Each ends on its **done** line.
+Talk with the Creator in their language. Work through steps 1 to 5 in order; steps 6 and 7 run when the Creator asks. Each ends on its **done** line.
+
+Never publish a theme: no `shopify theme publish`, no `--publish`, `--live` or `--allow-live` flag, no Publish button in the admin. Publishing changes the Merchant's live shop, and only the Merchant decides that.
 
 ## 1. Prerequisites
 
@@ -91,7 +93,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    | `POST /api/<page>/sections` | `{"type": "<catalog section>"}`; `<page>` is `home`, `product` or `collection` |
    | `DELETE /api/<page>/sections/<id>` | none |
    | `PATCH /api/<page>/sections/<id>` | `{"colorScheme": "scheme-2"}` |
-   | `GET /api/theme` | none; the current state, with the catalog sections each page can take under `catalog` |
+   | `GET /api/theme` | none; the current state, with the catalog sections each page can take under `catalog` and the Custom Sections under `custom` |
 
    For example: `curl -X PUT <studio>/api/brand/logo -H 'Content-Type: image/png' --data-binary @logo.png`.
 3. Compose the pages. A page keeps at least one section, so add the new sections before removing the Base Theme's `main`:
@@ -114,3 +116,46 @@ Tell the Creator, in a few lines:
 2. Open the preview link in a separate Chrome window: it shows the real Theme and refreshes after each change. Section text and images are edited in Shopify's Theme Editor; products and menus in the Shopify admin.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, end its process; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
+5. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
+
+## 6. Custom Sections
+
+When the Creator wants something no catalog section does, write a **Custom Section**: a section file in the Theme only, never in `<skill-dir>`.
+
+1. Pick a kebab-case name (like `size-guide`) that no file in `<theme>/sections/`, `<skill-dir>/base-theme/sections/` or `<skill-dir>/catalog/sections/` has, and write `<theme>/sections/<name>.liquid`.
+2. Follow the conventions of the catalog sections; open one in `<skill-dir>/catalog/sections/` (like `image-with-text.liquid`) as the model:
+   - **Brand only through settings.** No hardcoded colors or fonts: use the CSS variables the Theme sets from the Brand (`--color-background`, `--color-foreground`, `--color-button`, `--color-button-label`, `--font-heading--*`, `--font-body--*`).
+   - **Color scheme.** The schema has `{"type": "color_scheme", "id": "color_scheme", "label": "t:labels.color_scheme", "default": "scheme-1"}` and the outer element carries `class="color-{{ section.settings.color_scheme }}"`.
+   - **Placeholders.** A blank image, product or collection renders Shopify's placeholder (`{{ 'image' | placeholder_svg_tag: 'placeholder' }}`, `'product-1'` to `'product-6'`, `'collection-1'` to `'collection-6'`, `'lifestyle-1'`/`'lifestyle-2'` for large media), so an empty store still looks like a shop.
+   - **Presets.** The schema has a `presets` entry, so the Merchant can add the section in the Theme Editor.
+   - **Pages.** A section that needs the product or collection sets `"enabled_on": {"templates": ["product"]}` (or `["collection"]`); `"limit": 1` when a page shows it once.
+   - **Text.** Text the Creator writes is a setting with a default. Fixed storefront text uses `{{ 'key' | t }}`, and every `name`, `label`, `info` and `content` in the schema is a `t:` key. Add each new key to `locales/en.default.json` (or `locales/en.default.schema.json`) and, translated, to the shop language's files.
+   - **Limits.** At most 50 blocks (`max_blocks`) and 256 KB per file.
+3. Check Theme Check: `validation` in `GET /api/theme` (or `shopify theme check --path <theme>` when the Studio isn't running) must hold no error. Fix each one and check again. Don't tell the Creator the section is done before this passes.
+4. When the Creator said which page it goes on, add it with `POST /api/<page>/sections` and `{"type": "<name>"}`. Either way, the Studio lists it under Custom Sections in the section picker of each page it can go on, where the Creator can add it.
+5. Ask the Creator to check it in the preview; its text and images are edited in the Theme Editor. Then commit it in `<theme>`.
+
+**Done** when the section file passes Theme Check with zero errors, shows in the Studio, and is committed.
+
+## 7. Delivery
+
+When the Creator says the Theme is ready, deliver it. Delivery uploads a copy; it never publishes.
+
+1. Run `shopify theme check --path <theme>`. It must exit 0 (zero errors); fix every error first. Deliver nothing until it passes.
+2. Commit any open change in `<theme>`.
+3. Deliver it one way; the first is the default:
+   - **Push unpublished** (default), to the Merchant's store. When step 1 used a development store for the preview, ask for the Merchant's `<shop>.myshopify.com` and check access to it the same way; a development store can't be handed to a Merchant. `<theme name>` is the `theme_name` from step 3.3:
+
+     ```sh
+     shopify theme push --path <theme> --store <shop>.myshopify.com --unpublished --theme "<theme name>" --json
+     ```
+
+     It creates a new unpublished theme, and its output holds the theme's id and its preview and editor links; give both links to the Creator. When it reports files that failed to upload, fix them and push again with `--theme <id>` in place of `--unpublished --theme "<theme name>"`, so no second copy is created.
+   - **Zip**, when the Creator can't push to the Merchant's store. Run `shopify theme package --path <theme>`: it writes `<theme_name>-<theme_version>.zip` (both from `config/settings_schema.json`) into `<theme>`. Move it next to the Theme folder, so Git doesn't track it. The Merchant uploads it in Shopify admin › Online Store › Themes › Add theme › Upload zip file, and it arrives unpublished.
+   - **GitHub integration**, when the Creator deploys from Git. Tell them to:
+     1. Create an empty GitHub repository, then in `<theme>` run `git remote add origin <repo-url>` and `git push -u origin main`.
+     2. In Shopify admin › Online Store › Themes › Add theme › Connect from GitHub, log in to GitHub, and pick the repository and the `main` branch. The theme arrives unpublished.
+     3. From then on each push to `main` updates that theme, and changes saved in the Theme Editor are committed back to `main`: run `git pull` before editing locally.
+4. Tell the Creator that the Merchant publishes the theme in Shopify admin › Online Store › Themes, after reviewing it.
+
+**Done** when Theme Check passed and the theme is on the store unpublished, the zip is ready, or the Creator has the GitHub steps, and nothing was published.

@@ -18,7 +18,7 @@ import {
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
@@ -436,10 +436,14 @@ function PageSections({
   onSaved: (state: ThemeState) => void
 }) {
   const { saving, error, write } = useWrite(onSaved)
-  const [sectionType, setSectionType] = useState<string | null>(state.catalog[page][0] ?? null)
+  const sectionGroups = [
+    { label: 'Section Catalog', names: state.catalog[page] },
+    { label: 'Custom Sections', names: state.custom[page] },
+  ].filter((group) => group.names.length > 0)
+  const sectionItems = sectionGroups.flatMap((group) => group.names.map((name) => ({ value: name, label: name })))
+  const [sectionType, setSectionType] = useState<string | null>(sectionItems[0]?.value ?? null)
   const sections = state[page]
   const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
-  const catalog = state.catalog[page].map((name) => ({ value: name, label: name }))
 
   function move(index: number, offset: number) {
     const order = sections.map((section) => section.id)
@@ -534,24 +538,27 @@ function PageSections({
         ) : null}
       </CardContent>
       <CardFooter className="gap-2">
-        {catalog.length > 0 ? (
+        {sectionItems.length > 0 ? (
           <>
             <Field className="w-44">
               <FieldLabel htmlFor={`add-section-${page}`} className="sr-only">
                 Section to add
               </FieldLabel>
-              <Select items={catalog} value={sectionType} disabled={saving} onValueChange={setSectionType}>
+              <Select items={sectionItems} value={sectionType} disabled={saving} onValueChange={setSectionType}>
                 <SelectTrigger id={`add-section-${page}`} className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    {catalog.map((section) => (
-                      <SelectItem key={section.value} value={section.value}>
-                        {section.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
+                  {sectionGroups.map((group) => (
+                    <SelectGroup key={group.label}>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.names.map((name) => (
+                        <SelectItem key={name} value={name}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
