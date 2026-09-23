@@ -2,7 +2,7 @@
 // plugin adds the Node file API over the Theme folder on disk.
 import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
@@ -600,12 +600,17 @@ function newId(type, taken) {
 }
 
 /**
- * Adds the locale keys and theme settings of the Base Theme that a Theme made from an older one lacks,
- * since catalog sections use them. Nothing the Theme already has changes. The shop's language gets the
- * English text, so Theme Check's MatchingTranslations still passes until it's translated.
+ * Adds the locale keys, theme settings and theme blocks of the Base Theme that a Theme made from an older
+ * one lacks, since catalog sections use them. Nothing the Theme already has changes. The shop's language
+ * gets the English text, so Theme Check's MatchingTranslations still passes until it's translated.
  * @param {string} theme
  */
 function addMissingFromBaseTheme(theme) {
+  mkdirSync(path.join(theme, 'blocks'), { recursive: true })
+  for (const name of readdirSync(path.join(baseTheme, 'blocks'))) {
+    const own = path.join(theme, 'blocks', name)
+    if (!existsSync(own)) copyFileSync(path.join(baseTheme, 'blocks', name), own)
+  }
   const storefront = readJSON(baseTheme, 'locales/en.default.json')
   const schema = readJSON(baseTheme, 'locales/en.default.schema.json')
   for (const name of readdirSync(path.join(theme, 'locales'))) {
@@ -714,10 +719,11 @@ const maxBlocks = 50
 
 /**
  * The block types a section's schema lets a page add: its own blocks, not app or theme blocks.
+ * Only its own blocks have a name; `@app`, `@theme` and a theme block's type, like custom-liquid, don't.
  * @param {{ blocks?: { type: string, name?: string, limit?: number }[] }} schema
  */
 function blockTypes(schema) {
-  return (schema.blocks ?? []).filter((block) => !block.type.startsWith('@'))
+  return (schema.blocks ?? []).filter((block) => block.name)
 }
 
 /**

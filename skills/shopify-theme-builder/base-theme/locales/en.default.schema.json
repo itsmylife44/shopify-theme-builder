@@ -13,6 +13,7 @@
     "column": "Column",
     "contact_form": "Contact form",
     "content": "Content",
+    "custom_liquid": "Custom Liquid",
     "custom_section": "Custom section",
     "fonts": "Fonts",
     "footer": "Footer",
@@ -111,7 +112,8 @@
     "author": "Author",
     "author_detail": "Author detail",
     "show_localization": "Show country and language selectors",
-    "recommendations": "Recommendations"
+    "recommendations": "Recommendations",
+    "liquid": "Liquid"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
@@ -123,7 +125,8 @@
     "main_collection_enable_filtering": "Set up filters in the Shopify admin with the Search & Discovery app.",
     "testimonials_author_detail": "For example a city or \"Verified buyer\".",
     "header_show_localization": "Shown only when the shop sells in more than one country or language. The footer always shows them.",
-    "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app."
+    "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app.",
+    "custom_liquid_setting": "Add app snippets, tracking code or embeds. Liquid and HTML both work."
   },
   "options": {
     "alignment": {

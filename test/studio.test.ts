@@ -1260,7 +1260,7 @@ describe('Studio API: home page', () => {
   it('offers and adds every real catalog home section with a color scheme and a clean Theme Check', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
-    const types = ['hero', 'featured-collection', 'image-with-text', 'rich-text', 'logo-list', 'testimonials', 'faq', 'newsletter']
+    const types = ['hero', 'featured-collection', 'image-with-text', 'rich-text', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
     expect((await studio.readTheme()).catalog.home).toEqual(types.toSorted())
     let body
     for (const type of types) ({ body } = await studio.addSection(type))
@@ -1316,6 +1316,17 @@ describe('Studio API: product page', () => {
     expect(errors(body.validation)).toEqual([])
     // The main product shows once per page.
     expect((await studio.addSection('main-product', 'product')).status).toBe(400)
+  })
+
+  it('copies the Base Theme blocks the main product takes into a Theme that lacks them, and offers no theme block to add', async () => {
+    const theme = fixtureTheme()
+    rmSync(path.join(theme, 'blocks/custom-liquid.liquid'))
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const { body } = await studio.addSection('main-product', 'product')
+    expect(existsSync(path.join(theme, 'blocks/custom-liquid.liquid'))).toBe(true)
+    expect(errors(body.validation)).toEqual([])
+    const id = body.product.find((section: { type: string }) => section.type === 'main-product').id
+    expect((await studio.send('GET', `api/product/sections/${id}`)).body).toMatchObject({ blockTypes: [] })
   })
 })
 

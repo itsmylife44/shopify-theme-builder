@@ -41,8 +41,35 @@ describe('App blocks', () => {
     const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
     expect(schema.blocks).toContainEqual({ type: '@app' })
     const details = source.slice(source.indexOf('class="main-product__details"'), source.indexOf('</product-info>'))
-    expect(details).toContain('{% render block %}')
-    expect(details).toContain('block.shopify_attributes')
+    expect(details).toContain("{% content_for 'blocks' %}")
+  })
+})
+
+describe('Custom Liquid', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const parse = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const liquidSetting = { type: 'liquid', id: 'custom_liquid', label: 't:labels.liquid', info: 't:info.custom_liquid_setting' }
+
+  it('is a catalog section with a Liquid setting, a color scheme and a preset', () => {
+    const source = readFileSync(path.join(skillDir, 'catalog/sections/custom-liquid.liquid'), 'utf8')
+    const schema = parse(source)
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="custom-liquid full-width color-{{ section.settings.color_scheme }}"')
+    expect(source).toContain('{{ section.settings.custom_liquid }}')
+    expect(schema.settings).toContainEqual(liquidSetting)
+    expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets).toEqual([{ name: 't:general.custom_liquid' }])
+  })
+
+  it('is a Base Theme block, so every Theme has it, that the main product takes', () => {
+    const source = readFileSync(path.join(skillDir, 'base-theme/blocks/custom-liquid.liquid'), 'utf8')
+    const schema = parse(source)
+    expect(source).toContain('{{ block.shopify_attributes }}')
+    expect(source).toContain('{{ block.settings.custom_liquid }}')
+    expect(schema.settings).toEqual([liquidSetting])
+    expect(schema.presets).toEqual([{ name: 't:general.custom_liquid' }])
+    const mainProduct = parse(readFileSync(path.join(skillDir, 'catalog/sections/main-product.liquid'), 'utf8'))
+    expect(mainProduct.blocks).toContainEqual({ type: 'custom-liquid' })
   })
 })
 
