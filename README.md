@@ -58,8 +58,8 @@ flowchart LR
     C --> E["Your Shopify store<br/>uploaded unpublished"]
 ```
 
-1. **Brand.** The agent reads your colors, fonts, logo and style from the reference, and asks about the rest: the shop's languages, its name, the theme's author.
-2. **Theme.** It creates the theme in a new folder with its own Git history, writes the Brand, composes the home, product and collection pages from the Section Catalog, and writes every heading and paragraph in your shop's default language.
+1. **Brief.** The agent reads your colors, fonts and logo from the reference, and asks about your brand's world, your shoppers, the feeling the shop should give and what it rejects, then the shop's languages, its name and the theme's author.
+2. **Theme.** It creates the theme in a new folder with its own Git history and writes three Directions, each a different design with its own home page, for you to compare and choose in the Studio. It composes the product and collection pages from the Section Catalog, writes every heading and paragraph in your shop's default language, and records the chosen Direction's rules in `DIRECTION.md`.
 3. **Studio.** It opens the Studio, where you see the real store rendered by Shopify and change colors, text and section order.
 4. **Custom sections.** Need something the catalog doesn't have, like a size guide? Ask. The agent writes a section with the same conventions and validates it.
 5. **Delivery.** Ask to deliver: the agent checks speed and accessibility with Lighthouse, fixes the accessibility failures, then uploads the theme to your store unpublished, packages it as a zip, or explains the GitHub integration.

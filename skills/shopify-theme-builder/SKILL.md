@@ -11,7 +11,7 @@ metadata:
 
 You build a **Theme** for one Shopify shop with the **Creator** (the person you're talking to). The Theme starts from the **Base Theme** (Shopify's Skeleton), adds sections from the **Section Catalog**, and carries the **Brand** (colors, fonts, logo) in Shopify's native theme settings, so the Merchant can keep editing it in Shopify's Theme Editor. The **Studio** is a local app where the Creator adjusts the Brand and composes pages while `shopify theme dev` shows the real rendered Theme.
 
-`<skill-dir>` below is the folder holding this `SKILL.md`. It holds `base-theme/`, `catalog/sections/` and `studio/`. The Theme lives in its own folder outside it; the Theme's files never go in `<skill-dir>`.
+`<skill-dir>` below is the folder holding this `SKILL.md`. It holds `base-theme/`, `catalog/sections/`, `studio/` and `references/` (the design method, read when a step names a file). The Theme lives in its own folder outside it; the Theme's files never go in `<skill-dir>`.
 
 Talk with the Creator in their language. Work through steps 1 to 5 in order; steps 6 to 8 run when the Creator asks. Each ends on its **done** line.
 
@@ -49,22 +49,20 @@ Recommend, without requiring it, Shopify's AI Toolkit (https://github.com/Shopif
 
 **Done** when every check passes and you have the store address.
 
-## 2. Brand capture
+## 2. Brief and Brand capture
 
-Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop languages**, the **shop name**, and the **author** (the Creator's name or business, shown as the Theme's author).
+Gather the **brief** the Theme's design comes from, the **Brand** the shop already has (colors, fonts, logo), the **shop languages**, the **shop name**, and the **author** (the Creator's name or business, shown as the Theme's author).
 
-1. Ask for a reference first: the Creator's current website, a screenshot, or a moodboard.
-   - A website: open it and read the colors (background, text, buttons, accent), font families and logo file from its pages and CSS.
-   - An image: derive the palette and the font mood from it.
-2. Tell the Creator what you took from the reference, then ask only about what it left open. Ask one question at a time. Without a reference, ask about all seven.
-3. Turn the answers into Brand values:
-   - **Color schemes.** Each scheme has six hex colors (`#RRGGBB`): `background`, `text`, `button`, `button_label`, `accent` (links in running text, sale prices and badges) and `border` (inputs, dividers and bordered cards), and an optional `background_gradient` (a CSS gradient like `linear-gradient(180deg, #FAF7F2, #EFE6D8)`, or `""` to clear it). Make `scheme-1` the main light scheme and `scheme-2` its dark inverse; add `scheme-3` for a section in the Brand's accent color when it has one. Keep text-on-background, label-on-button and accent-on-background contrast at 4.5:1 or more, and border-on-background at 3:1 or more (inputs show only their border). The Studio's Brand tab flags any pair below that.
-   - **Fonts.** A heading font, a body font and optionally an accent font (labels and prices; it defaults to Work Sans), each a handle from `<skill-dir>/studio/server/shopify-fonts.json` (Shopify's font library), like `work_sans_n4` (`n4` is regular 400, `n7` bold, `i4` italic). When the reference's font isn't there, pick the closest family and tell the Creator.
+1. Ask for a reference first: the Creator's current website, a screenshot, or a moodboard. Read it as `<skill-dir>/references/design/brief.md` says, and tell the Creator what you took from it.
+2. Gather the brief as `brief.md` says, asking only what the reference left open, one question at a time: the brand's **world**, the shopper's **scene**, **three emotions**, **references** from outside the shop's category, what the brand **rejects**, and what the product **photos** really are. Ask which colors and fonts are **pinned** (the brand keeps them); the others each Direction picks in step 4.
+3. Turn the answers into Brand values, in this form for the pinned values now and for each Direction later:
+   - **Color schemes.** Each scheme has six hex colors (`#RRGGBB`): `background`, `text`, `button`, `button_label`, `accent` (links in running text, sale prices and badges) and `border` (inputs, dividers and bordered cards), and an optional `background_gradient` (a CSS gradient like `linear-gradient(180deg, #FAF7F2, #EFE6D8)`, or `""` to clear it). Make `scheme-1` the main scheme and `scheme-2` its inverse; add `scheme-3` for a section in the accent color when there is one. Keep text-on-background, label-on-button and accent-on-background contrast at 4.5:1 or more, and border-on-background at 3:1 or more (inputs show only their border). The Studio's Brand tab flags any pair below that.
+   - **Fonts.** A heading font, a body font and optionally an accent font (labels and prices; it defaults to Work Sans), each a handle from `<skill-dir>/studio/server/shopify-fonts.json` (Shopify's font library), like `work_sans_n4` (`n4` is regular 400, `n7` bold, `i4` italic). When a pinned font isn't there, pick the closest family and tell the Creator.
    - **Logo.** A PNG, JPEG, WebP or SVG file, at most 2 MB. Take the file the Creator gives, or download it from their website when that site is their own brand. None is fine: the header shows the shop name.
-   - **Style** (like minimal, bold, playful, luxurious) guides the fonts, the schemes and which home sections you pick in step 4.
    - **Shop languages**: every language the shop sells in, each as the ISO code Shopify admin › Settings › Languages shows (`it`, `de`, `pt-BR`), and which of them is the shop's **default language** (the one customers see first). Ask whether it sells in more than one.
+4. Read the brief back to the Creator in a few lines and have them confirm it.
 
-**Done** when every Brand value above has a concrete value (or "no logo") and the Creator has confirmed them.
+**Done** when the Creator has confirmed the brief's six items, the pinned colors and fonts have concrete values (or none is pinned), and the logo (or "no logo"), shop languages, shop name and author are known.
 
 ## 3. Create the Theme
 
@@ -83,7 +81,7 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 
 **Done** when `create-theme` has created `<theme>` and it holds both locale files of every shop language other than English.
 
-## 4. Open the Studio, write the Brand, compose the pages
+## 4. Open the Studio, write three Directions, compose the pages
 
 1. Start the Studio as a background process that keeps running after your command returns, with its output going to a log file outside the Theme folder:
 
@@ -122,21 +120,26 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    For example: `curl -X PUT <studio>/api/brand/logo -H 'Content-Type: image/png' --data-binary @logo.png`.
 
    With no logo, the header and footer show the store's name from Shopify admin, not the shop name from step 2. Compare the two: the store's name is the display name in `shopify store info --store <shop>.myshopify.com --json`, or the name in the preview's header once it runs. When they differ, tell the Creator to change it in Shopify admin › Settings › General › Store name.
-3. Compose the pages. A page keeps at least one section, so add the new sections before removing the Base Theme's `main`:
-   - **home**: pick 4 to 6 sections that fit the style from `catalog.home` in `GET /api/theme`. Start with `hero`. Then remove `main`.
+3. Write three **Directions**, as `<skill-dir>/references/design/directions.md` says: derive three cards from the brief, check each with the swap test and against `<skill-dir>/references/design/tells.md`, and make sure they differ on at least three axes. Then write them:
+   1. Upload the logo (`PUT /api/brand/logo`) when there is one; it stays in every Direction.
+   2. For each Direction: `PUT /api/brand` with its color schemes and fonts (the pinned ones are the same in all three), then `PUT /api/directions/<name>` with its style settings and its home template: 4 to 6 sections from `catalog.home` in `GET /api/theme`, its signature section among them, in the order its sketch shows, neighbours on different color schemes. Give each section the shop's text, in the default language, in its `settings` and `blocks`; a section's setting ids, and the blocks a section like testimonials starts with, are in the `presets` of its schema in `<skill-dir>/catalog/sections/<type>.liquid`.
+   3. `PUT /api/directions/current` with the first Direction, so the preview shows it.
+   4. Write `<theme>/DIRECTION.md` from `<skill-dir>/references/design/direction-template.md`: the brief, then the three cards in the order the Studio lists them, with no `Chosen:` line (the Studio writes it).
+4. Hand the choice to the Creator. When `GET /api/preview` is `running` (sub-step 8), give them the Studio's URL, to open in Google Chrome, and each Direction's thesis in one line: in the Directions tab they switch the preview between the three and choose one. Don't choose for them. When they ask for changes or a mix of two, check the changed card again, rewrite that Direction as in sub-step 3.2 and its card, and switch the preview to it (`PUT /api/directions/current`). Once `directions` in `GET /api/theme` shows one `chosen`, add its `### Rules` to `DIRECTION.md`, do/don't pairs with their reasons, as `directions.md` says. The chosen Direction's home is now the Theme's home page.
+5. Compose the other pages. A page keeps at least one section, so add the new sections before removing the Base Theme's `main`:
    - **product**: add `main-product` and `related-products`, then remove `main`.
    - **collection**: add `main-collection`, then remove `main`.
    - **page**, **contact**, **cart**, **search**, **blog**, **article**, **404** and **collections** already hold their catalog main section from step 3 (`contact-form`, `main-cart` …; the plain page keeps the Base Theme's `page`). Leave them as they are, unless the Creator wants more on one: then add sections from `catalog.<page>`, like a `rich-text` on the 404 page.
 
-   Alternate the color schemes down the home page (`PATCH`) so neighbouring sections don't share one background.
+   Every choice follows the chosen Direction's rules in `DIRECTION.md`.
 
    Point the sections at the store: a `collection` setting (like the featured collection's) takes a collection's handle, `product` a product's, `link_list` a menu's, and `collection_list` or `product_list` a list of handles like `["summer-sale"]`. Pick them from `GET /api/store`. A `url` setting (a button link) takes a store path like `/collections/summer-sale`, an `https://` link, or `shopify://collections/<handle>`. An empty value clears a setting. Layout options take their own values: a `checkbox` `true` or `false`, a `range` a number within its `min`, `max` and `step`, a `number` a number (`null` clears it), a `select` or `radio` one of its `options`' values; `GET` the section to see them. When `GET /api/store` answers an error, run `shopify store auth --store <shop>.myshopify.com --scopes read_products,read_online_store_navigation` as a background process and give the Creator the login link it prints; the Studio lists the store once they approve.
-4. Write the text of every section you added, and the headings, text and button labels of the other pages' main sections (like the 404 page's), in the shop's default language: the catalog's defaults are English placeholders ("Welcome to our store"). For each section, `GET` it and `PATCH` its `settings` and `blocks` with text written for the shop, from what you learned in step 2. Sections with blocks (testimonials, FAQ) start with three: add or remove blocks so their number fits what the shop has to say. A `text` or `inline_richtext` value is a line of text; a `richtext` value is HTML paragraphs (`<p>…</p>`). Leave product and collection names to Shopify. Shopify shows this text in every language until it's translated; the other shop languages get it through Translate & Adapt (the hand-off, step 5).
-5. Check `GET /api/theme`: `validation` must hold no offense with `"severity": "error"`. Fix any error in the file and line it names, then check again.
-6. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `reconnecting` means the Studio is restarting `theme dev` because the store's storefront session expired; it is `running` again within seconds. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password, under Password protection at `https://admin.shopify.com/store/<shop>/online_store/preferences` (development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
-7. Commit the Theme in `<theme>` (`git add -A && git commit -m "Create the Theme"`).
+6. Write the text of every section you added, and the headings, text and button labels of the other pages' main sections (like the 404 page's), in the shop's default language: the catalog's defaults are English placeholders ("Welcome to our store"). For each section, `GET` it and `PATCH` its `settings` and `blocks` with text written for the shop, from the brief and in the Direction's voice; check the home page's text the same way. Sections with blocks (testimonials, FAQ) start with three: add or remove blocks so their number fits what the shop has to say. A `text` or `inline_richtext` value is a line of text; a `richtext` value is HTML paragraphs (`<p>…</p>`). Leave product and collection names to Shopify. Shopify shows this text in every language until it's translated; the other shop languages get it through Translate & Adapt (the hand-off, step 5).
+7. Check `GET /api/theme`: `validation` must hold no offense with `"severity": "error"`. Fix any error in the file and line it names, then check again.
+8. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `reconnecting` means the Studio is restarting `theme dev` because the store's storefront session expired; it is `running` again within seconds. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password, under Password protection at `https://admin.shopify.com/store/<shop>/online_store/preferences` (development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
+9. Commit the Theme in `<theme>` (`git add -A && git commit -m "Create the Theme"`).
 
-**Done** when the Brand, the home, product and collection pages, every page's text and their collections and links are written, `validation` has zero errors, the preview is `running`, and the Theme is committed.
+**Done** when the Creator has chosen one of three Directions and `DIRECTION.md` holds the brief, the three cards and the chosen one's rules; the product and collection pages, every page's text and their collections and links are written; `validation` has zero errors, the preview is `running`, and the Theme is committed.
 
 ## 5. Hand-off
 
@@ -144,7 +147,7 @@ Tell the Creator, in a few lines:
 
 1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Pick a page (home, product, cart, blog, 404 …) in the top bar. Click a section there, or in the list on the left (the header and footer included), to change its colors, text, layout options, collections, products, menus and links on the right; a page's sections can also be moved or removed; add sections from the list; the Brand tab holds colors, fonts and logo, the Directions tab compares the Directions, switching the preview between them, and chooses one, and the Style tab the type scale, shape, buttons, spacing, product cards, media and motion.
 2. Images and videos are picked in Shopify's Theme Editor: the selected section in the Studio shows each image and video setting, whether it's set, and a "Choose in the Theme Editor" link that opens the page in the Theme Editor on the preview's development theme, where they select that section. Products and menus are edited in the Shopify admin. For a contact page, the Merchant picks the `contact` template for their Contact page in Shopify admin › Online Store › Pages.
-3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
+3. The Theme lives in `<theme>`, with its own Git history. `DIRECTION.md` there holds the chosen Direction's rules and why, for anyone who changes the Theme later. You can keep changing it: the Studio picks up your edits while it runs.
 4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
 5. When the shop sells in more than one language: the Theme's own text (buttons, labels, messages) comes in each language from its locale files, and the page text is written in the default language. Translate the page text into the other languages with Shopify's free Translate & Adapt app: install it from the Shopify App Store, make sure each language is added in Shopify admin › Settings › Languages, then in the app pick the language and the theme and translate its sections' text (Auto-translate fills it in to review). Translations belong to one theme on the store, so translate the theme delivered in step 8; text changed later in the Studio or Theme Editor needs translating again.
 6. Only when there is no logo and the store's name differs from the shop name (step 4.2): the header and footer show the store's name, so change it in Shopify admin › Settings › General › Store name.
@@ -166,7 +169,7 @@ When the Creator wants something no catalog section does, write a **Custom Secti
    - **Limits.** At most 50 blocks (`max_blocks`) and 256 KB per file.
 3. Check Theme Check: `validation` in `GET /api/theme` (or `shopify theme check --path <theme>` when the Studio isn't running) must hold no error. Fix each one and check again. Don't tell the Creator the section is done before this passes.
 4. When the Creator said which page it goes on, add it with `POST /api/<page>/sections` and `{"type": "<name>"}`. Either way, the Studio lists it under Custom Sections in the section picker of each page it can go on, where the Creator can add it.
-5. Write its text in the shop's default language (`PATCH`, like step 4.4), and ask the Creator to check it in the Studio; its images are edited in the Theme Editor. Then commit it in `<theme>`.
+5. Write its text in the shop's default language (`PATCH`, like step 4.6), and ask the Creator to check it in the Studio; its images are edited in the Theme Editor. Then commit it in `<theme>`.
 
 **Done** when the section file passes Theme Check with zero errors, shows in the Studio, and is committed.
 

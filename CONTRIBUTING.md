@@ -12,6 +12,7 @@ Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Report a
 | `…/SKILL.md` | The instructions a Creator's agent follows end to end |
 | `…/base-theme/` | Shopify's Skeleton theme, vendored as the Base Theme (Shopify's license, see the [README](README.md#license)) |
 | `…/catalog/sections/` | The Section Catalog |
+| `…/references/` | Details `SKILL.md` points to, read when a step needs them, like the design method in `references/design/` |
 | `…/studio/` | The Studio: a Vite + React UI (`src/`), its Node file API and `theme dev` runner (`server/`), and the `studio` and `create-theme` commands (`bin/`) |
 | `test/` | Vitest tests for the Studio, the `create-theme` command, the Section Catalog, the skill-gate hook and the release version |
 | `scripts/check-theme.mjs` | Runs Theme Check on the Base Theme with every catalog section |
