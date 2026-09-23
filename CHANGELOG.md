@@ -1,0 +1,21 @@
+# Changelog
+
+All notable changes to the shopify-theme-builder skill are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html). How to cut a release is in [CONTRIBUTING.md](CONTRIBUTING.md#releasing).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-09-23
+
+The first release.
+
+### Added
+
+- The `shopify-theme-builder` agent skill, installed with `npx skills add itsmylife44/shopify-theme-builder`: it checks the prerequisites, can create a development store with demo data, and builds a Theme from Shopify's Skeleton theme in its own Git repository.
+- The Brand in Shopify's native theme settings: color schemes, fonts from Shopify's font library, the logo and social links, so the Merchant keeps editing them in the Theme Editor.
+- The Section Catalog: header with dropdowns, a mobile menu drawer, a search link and country and language pickers; footer; hero, featured collection, image with text, rich text, testimonials, logo list, FAQ and newsletter for the home page; product page with app blocks, unit prices and related products; collection page; contact page with a contact form; cart page with accelerated checkout, a note and discounts. Its Theme Editor text is translated through locale keys.
+- Custom Sections, written by the agent with the Section Catalog's conventions and checked with Theme Check.
+- The Studio, a local 3-panel editor next to the live `shopify theme dev` preview: edit the Brand, add, remove and reorder sections and blocks, edit text, color schemes, toggles, sliders, options, and pick collections, products, menus and links, on the home, product and collection pages, in desktop and mobile previews, with a Theme Check status.
+- Delivery: upload the Theme to the store unpublished, package it as a zip, or connect Shopify's GitHub integration. The skill never publishes a theme.
+
+[Unreleased]: https://github.com/itsmylife44/shopify-theme-builder/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/itsmylife44/shopify-theme-builder/releases/tag/v0.1.0
