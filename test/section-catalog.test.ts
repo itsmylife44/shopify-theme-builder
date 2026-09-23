@@ -1344,6 +1344,54 @@ describe('Comparison table', () => {
   })
 })
 
+describe('Press quotes', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/press-quotes.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const quote = schema.blocks[0]
+  const blockSettings = Object.fromEntries(quote.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('is a catalog section with a description, a heading, a color scheme and a preset with a few quotes', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="press-quotes full-width press-quotes--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(schema.presets[0].name).toBe('t:general.press_quotes')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(2)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('shows each quote with the outlet’s logo, or its name without one, linked to the article', () => {
+    expect(quote).toEqual(expect.objectContaining({ type: 'quote', name: 't:general.quote' }))
+    expect(blockSettings.quote.type).toBe('richtext')
+    expect(blockSettings.publication.type).toBe('text')
+    expect(blockSettings.logo.type).toBe('image_picker')
+    expect(blockSettings.link.type).toBe('url')
+    expect(source).toMatch(/<figure class="press-quotes__figure">\s*<blockquote class="press-quotes__quote text-h5"/)
+    expect(source).toMatch(/{% if block\.settings\.link != blank %}\s*<a\s+class="press-quotes__source"\s+href="{{ block\.settings\.link }}"/)
+    // The logo stands for the outlet's name, so it carries the name as its text alternative.
+    expect(source).toMatch(/image_tag: alt: publication,[^}]*sizes: /)
+    expect(source).toMatch(/{% else %}\s*<span class="press-quotes__name text-label">{{ publication \| escape }}<\/span>/)
+    expect(source).toContain("'press_quotes.link' | t: publication: publication")
+    const locale = JSON.parse(readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.press_quotes.link).toContain('{{ publication }}')
+  })
+
+  it('lays the quotes in a row or a wall, stacked on mobile and spaced by the grid gap', () => {
+    expect(settings.layout.options.map((option: { value: string }) => option.value)).toEqual(['row', 'wall'])
+    expect(css).toMatch(/\.press-quotes__list {[^}]*gap: var\(--grid-row-gap\) var\(--grid-gap\);/)
+    expect(css).toMatch(/@media \(min-width: 750px\) {\s*\.press-quotes--row \.press-quotes__list {\s*grid-template-columns: repeat\(var\(--columns\), 1fr\);/)
+    expect(css).toMatch(/\.press-quotes--wall \.press-quotes__list {[^}]*columns: 3;[^}]*column-gap: var\(--grid-gap\);/)
+    expect(css).toMatch(/\.press-quotes--wall \.press-quotes__item {[^}]*break-inside: avoid;[^}]*margin-block-end: var\(--grid-row-gap\);/)
+  })
+
+  it('takes its borders, radius and link target size from the style system', () => {
+    expect(css).toMatch(/\.press-quotes__figure {[^}]*border: var\(--border-width\) solid var\(--color-border-subtle\);[^}]*border-radius: var\(--style-border-radius-cards\);/)
+    expect(css).toMatch(/\.press-quotes__source {[^}]*min-block-size: var\(--target-size-min\);/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

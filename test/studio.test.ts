@@ -1676,12 +1676,17 @@ describe('Studio API: home page', () => {
   it('offers and adds every real catalog home section with a color scheme and a clean Theme Check', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
-    const types = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
+    const types = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'press-quotes', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
     expect((await studio.readTheme()).catalog.home).toEqual(types.toSorted())
-    let body
-    for (const type of types) ({ body } = await studio.addSection(type))
-    expect(body.home.slice(1)).toEqual(types.map((type) => expect.objectContaining({ type, colorScheme: 'scheme-1' })))
-    expect(errors(body.validation)).toEqual([])
+    // A template holds at most 25 sections, so the catalog goes onto two home pages.
+    const halves = [types.slice(0, 12), types.slice(12)]
+    for (const [index, half] of halves.entries()) {
+      const target = index === 0 ? studio : await openStudio(fixtureTheme(), { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+      let body
+      for (const type of half) ({ body } = await target.addSection(type))
+      expect(body.home.slice(1)).toEqual(half.map((type) => expect.objectContaining({ type, colorScheme: 'scheme-1' })))
+      expect(errors(body.validation)).toEqual([])
+    }
   }, 20_000)
 
   it('never offers the real catalog header or footer for the home page', async () => {

@@ -1,0 +1,239 @@
+{% comment %}Quotes from the press, each with the outlet's logo or name and a link to the article, in a row or a wall.{% endcomment %}
+{% liquid
+  assign columns = section.blocks.size | at_most: 3 | at_least: 1
+%}
+<div class="press-quotes full-width press-quotes--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}">
+  <div class="press-quotes__inner">
+    {% if section.settings.heading != blank %}
+      <h2 class="press-quotes__heading">{{ section.settings.heading }}</h2>
+    {% endif %}
+
+    <ul class="press-quotes__list" role="list" style="--columns: {{ columns }};">
+      {% for block in section.blocks %}
+        {% liquid
+          assign publication = block.settings.publication
+          if publication == blank
+            assign publication = block.settings.logo.alt
+          endif
+        %}
+        <li class="press-quotes__item" {{ block.shopify_attributes }}>
+          <figure class="press-quotes__figure">
+            <blockquote class="press-quotes__quote text-h5"{% if block.settings.link != blank %} cite="{{ block.settings.link }}"{% endif %}>
+              {{ block.settings.quote }}
+            </blockquote>
+            {% capture outlet %}
+              {% if block.settings.logo != blank %}
+                {{
+                  block.settings.logo
+                  | image_url: width: 320
+                  | image_tag: alt: publication, class: 'press-quotes__logo', widths: '160, 320', sizes: '160px', loading: 'lazy'
+                }}
+              {% else %}
+                <span class="press-quotes__name text-label">{{ publication | escape }}</span>
+              {% endif %}
+            {% endcapture %}
+            {% if publication != blank %}
+              <figcaption class="press-quotes__caption">
+                {% if block.settings.link != blank %}
+                  <a
+                    class="press-quotes__source"
+                    href="{{ block.settings.link }}"
+                    aria-label="{{ 'press_quotes.link' | t: publication: publication }}"
+                  >
+                    {{- outlet -}}
+                  </a>
+                {% else %}
+                  <span class="press-quotes__source">{{ outlet }}</span>
+                {% endif %}
+              </figcaption>
+            {% endif %}
+          </figure>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+{% stylesheet %}
+  .press-quotes {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .press-quotes__inner {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+  }
+
+  .press-quotes__heading {
+    margin: 0;
+    text-align: center;
+  }
+
+  .press-quotes__list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--grid-row-gap) var(--grid-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .press-quotes--row .press-quotes__list {
+      grid-template-columns: repeat(var(--columns), 1fr);
+    }
+
+    .press-quotes--wall .press-quotes__list {
+      display: block;
+      columns: 3;
+      column-gap: var(--grid-gap);
+    }
+
+    .press-quotes--wall .press-quotes__item {
+      break-inside: avoid;
+      margin-block-end: var(--grid-row-gap);
+    }
+  }
+
+  .press-quotes__figure {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    height: 100%;
+    margin: 0;
+    padding: var(--space-lg);
+    border: var(--border-width) solid var(--color-border-subtle);
+    border-radius: var(--style-border-radius-cards);
+  }
+
+  .press-quotes__quote {
+    margin: 0;
+  }
+
+  .press-quotes__quote > * {
+    margin: 0;
+  }
+
+  .press-quotes__quote > * + * {
+    margin-block-start: var(--space-xs);
+  }
+
+  .press-quotes__caption {
+    margin-block-start: auto;
+  }
+
+  .press-quotes__source {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-size-min);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .press-quotes__logo {
+    display: block;
+    inline-size: auto;
+    max-inline-size: 8rem;
+    block-size: 2rem;
+    object-fit: contain;
+  }
+
+  .press-quotes__name {
+    opacity: var(--opacity-muted);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.press_quotes",
+  "tag": "section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "In the press"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "row", "label": "t:options.layout.row" },
+        { "value": "wall", "label": "t:options.layout.wall" }
+      ],
+      "default": "row"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "quote",
+      "name": "t:general.quote",
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "quote",
+          "label": "t:labels.quote",
+          "default": "<p>Quote what a publication said about your products.</p>"
+        },
+        {
+          "type": "text",
+          "id": "publication",
+          "label": "t:labels.publication",
+          "default": "Publication"
+        },
+        {
+          "type": "image_picker",
+          "id": "logo",
+          "label": "t:labels.logo",
+          "info": "t:info.press_quotes_logo"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.press_quotes",
+      "blocks": [
+        {
+          "type": "quote",
+          "settings": {
+            "quote": "<p>The kind of quality you keep for years.</p>",
+            "publication": "The Daily Edit"
+          }
+        },
+        {
+          "type": "quote",
+          "settings": {
+            "quote": "<p>Made with a care that shows in every detail.</p>",
+            "publication": "Modern Living"
+          }
+        },
+        {
+          "type": "quote",
+          "settings": {
+            "quote": "<p>A small brand doing things the right way.</p>",
+            "publication": "Studio Journal"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
