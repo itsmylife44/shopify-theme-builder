@@ -90,6 +90,8 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    node <skill-dir>/studio/bin/studio.mjs --theme <theme> --store <shop>.myshopify.com > <log-file> 2>&1
    ```
 
+   To stop this Studio and its `theme dev`, run `pkill -f "studio.mjs --theme <theme> "`, with `<theme>` exactly as in the start command and the trailing space kept. It matches only this Theme's Studio, so Studios and `theme dev` runs of other projects on the machine keep running.
+
    Read the Studio's URL from the log (`Local: http://localhost:5173/`); the port may differ. The Studio also starts `shopify theme dev` for the preview, and its output goes to the same log. While sections are being added, that log may show failed uploads (a template naming a section file not uploaded yet); they resolve within seconds, so judge by `GET /api/preview` and `validation` instead.
 2. Write the Brand and compose the pages through the Studio's API at that URL. It checks every value, copies catalog sections into the Theme with the locale keys they need, and runs Theme Check after each write. Every call returns the Theme's state as JSON (the pages, their section ids, the Brand and `validation`); an error returns `{ "error": "…" }` saying what to fix.
 
