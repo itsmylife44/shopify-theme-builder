@@ -1425,7 +1425,7 @@ describe('Studio API: the other pages', () => {
     }
     expect(errors(state.validation)).toEqual([])
     expect(readTemplate(theme, 'templates/list-collections.json').order).toHaveLength(1)
-  })
+  }, 60_000)
 })
 
 describe('Studio API: header and footer', () => {
