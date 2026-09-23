@@ -55,7 +55,9 @@
     "complementary_products": "Complementary products",
     "rich_text": "Rich text",
     "testimonials": "Testimonials",
-    "testimonial": "Testimonial"
+    "testimonial": "Testimonial",
+    "announcement_bar": "Announcement bar",
+    "announcement": "Announcement"
   },
   "labels": {
     "alignment": "Alignment",
@@ -114,7 +116,9 @@
     "author_detail": "Author detail",
     "show_localization": "Show country and language selectors",
     "recommendations": "Recommendations",
-    "liquid": "Liquid"
+    "liquid": "Liquid",
+    "layout": "Layout",
+    "link": "Link"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
@@ -127,7 +131,8 @@
     "testimonials_author_detail": "For example a city or \"Verified buyer\".",
     "header_show_localization": "Shown only when the shop sells in more than one country or language. The footer always shows them.",
     "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app.",
-    "custom_liquid_setting": "Add app snippets, tracking code or embeds. Liquid and HTML both work."
+    "custom_liquid_setting": "Add app snippets, tracking code or embeds. Liquid and HTML both work.",
+    "announcement_bar_layout": "Rotate shows one message at a time, changing every 5 seconds. Stack shows them all."
   },
   "options": {
     "alignment": {
@@ -155,6 +160,10 @@
       "title": "Title",
       "subtitle": "Subtitle",
       "normal": "Normal text"
+    },
+    "layout": {
+      "rotate": "Rotate",
+      "stack": "Stack"
     }
   }
 }

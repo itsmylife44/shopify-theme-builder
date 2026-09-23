@@ -151,5 +151,10 @@
     "products": "Products",
     "pages": "Pages",
     "search_for_html": "Search for “{{ terms }}”"
+  },
+  "announcement_bar": {
+    "label": "Announcements",
+    "next": "Next announcement",
+    "previous": "Previous announcement"
   }
 }

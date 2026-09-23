@@ -1,0 +1,201 @@
+{% comment %}Short messages above the header, like free shipping or a sale, with optional links, that rotate or stack.{% endcomment %}
+{% liquid
+  assign rotate = false
+  if section.settings.layout == 'rotate' and section.blocks.size > 1
+    assign rotate = true
+  endif
+%}
+{% if section.blocks.size > 0 %}
+  <announcement-bar
+    class="announcement-bar full-width color-{{ section.settings.color_scheme }}"
+    role="region"
+    aria-label="{{ 'announcement_bar.label' | t }}"
+    {% if rotate %}
+      data-rotate
+    {% endif %}
+  >
+    <div class="announcement-bar__inner">
+      {% if rotate %}
+        <button type="button" class="announcement-bar__button" data-step="-1" aria-label="{{ 'announcement_bar.previous' | t }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
+          </svg>
+        </button>
+      {% endif %}
+      <ul class="announcement-bar__list" role="list">
+        {% for block in section.blocks %}
+          <li
+            class="announcement-bar__message"
+            {% if rotate and forloop.first == false %}
+              hidden
+            {% endif %}
+            {{ block.shopify_attributes }}
+          >
+            {% if block.settings.link != blank %}
+              <a href="{{ block.settings.link }}">{{ block.settings.text | escape }}</a>
+            {% else %}
+              {{ block.settings.text | escape }}
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if rotate %}
+        <button type="button" class="announcement-bar__button" data-step="1" aria-label="{{ 'announcement_bar.next' | t }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
+      {% endif %}
+    </div>
+  </announcement-bar>
+{% endif %}
+
+{% stylesheet %}
+  .announcement-bar {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .announcement-bar__inner {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-block: 0.5rem;
+  }
+
+  .announcement-bar__list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .announcement-bar__message a {
+    color: inherit;
+  }
+
+  .announcement-bar__button {
+    display: flex;
+    padding: 0.25rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .announcement-bar__button svg {
+    width: 1.25rem;
+  }
+
+  .announcement-bar__button svg:dir(rtl) {
+    scale: -1 1;
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  class AnnouncementBar extends HTMLElement {
+    connectedCallback() {
+      if (!this.hasAttribute('data-rotate')) return;
+      this.controller = new AbortController();
+      const { signal } = this.controller;
+      this.messages = [...this.querySelectorAll('.announcement-bar__message')];
+      this.current = 0;
+      this.addEventListener(
+        'click',
+        (event) => {
+          const button = event.target.closest('[data-step]');
+          if (button) this.show(this.current + Number(button.dataset.step));
+        },
+        { signal }
+      );
+      this.addEventListener(
+        'shopify:block:select',
+        (event) => {
+          this.selected = true;
+          this.show(this.messages.indexOf(event.target));
+        },
+        { signal }
+      );
+      this.addEventListener('shopify:block:deselect', () => (this.selected = false), { signal });
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      this.timer = setInterval(() => {
+        if (!this.selected && !this.matches(':hover, :focus-within')) this.show(this.current + 1);
+      }, 5000);
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort();
+      clearInterval(this.timer);
+    }
+
+    show(index) {
+      this.current = (index + this.messages.length) % this.messages.length;
+      this.messages.forEach((message, i) => (message.hidden = i !== this.current));
+    }
+  }
+
+  if (!customElements.get('announcement-bar')) customElements.define('announcement-bar', AnnouncementBar);
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "t:general.announcement_bar",
+  "tag": "section",
+  "enabled_on": {
+    "groups": ["header"]
+  },
+  "limit": 1,
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-2"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "rotate", "label": "t:options.layout.rotate" },
+        { "value": "stack", "label": "t:options.layout.stack" }
+      ],
+      "default": "rotate",
+      "info": "t:info.announcement_bar_layout"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "announcement",
+      "name": "t:general.announcement",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "t:labels.text",
+          "default": "Welcome to our store"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "t:labels.link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.announcement_bar",
+      "blocks": [{ "type": "announcement" }]
+    }
+  ]
+}
+{% endschema %}
