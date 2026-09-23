@@ -1061,6 +1061,59 @@ describe('Editorial split', () => {
   })
 })
 
+describe('Marquee', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/marquee.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const noPreference = css.match(/@media \(prefers-reduced-motion: no-preference\) {([\s\S]*)\n {2}}/)?.[1] ?? ''
+
+  it('is a catalog section with a description, a color scheme and a preset with a few items', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toMatch(/class="marquee full-width marquee--{{ section\.settings\.item_style }} color-{{ section\.settings\.color_scheme }}/)
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(schema.presets[0].name).toBe('t:general.marquee')
+    expect(schema.presets[0].blocks.length).toBeGreaterThan(1)
+    expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('scrolls short texts or badges, each an item block', () => {
+    expect(schema.blocks).toEqual([expect.objectContaining({ type: 'item', name: 't:general.item' })])
+    expect(settings.item_style.options.map((option: { value: string }) => option.value)).toEqual(['text', 'badge'])
+    expect(css).toMatch(/\.marquee--badge \.marquee__item {[^}]*border: var\(--border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-badges\);/)
+  })
+
+  it('reads the items once to assistive technology, however often they repeat', () => {
+    expect(source).toMatch(/<ul class="marquee__list" role="list"{% unless forloop\.first %} aria-hidden="true"{% endunless %}>/)
+  })
+
+  it('takes its loop duration from the speed setting, never a raw duration in the stylesheet', () => {
+    expect(settings.speed.options.map((option: { value: string }) => option.value)).toEqual(['slow', 'medium', 'fast'])
+    expect(source).toMatch(/style="--marquee-duration: {{ duration }}s;"/)
+    expect(css).not.toMatch(/\d(m?s)\b/)
+    expect(noPreference).toMatch(/animation: marquee var\(--marquee-duration\) linear infinite;/)
+  })
+
+  it('moves only without reduced motion and unless the Merchant turned motion off', () => {
+    expect(source).toMatch(/if settings\.motion != 'none' and section\.blocks\.size > 0\s+assign animated = true/)
+    expect(css.replace(/@media \(prefers-reduced-motion: no-preference\) {[\s\S]*\n {2}}/, '')).not.toMatch(/animation|@keyframes/)
+  })
+
+  it('pauses on hover, on focus and with a pause control customers can press', () => {
+    // A visually hidden checkbox before its label, so the label shows the shared focus ring.
+    expect(source).toMatch(
+      /<input type="checkbox" id="MarqueePause-{{ section\.id }}" class="marquee__pause-input visually-hidden">\s*<label for="MarqueePause-{{ section\.id }}" class="marquee__pause">\s*<span class="visually-hidden">{{ 'marquee\.pause' \| t }}<\/span>/,
+    )
+    expect(noPreference).toMatch(/\.marquee:is\(:hover, :focus-within, :has\(\.marquee__pause-input:checked\)\) \.marquee__track {\s*animation-play-state: paused;/)
+    expect(css).toMatch(/\.marquee__pause {[^}]*min-inline-size: var\(--target-size\);[^}]*min-block-size: var\(--target-size\);/)
+  })
+
+  it('scrolls toward the start of the line, mirrored in right-to-left shops', () => {
+    expect(css).toMatch(/\.marquee__track:dir\(rtl\) {\s*--marquee-shift: 50%;/)
+    expect(css).toMatch(/@keyframes marquee {\s*to {\s*translate: var\(--marquee-shift\);/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

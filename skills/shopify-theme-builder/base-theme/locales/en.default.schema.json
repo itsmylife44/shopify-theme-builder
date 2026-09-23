@@ -81,7 +81,9 @@
     "product_cards": "Product cards",
     "motion": "Motion",
     "type_banner": "Type banner",
-    "editorial_split": "Editorial split"
+    "editorial_split": "Editorial split",
+    "marquee": "Marquee",
+    "item": "Item"
   },
   "labels": {
     "accent": "Accent",
@@ -183,6 +185,8 @@
     "motion": "Animations",
     "type_size": "Type size",
     "link_label": "Link label",
+    "item_style": "Item style",
+    "speed": "Speed",
     "drop_cap": "Drop cap on the first paragraph"
   },
   "info": {
@@ -216,6 +220,7 @@
     "media_tint": "Suits cut-out product photos: their white background takes the tint. Pick a light color, or clear it for none.",
     "motion": "Subtle fades sections in as they scroll into view and eases hovers. Expressive raises them and zooms images slowly. Always off for customers who reduce motion on their device, and never on what shows first.",
     "type_banner_heading": "A line or two. Press Enter where the line should break.",
+    "marquee_speed": "Pauses on hover, and customers can pause it. It stays still when a customer's device asks for reduced motion, or with Motion set to None.",
     "editorial_split_quote": "A pull quote after the text, at a heading size. Leave it empty for none."
   },
   "options": {
@@ -326,6 +331,15 @@
       "display": "Display",
       "h1": "Heading 1",
       "h2": "Heading 2"
+    },
+    "item_style": {
+      "text": "Text",
+      "badge": "Badges"
+    },
+    "speed": {
+      "slow": "Slow",
+      "medium": "Medium",
+      "fast": "Fast"
     }
   }
 }
