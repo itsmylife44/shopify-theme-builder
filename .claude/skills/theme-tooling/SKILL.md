@@ -35,6 +35,7 @@ When the Studio copies a catalog section into a Theme that lacks some Base Theme
 
 Every catalog section follows all of these:
 
+- **Description.** The file starts with a one-sentence description, `{% comment %}Customer quotes in a grid.{% endcomment %}`, which the Studio shows in its section picker. (`{% doc %}` fails Theme Check in sections.)
 - **Self-contained.** One file in `catalog/sections/`, depending only on what `base-theme/` ships. Themes copy sections once; afterwards the copy belongs to the Theme.
 - **Brand only through settings.** Use the Base Theme's Brand, never hardcoded colors or fonts: the `color_schemes` group in `config/settings_schema.json` and the CSS variables `snippets/css-variables.liquid` sets from it (`--color-background`, `--color-foreground`, `--color-button`, `--color-button-label`, `--font-heading--*`, `--font-body--*`). Headings pick up the heading font from `assets/critical.css`.
 - **Per-section color scheme.** The schema has `{"type": "color_scheme", "id": "color_scheme", "label": "t:labels.color_scheme", "default": "scheme-1"}` and the outer element carries `class="color-{{ section.settings.color_scheme }}"`, which sets the scheme's background, text color and color variables.

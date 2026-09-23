@@ -7,6 +7,7 @@ import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
+import { pagePaths, startFrameProxy } from './frame.mjs'
 import { startPreview } from './preview.mjs'
 
 const studioDir = fileURLToPath(new URL('..', import.meta.url))
@@ -27,7 +28,8 @@ export async function startStudio({ theme, catalog = defaultCatalog, port, cli =
   const server = await createServer({
     root: studioDir,
     configFile: path.join(studioDir, 'vite.config.ts'),
-    server: { port },
+    // No CORS: only the Studio's own page may call its API.
+    server: { port, cors: false },
     plugins: [studioApi(theme, catalog, { cli, store, storePassword })],
   })
   return server.listen()
@@ -42,7 +44,7 @@ export async function startStudio({ theme, catalog = defaultCatalog, port, cli =
 function studioApi(theme, catalog, { cli, store, storePassword }) {
   return {
     name: 'studio-api',
-    configureServer(server) {
+    async configureServer(server) {
       /** @type {Promise<Offense[]> | null} The latest Theme Check result, until a file changes. */
       let validation = null
       let validatedAt = 0
@@ -81,10 +83,12 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         storePassword,
         onChange: (state) => server.ws.send('studio:preview', state),
       })
+      const frame = await startFrameProxy(() => (preview.state.status === 'running' ? preview.state.url : undefined))
       const stop = () => preview.stop()
       process.on('exit', stop)
       server.httpServer?.once('close', () => {
         watcher.close()
+        frame.close()
         clearTimeout(notify)
         stop()
         process.off('exit', stop)
@@ -104,6 +108,14 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
           const rest = new URL(req.url ?? '/', 'http://studio').pathname
           const id = param ? rest.match(/^\/([^/]+)$/)?.[1] : rest === '/' ? '' : undefined
           if (req.method !== method || id === undefined) return next()
+          // A browser names the page behind a request in Origin. Only the Studio's own page may write: not a
+          // script in the preview (served from the proxy's port) nor another website.
+          if (method !== 'GET' && req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) {
+            res.statusCode = 403
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({ error: 'Only the Studio itself may change the Theme.' }))
+            return
+          }
           Promise.resolve()
             .then(() => handle(req, decodeId(id)))
             .then((body) => {
@@ -127,6 +139,11 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       }
       route('/api/theme', 'GET', readState)
       route('/api/preview', 'GET', async () => preview.state)
+      route('/api/frame', 'GET', async () => {
+        const { state } = preview
+        if (state.status !== 'running') throw new Conflict('The preview is not running yet.')
+        return { url: frame.url, paths: await pagePaths(state.url) }
+      })
       route('/api/brand', 'PUT', async (req) => {
         setBrand(theme, await readBody(req))
         return readStateAfterWrite()
@@ -149,8 +166,9 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
           removeSection(theme, template, id)
           return readStateAfterWrite()
         })
+        route(`/api/${page}/sections/:id`, 'GET', async (_, id) => readSection(theme, template, id))
         route(`/api/${page}/sections/:id`, 'PATCH', async (req, id) => {
-          setColorScheme(theme, template, id, await readBody(req))
+          updateSection(theme, template, id, await readBody(req))
           return readStateAfterWrite()
         })
         route(`/api/${page}/order`, 'PUT', async (req) => {
@@ -187,6 +205,9 @@ class BadRequest extends HttpError {
 class NotFound extends HttpError {
   status = 404
 }
+class Conflict extends HttpError {
+  status = 409
+}
 
 /**
  * @typedef {{ file: string, line: number, severity: 'error' | 'warning', check: string, message: string }} Offense
@@ -200,7 +221,7 @@ class NotFound extends HttpError {
  *   logoAsset: string | null,
  * }} Brand
  * @typedef {keyof typeof pages} Page
- * @typedef {Record<Page, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, brand: Brand, validation: Offense[] }} ThemeState
+ * @typedef {Record<Page, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, validation: Offense[] }} ThemeState
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'logo'>>} BrandChange
  */
 
@@ -215,6 +236,7 @@ async function readThemeState(theme, catalog, validation) {
     ...perPage((file) => readTemplate(theme, file)),
     catalog: perPage((file) => listSections(catalog, file)),
     custom: perPage((file) => listCustomSections(theme, catalog, file)),
+    sectionInfo: readSectionInfo(theme, catalog),
     brand: readBrand(theme),
     validation: await validation,
   }
@@ -658,26 +680,158 @@ function reorderSections(theme, file, body) {
 }
 
 /**
- * Sets the color scheme of a page's section whose schema has a color scheme setting.
+ * Changes a page's section: its color scheme, its text settings and its blocks' text settings.
  * @param {string} theme
  * @param {string} file The page's JSON template.
  * @param {string} id
- * @param {unknown} body
+ * @param {unknown} body `{ colorScheme?, settings?: { <setting id>: string }, blocks?: { <block id>: { <setting id>: string } } }`
  */
-function setColorScheme(theme, file, id, body) {
-  const { colorScheme, ...unknown } = /** @type {Record<string, unknown>} */ (body ?? {})
+function updateSection(theme, file, id, body) {
+  const { colorScheme, settings, blocks, ...unknown } = /** @type {Record<string, unknown>} */ (body ?? {})
   const extra = Object.keys(unknown)
   if (extra.length > 0) throw new BadRequest(`Unknown section field: ${extra.join(', ')}.`)
+  if (colorScheme === undefined && settings === undefined && blocks === undefined) {
+    throw new BadRequest('Send colorScheme, settings or blocks.')
+  }
   const schemes = Object.keys(readBrand(theme).colorSchemes)
-  if (typeof colorScheme !== 'string' || !schemes.includes(colorScheme)) {
+  if (colorScheme !== undefined && (typeof colorScheme !== 'string' || !schemes.includes(colorScheme))) {
     throw new BadRequest(`colorScheme must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
+  }
+  if (settings !== undefined && !isObject(settings)) throw new BadRequest('settings must be an object.')
+  if (blocks !== undefined && (!isObject(blocks) || !Object.values(/** @type {object} */ (blocks)).every(isObject))) {
+    throw new BadRequest('blocks must map block ids to objects of settings.')
   }
   updateJSON(theme, file, (template) => {
     const section = findSection(template, file, id)
-    const setting = colorSchemeSetting(theme, section.type)
-    if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
-    section.settings = { ...section.settings, [setting.id]: colorScheme }
+    const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
+    if (colorScheme !== undefined) {
+      const setting = colorSchemeSetting(theme, section.type)
+      if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
+      section.settings = { ...section.settings, [setting.id]: colorScheme }
+    }
+    if (settings) section.settings = { ...section.settings, ...textValues(settings, schema.settings, `the ${section.type} section`) }
+    for (const [blockId, values] of Object.entries(/** @type {Record<string, object>} */ (blocks ?? {}))) {
+      const block = section.blocks?.[blockId]
+      if (!Object.hasOwn(section.blocks ?? {}, blockId)) throw new BadRequest(`The ${id} section has no block ${blockId}.`)
+      const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
+      block.settings = { ...block.settings, ...textValues(values, blockSchema?.settings, `the ${block.type} block`) }
+    }
   })
+}
+
+// The setting types the Studio edits as text. richtext holds HTML paragraphs, inline_richtext inline HTML.
+const textTypes = new Set(['text', 'inline_richtext', 'richtext'])
+
+/**
+ * The values, checked against a schema's settings: each must name a text setting and be a string.
+ * @param {object} values
+ * @param {{ id?: string, type: string }[] | undefined} schemaSettings
+ * @param {string} owner Names the section or block in errors.
+ */
+function textValues(values, schemaSettings, owner) {
+  for (const [key, value] of Object.entries(values)) {
+    const setting = schemaSettings?.find((candidate) => candidate.id === key)
+    if (!setting || !textTypes.has(setting.type)) throw new BadRequest(`${key} is not a text setting of ${owner}.`)
+    if (typeof value !== 'string') throw new BadRequest(`${key} must be a string.`)
+    // Shopify stores richtext as block HTML and refuses a value that doesn't start with a block element.
+    if (setting.type === 'richtext' && value.trim() !== '' && !/^\s*<(p|ul|ol|h[1-6])[\s>]/.test(value)) {
+      throw new BadRequest(`${key} is rich text: HTML paragraphs like <p>…</p>.`)
+    }
+  }
+  return values
+}
+
+/**
+ * @typedef {{ id: string, type: string, label: string, value: string }} TextSetting
+ * @typedef {{ id: string, type: string, name: string, colorScheme?: string | null, settings: TextSetting[], blocks: { id: string, type: string, name: string, settings: TextSetting[] }[] }} SectionDetails
+ */
+
+/**
+ * A page's section with its text settings and its blocks', labelled in the Theme's schema language.
+ * @param {string} theme
+ * @param {string} file The page's JSON template.
+ * @param {string} id
+ * @returns {SectionDetails}
+ */
+function readSection(theme, file, id) {
+  const section = findSection(readJSON(theme, file), file, id)
+  const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
+  const translate = schemaTranslator(theme)
+  /** @param {{ id?: string, type: string, label?: string, default?: string }[] | undefined} schemaSettings @param {Record<string, unknown> | undefined} values */
+  const texts = (schemaSettings, values) =>
+    (schemaSettings ?? []).flatMap((setting) =>
+      setting.id && textTypes.has(setting.type)
+        ? [{ id: setting.id, type: setting.type, label: translate(setting.label ?? setting.id), value: String(values?.[setting.id] ?? setting.default ?? '') }]
+        : [],
+    )
+  const color = colorSchemeSetting(theme, section.type)
+  const blocks = section.blocks ?? {}
+  return {
+    id,
+    type: section.type,
+    name: translate(schema.name ?? section.type),
+    ...(color ? { colorScheme: section.settings?.[color.id] ?? color.default ?? null } : {}),
+    settings: texts(schema.settings, section.settings),
+    blocks: (section.block_order ?? Object.keys(blocks)).map((/** @type {string} */ blockId) => {
+      const block = blocks[blockId]
+      const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
+      return { id: blockId, type: block.type, name: translate(blockSchema?.name ?? block.type), settings: texts(blockSchema?.settings, block.settings) }
+    }),
+  }
+}
+
+/**
+ * Resolves a schema's `t:` keys: from the shop language's schema locale when the Theme has one, else from
+ * English, then from the Base Theme (whose keys a newly copied catalog section may use).
+ * @param {string} theme
+ * @returns {(text: string) => string}
+ */
+function schemaTranslator(theme) {
+  const names = readdirSync(path.join(theme, 'locales')).filter((name) => name.endsWith('.schema.json'))
+  const shopLanguage = names.find((name) => !name.startsWith('en.default.'))
+  const locales = [
+    ...[shopLanguage, 'en.default.schema.json'].flatMap((name) => (name && names.includes(name) ? [readJSON(theme, `locales/${name}`)] : [])),
+    readJSON(baseTheme, 'locales/en.default.schema.json'),
+  ]
+  return (text) => {
+    if (!text.startsWith('t:')) return text
+    const keys = text.slice(2).split('.')
+    for (const locale of locales) {
+      const value = keys.reduce((/** @type {any} */ node, key) => (isObject(node) ? node[key] : undefined), locale)
+      if (typeof value === 'string') return value
+    }
+    return text
+  }
+}
+
+/**
+ * The name and description of every section in the Theme and the catalog, keyed by type. The description is
+ * the `{% comment %}` a section file starts with.
+ * @param {string} theme
+ * @param {string} catalog
+ * @returns {Record<string, { name: string, description: string }>}
+ */
+function readSectionInfo(theme, catalog) {
+  const translate = schemaTranslator(theme)
+  /** @type {Record<string, { name: string, description: string }>} */
+  const info = {}
+  // The Theme's own copy wins over the catalog's.
+  for (const dir of [catalog, theme]) {
+    for (const file of readdirSync(path.join(dir, 'sections'))) {
+      if (!file.endsWith('.liquid')) continue
+      const source = readFileSync(path.join(dir, 'sections', file), 'utf8')
+      const type = file.slice(0, -'.liquid'.length)
+      info[type] = {
+        name: translate(readSchema(path.join(dir, 'sections', file))?.name ?? type),
+        // A Theme copy made before the catalog section had a description keeps the catalog's.
+        description:
+          source.match(/^\s*{%-?\s*comment\s*-?%}([\s\S]*?){%-?\s*endcomment\s*-?%}/)?.[1].trim().replace(/\s+/g, ' ') ||
+          info[type]?.description ||
+          '',
+      }
+    }
+  }
+  return info
 }
 
 /**

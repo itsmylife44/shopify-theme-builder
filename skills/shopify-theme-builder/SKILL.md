@@ -101,7 +101,8 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    | `PUT /api/brand/logo` | the image file, with its `Content-Type` (`image/png`, `image/jpeg`, `image/webp`, `image/svg+xml`) |
    | `POST /api/<page>/sections` | `{"type": "<catalog section>"}`; `<page>` is `home`, `product` or `collection` |
    | `DELETE /api/<page>/sections/<id>` | none |
-   | `PATCH /api/<page>/sections/<id>` | `{"colorScheme": "scheme-2"}` |
+   | `GET /api/<page>/sections/<id>` | none; the section's `name`, `colorScheme`, text `settings` and `blocks`, each setting as `{"id", "type", "label", "value"}` |
+   | `PATCH /api/<page>/sections/<id>` | any of `{"colorScheme": "scheme-2", "settings": {"<setting id>": "…"}, "blocks": {"<block id>": {"<setting id>": "…"}}}`; settings are the text ones `GET` lists |
    | `PUT /api/<page>/order` | `{"order": ["<id>", …]}`, every section id of the page exactly once; a new section is added at the end, so move it with this |
    | `GET /api/theme` | none; the current state, with the catalog sections each page can take under `catalog` and the Custom Sections under `custom` |
 
@@ -112,27 +113,28 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
    - **collection**: add `main-collection`, then remove `main`.
 
    Alternate the color schemes down the home page (`PATCH`) so neighbouring sections don't share one background.
-4. Check `GET /api/theme`: `validation` must hold no offense with `"severity": "error"`. Fix any error in the file and line it names, then check again.
-5. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password, under Password protection at `https://admin.shopify.com/store/<shop>/online_store/preferences` (development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
-6. Commit the Theme in `<theme>` (`git add -A && git commit -m "Create the Theme"`).
+4. Write the text of every section you added, in the shop's language: the catalog's defaults are English placeholders ("Welcome to our store"). For each section, `GET` it and `PATCH` its `settings` and `blocks` with text written for the shop, from what you learned in step 2. A `text` or `inline_richtext` value is a line of text; a `richtext` value is HTML paragraphs (`<p>…</p>`). Leave product and collection names to Shopify.
+5. Check `GET /api/theme`: `validation` must hold no offense with `"severity": "error"`. Fix any error in the file and line it names, then check again.
+6. Check `GET /api/preview`: `{"status": "running", "url": …}` gives the preview link. `login-required` means the Shopify CLI printed a login link in the log: give it to the Creator and check again after they log in. `error` carries a message saying what to fix. When it asks for the store password, ask the Creator for the storefront password, under Password protection at `https://admin.shopify.com/store/<shop>/online_store/preferences` (development stores always have one), stop the Studio, and start it again with `--store-password <password>` added.
+7. Commit the Theme in `<theme>` (`git add -A && git commit -m "Create the Theme"`).
 
-**Done** when the Brand and the three pages are written, `validation` has zero errors, the preview is `running`, and the Theme is committed.
+**Done** when the Brand, the three pages and their text are written, `validation` has zero errors, the preview is `running`, and the Theme is committed.
 
 ## 5. Hand-off
 
 Tell the Creator, in a few lines:
 
-1. Open the Studio at its URL to adjust colors, fonts and logo, and to add, remove, reorder or recolor sections on the home, product and collection pages.
-2. Open the preview link in a separate Chrome window: it shows the real Theme and refreshes after each change. Section text and images are edited in Shopify's Theme Editor; products and menus in the Shopify admin.
+1. Open the Studio at its URL, in Google Chrome. It shows the real Theme in the middle and refreshes it after each change. Click a section there, or in the list on the left, to change its colors and text on the right, move it or remove it; add sections from the list; the Brand tab holds colors, fonts and logo.
+2. Images, and the header and footer, are edited in Shopify's Theme Editor; products and menus in the Shopify admin.
 3. The Theme lives in `<theme>`, with its own Git history. You can keep changing it: the Studio picks up your edits while it runs.
-4. To stop the Studio, end its process; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
+4. To stop the Studio, ask me; to start it again, run the command from step 4.1 (with `--store-password` if you added it).
 5. Ask you for a section the catalog doesn't have (step 6), and to deliver the Theme to the store when it's ready (step 7).
 
 ## 6. Custom Sections
 
 When the Creator wants something no catalog section does, write a **Custom Section**: a section file in the Theme only, never in `<skill-dir>`.
 
-1. Pick a kebab-case name (like `size-guide`) that no file in `<theme>/sections/`, `<skill-dir>/base-theme/sections/` or `<skill-dir>/catalog/sections/` has, and write `<theme>/sections/<name>.liquid`.
+1. Pick a kebab-case name (like `size-guide`) that no file in `<theme>/sections/`, `<skill-dir>/base-theme/sections/` or `<skill-dir>/catalog/sections/` has, and write `<theme>/sections/<name>.liquid`. Start it with a one-sentence description the Studio shows in its section picker: `{% comment %}A size table for the product page.{% endcomment %}`.
 2. Follow the conventions of the catalog sections; open one in `<skill-dir>/catalog/sections/` (like `image-with-text.liquid`) as the model:
    - **Brand only through settings.** No hardcoded colors or fonts: use the CSS variables the Theme sets from the Brand (`--color-background`, `--color-foreground`, `--color-button`, `--color-button-label`, `--font-heading--*`, `--font-body--*`).
    - **Color scheme.** The schema has `{"type": "color_scheme", "id": "color_scheme", "label": "t:labels.color_scheme", "default": "scheme-1"}` and the outer element carries `class="color-{{ section.settings.color_scheme }}"`.
@@ -143,7 +145,7 @@ When the Creator wants something no catalog section does, write a **Custom Secti
    - **Limits.** At most 50 blocks (`max_blocks`) and 256 KB per file.
 3. Check Theme Check: `validation` in `GET /api/theme` (or `shopify theme check --path <theme>` when the Studio isn't running) must hold no error. Fix each one and check again. Don't tell the Creator the section is done before this passes.
 4. When the Creator said which page it goes on, add it with `POST /api/<page>/sections` and `{"type": "<name>"}`. Either way, the Studio lists it under Custom Sections in the section picker of each page it can go on, where the Creator can add it.
-5. Ask the Creator to check it in the preview; its text and images are edited in the Theme Editor. Then commit it in `<theme>`.
+5. Write its text in the shop's language (`PATCH`, like step 4.4), and ask the Creator to check it in the Studio; its images are edited in the Theme Editor. Then commit it in `<theme>`.
 
 **Done** when the section file passes Theme Check with zero errors, shows in the Studio, and is committed.
 

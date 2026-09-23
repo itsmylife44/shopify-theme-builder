@@ -1,12 +1,23 @@
-import { ArrowDownIcon, ArrowUpIcon, ExternalLinkIcon, Trash2Icon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CircleCheckIcon,
+  ExternalLinkIcon,
+  LayoutListIcon,
+  MonitorIcon,
+  PaletteIcon,
+  PlusIcon,
+  SmartphoneIcon,
+  Trash2Icon,
+  XIcon,
+} from 'lucide-react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import fontLibrary from '../server/shopify-fonts.json'
 import type { PreviewState } from '../server/preview.mjs'
-import type { Brand, Offense, Page, TemplateSection, ThemeState } from '../server/studio.mjs'
+import type { Brand, Offense, Page, SectionDetails, TextSetting, ThemeState } from '../server/studio.mjs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Combobox,
   ComboboxContent,
@@ -19,12 +30,26 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
+type Frame = { url: string; paths: Record<Page, string> }
+type Tab = 'sections' | 'brand' | 'checks'
+type Device = 'desktop' | 'mobile'
 
+const pageNames: Record<Page, string> = { home: 'Home', product: 'Product', collection: 'Collection' }
+
+/** The Studio: the page's sections on the left, the live preview in the middle, the selected section on the right. */
 export function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
+  const preview = usePreview()
+  const frame = useFrame(preview)
+  const [page, setPage] = useState<Page>('home')
+  const [tab, setTab] = useState<Tab>('sections')
+  const [device, setDevice] = useState<Device>('desktop')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const showState = (state: ThemeState) => setLoad({ status: 'ready', state })
 
   // Reads the Theme at start and again whenever its files change elsewhere. The Studio always runs on
@@ -54,38 +79,137 @@ export function App() {
     }
   }, [])
 
+  function openPage(next: Page) {
+    setPage(next)
+    setSelectedId(null)
+  }
+
+  function select(id: string | null) {
+    setSelectedId(id)
+    if (id) setTab('sections')
+  }
+
+  if (load.status !== 'ready') {
+    return (
+      <main className="flex h-screen items-center justify-center p-6">
+        {load.status === 'loading' ? (
+          <Skeleton className="h-64 w-full max-w-3xl" />
+        ) : (
+          <Alert variant="destructive" className="max-w-xl">
+            <AlertTitle>The Studio could not read the Theme</AlertTitle>
+            <AlertDescription>{load.message}</AlertDescription>
+          </Alert>
+        )}
+      </main>
+    )
+  }
+  const { state } = load
+
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
-      <h1 className="font-heading text-xl font-medium">Studio</h1>
-      <Preview />
-      {load.status === 'loading' ? (
-        <Skeleton className="h-64 w-full" />
-      ) : load.status === 'error' ? (
-        <Alert variant="destructive">
-          <AlertTitle>The Studio could not read the Theme</AlertTitle>
-          <AlertDescription>{load.message}</AlertDescription>
-        </Alert>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {/* Keyed by the saved Brand, so the form restarts from what was written. */}
-          <BrandPanel
-            key={JSON.stringify(load.state.brand)}
-            brand={load.state.brand}
-            onSaved={showState}
-          />
-          <PageSections page="home" title="Home page" file="templates/index.json" state={load.state} onSaved={showState} />
-          <PageSections page="product" title="Product page" file="templates/product.json" state={load.state} onSaved={showState} />
-          <PageSections
-            page="collection"
-            title="Collection page"
-            file="templates/collection.json"
-            state={load.state}
-            onSaved={showState}
-          />
-          <ThemeCheck offenses={load.state.validation} />
+    <div className="flex h-screen flex-col bg-background">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b px-3">
+        <span className="font-heading font-medium">Studio</span>
+        <nav aria-label="Pages" className="flex rounded-md border p-0.5">
+          {(Object.keys(pageNames) as Page[]).map((name) => (
+            <Button
+              key={name}
+              size="sm"
+              variant={page === name ? 'secondary' : 'ghost'}
+              aria-current={page === name ? 'page' : undefined}
+              onClick={() => openPage(name)}
+            >
+              {pageNames[name]}
+            </Button>
+          ))}
+        </nav>
+        <div className="ml-auto flex items-center gap-2">
+          <PreviewBadge preview={preview} />
+          <ChecksBadge offenses={state.validation} onClick={() => setTab('checks')} />
+          <div className="flex rounded-md border p-0.5">
+            <Button size="icon-sm" variant={device === 'desktop' ? 'secondary' : 'ghost'} aria-label="Desktop preview" onClick={() => setDevice('desktop')}>
+              <MonitorIcon />
+            </Button>
+            <Button size="icon-sm" variant={device === 'mobile' ? 'secondary' : 'ghost'} aria-label="Mobile preview" onClick={() => setDevice('mobile')}>
+              <SmartphoneIcon />
+            </Button>
+          </div>
+          {preview?.status === 'running' && typeof frame === 'object' && frame ? (
+            <a href={preview.url + frame.paths[page]} target="_blank" rel="noreferrer" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+              <ExternalLinkIcon data-icon="inline-start" />
+              Open
+            </a>
+          ) : null}
         </div>
-      )}
-    </main>
+      </header>
+      <div className="flex min-h-0 flex-1">
+        <aside className="flex w-76 shrink-0 flex-col border-r">
+          <div role="tablist" className="flex gap-1 border-b p-2">
+            <TabButton tab="sections" current={tab} onSelect={setTab} icon={<LayoutListIcon />} label="Sections" />
+            <TabButton tab="brand" current={tab} onSelect={setTab} icon={<PaletteIcon />} label="Brand" />
+            <TabButton tab="checks" current={tab} onSelect={setTab} icon={<CircleCheckIcon />} label="Checks" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {tab === 'sections' ? (
+              <SectionsPanel state={state} page={page} selectedId={selectedId} onSelect={select} onSaved={showState} />
+            ) : tab === 'brand' ? (
+              // Keyed by the saved Brand, so the form restarts from what was written.
+              <BrandPanel key={JSON.stringify(state.brand)} brand={state.brand} onSaved={showState} />
+            ) : (
+              <ThemeCheck offenses={state.validation} />
+            )}
+          </div>
+        </aside>
+        <main className="flex min-w-0 flex-1 justify-center overflow-hidden bg-muted p-4">
+          {typeof frame === 'string' ? (
+            <p className="max-w-md self-center text-center text-destructive">The Studio could not show the preview: {frame}</p>
+          ) : preview?.status === 'running' && frame ? (
+            <PreviewFrame
+              src={frame.url + frame.paths[page]}
+              device={device}
+              selectedId={selectedId}
+              onSelect={select}
+            />
+          ) : (
+            <PreviewWaiting preview={preview} />
+          )}
+        </main>
+        <aside className="w-84 shrink-0 overflow-y-auto border-l">
+          {selectedId ? (
+            <Inspector
+              key={`${page}/${selectedId}`}
+              state={state}
+              page={page}
+              sectionId={selectedId}
+              onClose={() => setSelectedId(null)}
+              onSaved={showState}
+            />
+          ) : (
+            <EmptyState title="No section selected" description="Click a section in the preview or in the list to edit it." />
+          )}
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function TabButton({
+  tab,
+  current,
+  onSelect,
+  icon,
+  label,
+}: {
+  tab: Tab
+  current: Tab
+  onSelect: (tab: Tab) => void
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <Button role="tab" aria-selected={tab === current} size="sm" variant={tab === current ? 'secondary' : 'ghost'} onClick={() => onSelect(tab)}>
+      {icon}
+      {label}
+    </Button>
   )
 }
 
@@ -94,8 +218,8 @@ function useWrite(onSaved: (state: ThemeState) => void) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /** Resolves to whether the write succeeded; a failure shows in error. */
-  async function write(url: string, init: RequestInit) {
+  /** Resolves to the Theme state the write returned, or null when it failed; a failure shows in error. */
+  async function write(url: string, init: RequestInit): Promise<ThemeState | null> {
     setSaving(true)
     setError(null)
     try {
@@ -103,10 +227,10 @@ function useWrite(onSaved: (state: ThemeState) => void) {
       const body = await response.json()
       if (!response.ok) throw new Error(body.error)
       onSaved(body)
-      return true
+      return body
     } catch (error) {
       setError((error as Error).message)
-      return false
+      return null
     } finally {
       setSaving(false)
     }
@@ -119,11 +243,487 @@ function jsonRequest(method: string, body: unknown): RequestInit {
   return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
 }
 
+/** The status of `shopify theme dev`, kept up to date by the Studio server. */
+function usePreview() {
+  const [preview, setPreview] = useState<PreviewState | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    function update(state: PreviewState) {
+      // A pushed status is newer than the one being fetched.
+      controller.abort()
+      setPreview(state)
+    }
+    fetch('/api/preview', { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json()
+        if (!response.ok) throw new Error(body.error)
+        setPreview(body)
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setPreview({ status: 'error', message: error.message })
+      })
+    import.meta.hot?.on('studio:preview', update)
+    return () => {
+      controller.abort()
+      import.meta.hot?.off('studio:preview', update)
+    }
+  }, [])
+  return preview
+}
+
+/** Where the Studio's iframe loads the preview, once theme dev runs, or why it can't. */
+function useFrame(preview: PreviewState | null) {
+  const [frame, setFrame] = useState<Frame | string | null>(null)
+  const running = preview?.status === 'running'
+  useEffect(() => {
+    if (!running) return
+    const controller = new AbortController()
+    fetch('/api/frame', { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json()
+        setFrame(response.ok ? body : body.error)
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setFrame(error.message)
+      })
+    return () => controller.abort()
+  }, [running])
+  return running ? frame : null
+}
+
+function PreviewBadge({ preview }: { preview: PreviewState | null }) {
+  const labels: Record<PreviewState['status'], string> = {
+    starting: 'Starting',
+    running: 'Live',
+    'login-required': 'Login required',
+    error: 'Preview error',
+  }
+  const status = preview?.status ?? 'starting'
+  return (
+    <Badge variant={status === 'error' ? 'destructive' : status === 'running' ? 'secondary' : 'outline'}>{labels[status]}</Badge>
+  )
+}
+
+function ChecksBadge({ offenses, onClick }: { offenses: Offense[]; onClick: () => void }) {
+  const errors = offenses.filter((offense) => offense.severity === 'error').length
+  return (
+    <Button size="sm" variant={errors > 0 ? 'destructive' : 'ghost'} onClick={onClick}>
+      <CircleCheckIcon data-icon="inline-start" />
+      {errors > 0 ? plural(errors, 'error') : 'Theme Check passes'}
+    </Button>
+  )
+}
+
+function PreviewWaiting({ preview }: { preview: PreviewState | null }) {
+  return (
+    <div className="flex max-w-md items-center text-center">
+      {preview && preview.status !== 'running' ? (
+        <p className={preview.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>{preview.message}</p>
+      ) : (
+        <p className="text-muted-foreground">Starting the preview…</p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The Theme's page as Shopify renders it, through the Studio's proxy. A script the proxy adds reports the
+ * section the Creator clicks, and outlines the selected one.
+ */
+function PreviewFrame({
+  src,
+  device,
+  selectedId,
+  onSelect,
+}: {
+  src: string
+  device: Device
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const frame = useRef<HTMLIFrameElement>(null)
+  // Changes on each page load, including theme dev's reloads after a Theme change.
+  const [loads, setLoads] = useState(0)
+  const onMessage = useEffectEvent((event: MessageEvent) => {
+    if (event.source !== frame.current?.contentWindow) return
+    if (event.data?.type === 'studio:select' && typeof event.data.id === 'string') onSelect(event.data.id)
+    if (event.data?.type === 'studio:loaded') setLoads((n) => n + 1)
+  })
+
+  useEffect(() => {
+    const listener = (event: MessageEvent) => onMessage(event)
+    addEventListener('message', listener)
+    return () => removeEventListener('message', listener)
+  }, [])
+
+  // Scrolls to the selected section when it changes; after a reload it only outlines it again.
+  const scrolledTo = useRef<string | null>(null)
+  useEffect(() => {
+    const scroll = selectedId !== scrolledTo.current
+    scrolledTo.current = selectedId
+    frame.current?.contentWindow?.postMessage({ type: 'studio:selected', id: selectedId, scroll }, new URL(src).origin)
+  }, [selectedId, loads, src])
+
+  return (
+    <iframe
+      ref={frame}
+      src={src}
+      title="Theme preview"
+      className="h-full max-w-full rounded-md border bg-white shadow-sm transition-[width]"
+      style={{ width: device === 'mobile' ? 390 : '100%' }}
+    />
+  )
+}
+
+const sectionLabel = (state: ThemeState, type: string) => state.sectionInfo[type]?.name || type
+
+/** The page's sections in order between the header and the footer, and the sections the page can add. */
+function SectionsPanel({
+  state,
+  page,
+  selectedId,
+  onSelect,
+  onSaved,
+}: {
+  state: ThemeState
+  page: Page
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onSaved: (state: ThemeState) => void
+}) {
+  const { saving, error, write } = useWrite(onSaved)
+  const groups = [
+    { label: 'Section Catalog', names: state.catalog[page] },
+    { label: 'Custom Sections', names: state.custom[page] },
+  ].filter((group) => group.names.length > 0)
+  const items = groups.flatMap((group) => group.names.map((name) => ({ value: name, label: sectionLabel(state, name) })))
+  const [adding, setAdding] = useState<string | null>(null)
+
+  async function add() {
+    const saved = await write(`/api/${page}/sections`, jsonRequest('POST', { type: adding }))
+    const added = saved?.[page].at(-1)
+    if (added) onSelect(added.id)
+    setAdding(null)
+  }
+
+  return (
+    <div className="flex flex-col gap-3 p-2">
+      <ol className="flex flex-col gap-0.5" aria-label={`${pageNames[page]} page sections`}>
+        <li className="px-2 py-1 text-xs text-muted-foreground">Header</li>
+        {state[page].map((section) => (
+          <li key={section.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(section.id)}
+              aria-current={selectedId === section.id ? 'true' : undefined}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted ${
+                selectedId === section.id ? 'bg-muted font-medium' : ''
+              }`}
+            >
+              <LayoutListIcon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{sectionLabel(state, section.type)}</span>
+            </button>
+          </li>
+        ))}
+        <li className="px-2 py-1 text-xs text-muted-foreground">Footer</li>
+      </ol>
+      {items.length > 0 ? (
+        <FieldGroup className="gap-2">
+          <Separator />
+          <Field>
+            <FieldLabel htmlFor={`add-section-${page}`}>Add a section</FieldLabel>
+            <Select items={items} value={adding} disabled={saving} onValueChange={setAdding}>
+              <SelectTrigger id={`add-section-${page}`} className="w-full">
+                <SelectValue placeholder="Pick a section" />
+              </SelectTrigger>
+              <SelectContent className="max-w-80">
+                {groups.map((group) => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel>{group.label}</SelectLabel>
+                    {group.names.map((name) => (
+                      <SelectItem key={name} value={name} className="items-start">
+                        <span className="flex flex-col">
+                          <span>{sectionLabel(state, name)}</span>
+                          {state.sectionInfo[name]?.description ? (
+                            <span className="text-xs whitespace-normal text-muted-foreground">{state.sectionInfo[name].description}</span>
+                          ) : null}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+            {adding && state.sectionInfo[adding]?.description ? (
+              <FieldDescription>{state.sectionInfo[adding].description}</FieldDescription>
+            ) : null}
+          </Field>
+          <Button disabled={saving || !adding} onClick={add}>
+            <PlusIcon data-icon="inline-start" />
+            Add to the {pageNames[page].toLowerCase()} page
+          </Button>
+        </FieldGroup>
+      ) : (
+        <p className="px-2 text-muted-foreground">The Section Catalog has no sections for this page.</p>
+      )}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>The section was not added</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  )
+}
+
+// richtext settings hold HTML paragraphs; the inspector edits them as plain paragraphs split by blank lines.
+const paragraphsOnly = /^\s*(<p>[\s\S]*?<\/p>\s*)*$/
+const toParagraphs = (html: string) =>
+  html
+    .trim()
+    .replace(/^<p>|<\/p>$/g, '')
+    .split(/<\/p>\s*<p>/)
+    .map((paragraph) => paragraph.replaceAll('<br>', '\n'))
+    .join('\n\n')
+const fromParagraphs = (text: string) =>
+  text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${paragraph.replaceAll('\n', '<br>')}</p>`)
+    .join('')
+
+/** A text setting's value as the inspector edits it, and back. */
+function editable(setting: TextSetting) {
+  return setting.type === 'richtext' && paragraphsOnly.test(setting.value) ? toParagraphs(setting.value) : setting.value
+}
+function stored(setting: TextSetting, text: string) {
+  return setting.type === 'richtext' && paragraphsOnly.test(setting.value) ? fromParagraphs(text) : text
+}
+
+/** The selected section: color scheme, text settings (its own and its blocks'), order and removal. */
+function Inspector({
+  state,
+  page,
+  sectionId,
+  onClose,
+  onSaved,
+}: {
+  state: ThemeState
+  page: Page
+  sectionId: string
+  onClose: () => void
+  onSaved: (state: ThemeState) => void
+}) {
+  const [details, setDetails] = useState<SectionDetails | { error: string } | null>(null)
+  // Edited texts, by setting ("heading") or block and setting ("<block id>/quote").
+  const [edits, setEdits] = useState<Record<string, string>>({})
+  const { saving, error, write } = useWrite(onSaved)
+  const sections = state[page]
+  const index = sections.findIndex((section) => section.id === sectionId)
+  const url = `/api/${page}/sections/${encodeURIComponent(sectionId)}`
+
+  // Read again after every change to the Theme, so the inspector shows what the files hold.
+  useEffect(() => {
+    if (index === -1) return
+    const controller = new AbortController()
+    fetch(url, { signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json()
+        setDetails(response.ok ? body : { error: body.error })
+      })
+      .catch((error: Error) => {
+        if (!controller.signal.aborted) setDetails({ error: error.message })
+      })
+    return () => controller.abort()
+  }, [url, index, state])
+
+  if (index === -1) {
+    return (
+      <InspectorFrame title={sectionLabel(state, sectionId)} onClose={onClose}>
+        <p className="text-muted-foreground">
+          This section is in the header or footer, which every page shares. Edit it in Shopify's Theme Editor.
+        </p>
+      </InspectorFrame>
+    )
+  }
+  if (details === null) return <Skeleton className="m-4 h-48" />
+  if ('error' in details) {
+    return (
+      <InspectorFrame title={sectionLabel(state, sectionId)} onClose={onClose}>
+        <p className="text-destructive">{details.error}</p>
+      </InspectorFrame>
+    )
+  }
+
+  const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
+  const changed = Object.keys(edits).length > 0
+
+  function move(offset: number) {
+    const order = sections.map((section) => section.id)
+    ;[order[index], order[index + offset]] = [order[index + offset], order[index]]
+    write(`/api/${page}/order`, jsonRequest('PUT', { order }))
+  }
+
+  async function remove() {
+    if (!confirm(`Remove ${sectionLabel(state, sections[index].type)} from the ${pageNames[page].toLowerCase()} page? Its settings and blocks are deleted too.`)) return
+    if (await write(url, { method: 'DELETE' })) onClose()
+  }
+
+  async function saveTexts(event: React.SubmitEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (details === null || 'error' in details) return
+    const settings: Record<string, string> = {}
+    const blocks: Record<string, Record<string, string>> = {}
+    for (const setting of details.settings) {
+      if (setting.id in edits) settings[setting.id] = stored(setting, edits[setting.id])
+    }
+    for (const block of details.blocks) {
+      for (const setting of block.settings) {
+        const key = `${block.id}/${setting.id}`
+        if (key in edits) (blocks[block.id] ??= {})[setting.id] = stored(setting, edits[key])
+      }
+    }
+    if (await write(url, jsonRequest('PATCH', { settings, blocks }))) setEdits({})
+  }
+
+  function textField(setting: TextSetting, key: string) {
+    const value = edits[key] ?? editable(setting)
+    const change = (text: string) => setEdits((current) => ({ ...current, [key]: text }))
+    return (
+      <Field key={key}>
+        <FieldLabel htmlFor={`setting-${key}`}>{setting.label}</FieldLabel>
+        {setting.type === 'richtext' ? (
+          <Textarea id={`setting-${key}`} value={value} rows={3} onChange={(event) => change(event.target.value)} />
+        ) : (
+          <Input id={`setting-${key}`} value={value} onChange={(event) => change(event.target.value)} />
+        )}
+      </Field>
+    )
+  }
+
+  return (
+    <InspectorFrame title={details.name} onClose={onClose}>
+      <FieldGroup className="gap-4">
+        {details.colorScheme !== undefined ? (
+          <Field>
+            <FieldLabel htmlFor="section-color-scheme">Color scheme</FieldLabel>
+            <Select
+              items={schemes}
+              value={details.colorScheme}
+              disabled={saving}
+              onValueChange={(colorScheme) => colorScheme && write(url, jsonRequest('PATCH', { colorScheme }))}
+            >
+              <SelectTrigger id="section-color-scheme" className="w-full">
+                <SchemeSwatch brand={state.brand} scheme={details.colorScheme ?? ''} />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {schemes.map((scheme) => (
+                    <SelectItem key={scheme.value} value={scheme.value}>
+                      <SchemeSwatch brand={state.brand} scheme={scheme.value} />
+                      {scheme.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+        ) : null}
+      </FieldGroup>
+      {details.settings.length > 0 || details.blocks.some((block) => block.settings.length > 0) ? (
+        <form onSubmit={saveTexts} className="flex flex-col gap-4">
+          <Separator />
+          <FieldGroup className="gap-4">
+            {details.settings.map((setting) => textField(setting, setting.id))}
+            {details.blocks.map((block, blockIndex) =>
+              block.settings.length > 0 ? (
+                <FieldSet key={block.id} className="gap-3 rounded-md border p-3">
+                  <FieldLegend variant="label">
+                    {block.name} {blockIndex + 1}
+                  </FieldLegend>
+                  {block.settings.map((setting) => textField(setting, `${block.id}/${setting.id}`))}
+                </FieldSet>
+              ) : null,
+            )}
+          </FieldGroup>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={saving || !changed}>
+              {saving ? 'Saving…' : 'Save text'}
+            </Button>
+            {changed ? (
+              <Button type="button" variant="ghost" onClick={() => setEdits({})}>
+                Discard
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>The section was not saved</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Separator />
+      <div className="flex gap-1">
+        <Button size="sm" variant="outline" disabled={saving || index === 0} onClick={() => move(-1)}>
+          <ArrowUpIcon data-icon="inline-start" />
+          Up
+        </Button>
+        <Button size="sm" variant="outline" disabled={saving || index === sections.length - 1} onClick={() => move(1)}>
+          <ArrowDownIcon data-icon="inline-start" />
+          Down
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          className="ml-auto"
+          // Shopify needs at least one section in a JSON template.
+          disabled={saving || sections.length === 1}
+          onClick={remove}
+        >
+          <Trash2Icon data-icon="inline-start" />
+          Remove
+        </Button>
+      </div>
+    </InspectorFrame>
+  )
+}
+
+function InspectorFrame({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <section aria-label={`${title} settings`} className="flex flex-col gap-4 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-heading font-medium">{title}</h2>
+        <Button size="icon-sm" variant="ghost" aria-label="Close" onClick={onClose}>
+          <XIcon />
+        </Button>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function SchemeSwatch({ brand, scheme }: { brand: Brand; scheme: string }) {
+  const colors = brand.colorSchemes[scheme]
+  return (
+    <span
+      aria-hidden
+      className="flex size-4 shrink-0 items-center justify-center rounded-sm border text-[9px] font-semibold"
+      style={{ background: colors?.background, color: colors?.text }}
+    >
+      A
+    </span>
+  )
+}
+
 function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
   const [colorSchemes, setColorSchemes] = useState(brand.colorSchemes)
   const [headingFont, setHeadingFont] = useState(brand.headingFont)
   const [bodyFont, setBodyFont] = useState(brand.bodyFont)
-  // Changes on every logo upload, so the preview reloads even when the file name stays the same.
+  // Changes on every logo upload, so the logo reloads even when the file name stays the same.
   const [logoVersion, setLogoVersion] = useState(Date.now)
   const { saving, error, write } = useWrite(onSaved)
 
@@ -155,7 +755,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
     return changes
   }
 
-  function save(event: React.FormEvent) {
+  function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     write('/api/brand', jsonRequest('PUT', brandChanges()))
   }
@@ -171,153 +771,73 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Brand</CardTitle>
-        <CardDescription>Colors, fonts and logo, saved to config/settings_data.json.</CardDescription>
-      </CardHeader>
-      <form onSubmit={save} className="contents">
-        <CardContent>
-          <FieldGroup>
-            <FieldSet>
-              <FieldLegend>Color schemes</FieldLegend>
-              <FieldDescription>Sections pick one of these schemes for their colors.</FieldDescription>
-              <FieldGroup className="gap-3">
-                {Object.entries(colorSchemes).map(([scheme, colors]) => (
-                  <FieldSet key={scheme}>
-                    <FieldLegend variant="label">{scheme}</FieldLegend>
-                    <FieldGroup className="flex-row flex-wrap gap-4">
-                      {brand.colorFields.map((field) => (
-                        <Field key={field} className="w-24">
-                          <FieldLabel htmlFor={`${scheme}-${field}`}>{field.replaceAll('_', ' ')}</FieldLabel>
-                          <Input
-                            id={`${scheme}-${field}`}
-                            type="color"
-                            value={colors[field] ?? '#000000'}
-                            onChange={(event) => setColor(scheme, field, event.target.value)}
-                          />
-                        </Field>
-                      ))}
-                    </FieldGroup>
-                  </FieldSet>
-                ))}
-              </FieldGroup>
-              <Button type="button" variant="outline" className="self-start" onClick={addScheme}>
-                Add color scheme
-              </Button>
-            </FieldSet>
-            <FieldGroup className="grid md:grid-cols-2">
-              <FontPicker id="heading-font" label="Heading font" value={headingFont} onChange={setHeadingFont} />
-              <FontPicker id="body-font" label="Body font" value={bodyFont} onChange={setBodyFont} />
-            </FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="logo">Logo</FieldLabel>
-              {brand.logoAsset ? (
-                <div className="flex items-center gap-4">
-                  <img src={`/api/brand/logo?v=${logoVersion}`} alt="Current logo" className="h-12 w-auto" />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={saving}
-                    onClick={() => writeLogo({ method: 'DELETE' })}
-                  >
-                    Remove logo
-                  </Button>
+    <form onSubmit={save} className="flex flex-col gap-4 p-3">
+      <FieldGroup className="gap-5">
+        <FieldSet>
+          <FieldLegend>Color schemes</FieldLegend>
+          <FieldDescription>Each section picks one of these schemes for its colors.</FieldDescription>
+          <FieldGroup className="gap-3">
+            {Object.entries(colorSchemes).map(([scheme, colors]) => (
+              <FieldSet key={scheme} className="gap-2 rounded-md border p-3">
+                <FieldLegend variant="label" className="flex items-center gap-2">
+                  <SchemeSwatch brand={{ ...brand, colorSchemes }} scheme={scheme} />
+                  {scheme}
+                </FieldLegend>
+                <div className="grid grid-cols-2 gap-2">
+                  {brand.colorFields.map((field) => (
+                    <Field key={field} orientation="horizontal" className="items-center gap-2">
+                      <Input
+                        id={`${scheme}-${field}`}
+                        type="color"
+                        className="h-7 w-9 shrink-0 p-0.5"
+                        value={colors[field] ?? '#000000'}
+                        onChange={(event) => setColor(scheme, field, event.target.value)}
+                      />
+                      <FieldLabel htmlFor={`${scheme}-${field}`} className="text-xs font-normal">
+                        {field.replaceAll('_', ' ')}
+                      </FieldLabel>
+                    </Field>
+                  ))}
                 </div>
-              ) : null}
-              <Input
-                id="logo"
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                disabled={saving}
-                onChange={uploadLogo}
-              />
-              <FieldDescription>
-                PNG, JPEG, WebP or SVG up to 2 MB, saved in the Theme's assets.
-                {brand.logo ? ' The header shows the logo picked in the Theme Editor instead.' : null}
-              </FieldDescription>
-            </Field>
-            {error ? (
-              <Alert variant="destructive">
-                <AlertTitle>The Brand was not saved</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
+              </FieldSet>
+            ))}
           </FieldGroup>
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={saving}>
-            {saving ? 'Saving…' : 'Save Brand'}
+          <Button type="button" variant="outline" size="sm" className="self-start" onClick={addScheme}>
+            <PlusIcon data-icon="inline-start" />
+            Add color scheme
           </Button>
-        </CardFooter>
-      </form>
-    </Card>
-  )
-}
-
-const previewBadges: Record<PreviewState['status'], string> = {
-  starting: 'Starting',
-  running: 'Running',
-  'login-required': 'Login required',
-  error: 'Error',
-}
-
-/** The status of `shopify theme dev`, and the link to the preview once it runs. */
-function Preview() {
-  const [preview, setPreview] = useState<PreviewState | null>(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    function update(state: PreviewState) {
-      // A pushed status is newer than the one being fetched.
-      controller.abort()
-      setPreview(state)
-    }
-    fetch('/api/preview', { signal: controller.signal })
-      .then(async (response) => {
-        const body = await response.json()
-        if (!response.ok) throw new Error(body.error)
-        setPreview(body)
-      })
-      .catch((error: Error) => {
-        if (!controller.signal.aborted) setPreview({ status: 'error', message: error.message })
-      })
-    import.meta.hot?.on('studio:preview', update)
-    return () => {
-      controller.abort()
-      import.meta.hot?.off('studio:preview', update)
-    }
-  }, [])
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Preview</CardTitle>
-        <CardDescription>The Theme rendered by Shopify through shopify theme dev.</CardDescription>
-        {preview ? (
-          <CardAction>
-            <Badge variant={preview.status === 'error' ? 'destructive' : 'secondary'}>{previewBadges[preview.status]}</Badge>
-          </CardAction>
+        </FieldSet>
+        <FontPicker id="heading-font" label="Heading font" value={headingFont} onChange={setHeadingFont} />
+        <FontPicker id="body-font" label="Body font" value={bodyFont} onChange={setBodyFont} />
+        <Field>
+          <FieldLabel htmlFor="logo">Logo</FieldLabel>
+          {brand.logoAsset ? (
+            <div className="flex items-center gap-3">
+              <img src={`/api/brand/logo?v=${logoVersion}`} alt="Current logo" className="h-10 w-auto" />
+              <Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => writeLogo({ method: 'DELETE' })}>
+                Remove logo
+              </Button>
+            </div>
+          ) : null}
+          <Input id="logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={saving} onChange={uploadLogo} />
+          <FieldDescription>
+            PNG, JPEG, WebP or SVG up to 2 MB, saved in the Theme's assets.
+            {brand.logo ? ' The header shows the logo picked in the Theme Editor instead.' : null}
+          </FieldDescription>
+        </Field>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>The Brand was not saved</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
-      </CardHeader>
-      <CardContent>
-        {preview === null ? (
-          <Skeleton className="h-9 w-full" />
-        ) : preview.status === 'running' ? (
-          <div className="flex flex-wrap items-center gap-4">
-            <a href={preview.url} target="_blank" rel="noreferrer" className={buttonVariants()}>
-              Open preview
-              <ExternalLinkIcon data-icon="inline-end" />
-            </a>
-            <p className="text-muted-foreground">
-              {preview.url} works in Google Chrome and reloads when the Theme changes.
-            </p>
-          </div>
-        ) : (
-          <p className={preview.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>{preview.message}</p>
-        )}
-      </CardContent>
-    </Card>
+      </FieldGroup>
+      <div className="sticky bottom-0 -mx-3 border-t bg-background p-3">
+        <Button type="submit" className="w-full" disabled={saving}>
+          {saving ? 'Saving…' : 'Save Brand'}
+        </Button>
+      </div>
+    </form>
   )
 }
 
@@ -377,7 +897,7 @@ function FontPicker({
   return (
     <FieldSet>
       <FieldLegend variant="label">{label}</FieldLegend>
-      <FieldGroup className="flex-row gap-2">
+      <FieldGroup className="gap-2">
         <Field>
           <FieldLabel htmlFor={id} className="sr-only">
             {label} family
@@ -396,7 +916,7 @@ function FontPicker({
             </ComboboxContent>
           </Combobox>
         </Field>
-        <Field className="w-44 shrink-0">
+        <Field>
           <FieldLabel htmlFor={`${id}-variant`} className="sr-only">
             {label} weight and style
           </FieldLabel>
@@ -421,196 +941,34 @@ function FontPicker({
   )
 }
 
-/** A page's sections: add from the Section Catalog, remove, reorder and pick each one's color scheme. */
-function PageSections({
-  page,
-  title,
-  file,
-  state,
-  onSaved,
-}: {
-  page: Page
-  title: string
-  file: string
-  state: ThemeState
-  onSaved: (state: ThemeState) => void
-}) {
-  const { saving, error, write } = useWrite(onSaved)
-  const sectionGroups = [
-    { label: 'Section Catalog', names: state.catalog[page] },
-    { label: 'Custom Sections', names: state.custom[page] },
-  ].filter((group) => group.names.length > 0)
-  const sectionItems = sectionGroups.flatMap((group) => group.names.map((name) => ({ value: name, label: name })))
-  const [sectionType, setSectionType] = useState<string | null>(sectionItems[0]?.value ?? null)
-  const sections = state[page]
-  const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
-
-  function move(index: number, offset: number) {
-    const order = sections.map((section) => section.id)
-    ;[order[index], order[index + offset]] = [order[index + offset], order[index]]
-    write(`/api/${page}/order`, jsonRequest('PUT', { order }))
-  }
-
-  function remove(section: TemplateSection) {
-    if (!confirm(`Remove ${section.type} (${section.id}) from the ${title.toLowerCase()}? Its settings and blocks are deleted too.`)) return
-    write(`/api/${page}/sections/${encodeURIComponent(section.id)}`, { method: 'DELETE' })
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>Sections in page order, saved to {file}.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {sections.length > 0 ? (
-          <ol className="flex flex-col gap-2">
-            {sections.map((section, index) => (
-              <li key={section.id} className="flex items-center gap-2">
-                <span className="w-5 text-right text-muted-foreground tabular-nums">{index + 1}</span>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-medium">{section.type}</span>
-                  <span className="truncate text-xs text-muted-foreground">{section.id}</span>
-                </div>
-                {section.colorScheme !== undefined ? (
-                  <Select
-                    items={schemes}
-                    value={section.colorScheme}
-                    disabled={saving}
-                    onValueChange={(colorScheme) =>
-                      colorScheme &&
-                      write(`/api/${page}/sections/${encodeURIComponent(section.id)}`, jsonRequest('PATCH', { colorScheme }))
-                    }
-                  >
-                    <SelectTrigger aria-label={`Color scheme of ${section.id}`} className="w-36">
-                      <SelectValue placeholder="Color scheme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {schemes.map((scheme) => (
-                          <SelectItem key={scheme.value} value={scheme.value}>
-                            {scheme.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Move ${section.id} up`}
-                  disabled={saving || index === 0}
-                  onClick={() => move(index, -1)}
-                >
-                  <ArrowUpIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Move ${section.id} down`}
-                  disabled={saving || index === sections.length - 1}
-                  onClick={() => move(index, 1)}
-                >
-                  <ArrowDownIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove ${section.id}`}
-                  // Shopify needs at least one section in a JSON template.
-                  disabled={saving || sections.length === 1}
-                  onClick={() => remove(section)}
-                >
-                  <Trash2Icon />
-                </Button>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <EmptyState title="No sections" description={`The ${title.toLowerCase()} has no sections yet.`} />
-        )}
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>The {title.toLowerCase()} was not saved</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-      <CardFooter className="gap-2">
-        {sectionItems.length > 0 ? (
-          <>
-            <Field className="w-44">
-              <FieldLabel htmlFor={`add-section-${page}`} className="sr-only">
-                Section to add
-              </FieldLabel>
-              <Select items={sectionItems} value={sectionType} disabled={saving} onValueChange={setSectionType}>
-                <SelectTrigger id={`add-section-${page}`} className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {sectionGroups.map((group) => (
-                    <SelectGroup key={group.label}>
-                      <SelectLabel>{group.label}</SelectLabel>
-                      {group.names.map((name) => (
-                        <SelectItem key={name} value={name}>
-                          {name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Button
-              disabled={saving || !sectionType}
-              onClick={() => write(`/api/${page}/sections`, jsonRequest('POST', { type: sectionType }))}
-            >
-              Add section
-            </Button>
-          </>
-        ) : (
-          <p className="text-muted-foreground">The Section Catalog has no sections yet.</p>
-        )}
-      </CardFooter>
-    </Card>
-  )
-}
-
 function ThemeCheck({ offenses }: { offenses: Offense[] }) {
   const errors = offenses.filter((offense) => offense.severity === 'error').length
   const warnings = offenses.length - errors
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Theme Check</CardTitle>
-        <CardDescription>Errors and warnings in the Theme.</CardDescription>
-        <CardAction className="flex gap-2">
-          <Badge variant={errors > 0 ? 'destructive' : 'secondary'}>{plural(errors, 'error')}</Badge>
-          <Badge variant="secondary">{plural(warnings, 'warning')}</Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        {offenses.length > 0 ? (
-          <ul className="flex flex-col gap-3">
-            {offenses.map((offense, index) => (
-              <li key={index} className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <Badge variant={offense.severity === 'error' ? 'destructive' : 'secondary'}>{offense.severity}</Badge>
-                  <code className="truncate">
-                    {offense.file}:{offense.line}
-                  </code>
-                  <span className="text-muted-foreground">{offense.check}</span>
-                </div>
-                <p>{offense.message}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState title="No problems" description="Theme Check found no errors or warnings." />
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-3 p-3">
+      <div className="flex gap-2">
+        <Badge variant={errors > 0 ? 'destructive' : 'secondary'}>{plural(errors, 'error')}</Badge>
+        <Badge variant="secondary">{plural(warnings, 'warning')}</Badge>
+      </div>
+      {offenses.length > 0 ? (
+        <ul className="flex flex-col gap-3">
+          {offenses.map((offense, index) => (
+            <li key={index} className="flex flex-col gap-1 border-b pb-3 last:border-0">
+              <div className="flex items-center gap-2">
+                <Badge variant={offense.severity === 'error' ? 'destructive' : 'secondary'}>{offense.severity}</Badge>
+                <code className="truncate text-xs">
+                  {offense.file}:{offense.line}
+                </code>
+              </div>
+              <p>{offense.message}</p>
+              <span className="text-xs text-muted-foreground">{offense.check}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState title="No problems" description="Theme Check found no errors or warnings." />
+      )}
+    </div>
   )
 }
 
