@@ -141,6 +141,28 @@ describe('Header search', () => {
   })
 })
 
+describe('Header menu', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/header.liquid'), 'utf8')
+  const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+
+  it('opens nested links as keyboard dropdowns and marks the current page', () => {
+    expect(source).toMatch(/{%-? if link\.links\.size > 0 -?%}\s*<details class="header__submenu"[^>]*>\s*<summary/)
+    expect(source).toMatch(/{%-? for child in link\.links -?%}/)
+    expect(source).toMatch(/href="{{ child\.url }}"\s*{%-? if child\.current -?%}\s*aria-current="page"/)
+    expect(source).toMatch(/href="{{ link\.url }}"\s*{%-? if link\.current -?%}\s*aria-current="page"/)
+  })
+
+  it('opens the menu in a dialog drawer from a menu button on mobile', () => {
+    expect(source).toMatch(/<button[^>]*class="header__menu-button"[^>]*aria-controls="HeaderDrawer"/)
+    expect(source).toMatch(/<dialog[^>]*id="HeaderDrawer"/)
+    expect(source).toContain('.showModal()')
+    expect(source).toMatch(/<form method="dialog">/)
+    expect(locale.header.menu).toBeTruthy()
+    expect(locale.header.close_menu).toBeTruthy()
+  })
+})
+
 describe('Country and language selector', () => {
   const catalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
   const header = readFileSync(path.join(catalog, 'header.liquid'), 'utf8')
@@ -157,7 +179,7 @@ describe('Country and language selector', () => {
     expect(form).toMatch(/<button type="submit"/)
     // Both sections can render the form on one page, so each needs its own id instead of the default localization_form.
     expect(source).toContain(`{% form 'localization', id: '${name[0].toUpperCase()}${name.slice(1)}Localization'`)
-    expect(source).not.toContain('{% javascript %}')
+    expect(form).not.toMatch(/<script|\son[a-z]+=/)
   })
 
   it('shows the selector in the header only when the Merchant turns it on', () => {
