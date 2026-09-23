@@ -41,6 +41,9 @@
     </ul>
 
     <div class="main-product__details">
+      {% if section.settings.show_vendor and product.vendor != blank %}
+        <p class="main-product__vendor">{{ product.vendor | escape }}</p>
+      {% endif %}
       <h1 class="main-product__title">{{ product.title }}</h1>
 
       <p class="main-product__price">
@@ -95,6 +98,7 @@
 
       {% form 'product', product, class: 'main-product__form' %}
         <input type="hidden" name="id" value="{{ current_variant.id }}">
+        {{ form | payment_terms }}
         <label class="main-product__quantity">
           {{ 'product.quantity' | t }}
           <input type="number" name="quantity" min="1" value="1">
@@ -116,6 +120,25 @@
           {{ form | payment_button }}
         {% endif %}
       {% endform %}
+
+      {% assign pickup_availabilities = current_variant.store_availabilities | where: 'pick_up_enabled', true %}
+      {% if pickup_availabilities.size > 0 %}
+        <ul class="main-product__pickup" role="list" aria-label="{{ 'product.pickup_locations' | t }}">
+          {% for availability in pickup_availabilities %}
+            <li>
+              <strong>{{ availability.location.name | escape }}</strong>
+              {% if availability.available %}
+                <span>{{ 'product.pickup_available' | t }}</span>
+                {% if availability.pick_up_time != blank %}
+                  <span class="main-product__pickup-time">{{ availability.pick_up_time | escape }}</span>
+                {% endif %}
+              {% else %}
+                <span>{{ 'product.pickup_unavailable' | t }}</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
 
       {% for block in section.blocks %}
         <div class="main-product__app" {{ block.shopify_attributes }}>
@@ -244,6 +267,14 @@
     }
   }
 
+  .main-product__vendor {
+    margin-block-end: -1rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
   .main-product__title {
     font-size: clamp(1.75rem, 3vw, 2.5rem);
   }
@@ -339,6 +370,25 @@
     cursor: pointer;
   }
 
+  .main-product__pickup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.875rem;
+  }
+
+  .main-product__pickup li {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main-product__pickup-time {
+    opacity: 0.7;
+  }
+
   .main-product__add:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -373,6 +423,12 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "t:labels.show_vendor",
+      "default": true
     },
     {
       "type": "checkbox",

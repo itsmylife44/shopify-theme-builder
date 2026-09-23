@@ -109,6 +109,9 @@
   "product": {
     "add_to_cart": "Add to cart",
     "media": "Product media",
+    "pickup_available": "Pickup available",
+    "pickup_locations": "Pickup locations",
+    "pickup_unavailable": "Pickup currently unavailable",
     "quantity": "Quantity",
     "regular_price": "Regular price",
     "sale_price": "Sale price",

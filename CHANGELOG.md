@@ -4,6 +4,10 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ## [Unreleased]
 
+### Added
+
+- The product page shows the vendor (with a setting to hide it), pickup availability at local pickup locations for the selected variant, and the Shop Pay Installments banner.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.

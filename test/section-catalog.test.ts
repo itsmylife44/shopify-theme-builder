@@ -116,6 +116,28 @@ describe('Unit prices', () => {
   })
 })
 
+describe('Product page requirements', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-product.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const info = source.slice(source.indexOf('<product-info'), source.indexOf('</product-info>'))
+  const form = source.slice(source.indexOf("{% form 'product'"), source.indexOf('{% endform %}'))
+
+  it('shows the vendor, with a setting to hide it', () => {
+    expect(schema.settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
+    expect(info).toContain('{% if section.settings.show_vendor and product.vendor != blank %}')
+    expect(info).toContain('product.vendor | escape')
+  })
+
+  it('shows pickup availability of the current variant inside the product info, so it updates with the variant', () => {
+    expect(info).toContain("current_variant.store_availabilities | where: 'pick_up_enabled', true")
+    expect(info).toContain('.pick_up_time')
+  })
+
+  it('shows Shop Pay Installments inside the product form', () => {
+    expect(form).toContain('{{ form | payment_terms }}')
+  })
+})
+
 describe('Base Theme templates', () => {
   const baseTheme = path.join(projectDir, 'skills/shopify-theme-builder/base-theme')
   // The pages the Studio doesn't compose: each ships a basic layout that takes a Brand color scheme.
