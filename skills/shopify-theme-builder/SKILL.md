@@ -69,23 +69,19 @@ Gather seven things: **colors**, **fonts**, **logo**, **style**, **shop language
 ## 3. Create the Theme
 
 1. Ask where the Theme goes. Default: a new folder named after the shop (like `acme-theme`) in the Creator's current directory. It must be outside `<skill-dir>`, and must not exist yet or be empty; pick another name rather than write into a folder with files.
-2. Copy every file of the Base Theme, including its dotfiles, then the catalog's header, header group, footer and footer group over the Base Theme's own, the header group's `announcement-bar` section (short messages above the header), the header's `predictive-search` section (the suggestions its search box shows), the `quick-add` section (the dialog product cards open to pick a variant and add it to the cart), the catalog's contact page (the `page.contact` template and its `contact-form` section), the catalog's cart page (the `cart` template and its `main-cart` section, with accelerated checkout buttons, an order note setting and discounts), the catalog's search page (the `search` template and its `main-search` section, with filters and sorting), the catalog's blog page (the `blog` template and its `main-blog` section, with tag links and pagination), the catalog's article page (the `article` template and its `main-article` section, with tags and paginated comments), the catalog's 404 page (the `404` template and its `main-404` section, with a search form and a link back to the shop), and the catalog's collections list page (the `list-collections` template and its `main-list-collections` section, with a sort setting and pagination). On macOS or Linux (on Windows, use the shell's equivalent):
+2. Create it with the skill's `create-theme` command:
 
    ```sh
-   mkdir -p <theme> && cp -R <skill-dir>/base-theme/. <theme>/
-   cp <skill-dir>/catalog/sections/header.liquid <skill-dir>/catalog/sections/header-group.json <skill-dir>/catalog/sections/announcement-bar.liquid <skill-dir>/catalog/sections/footer.liquid <skill-dir>/catalog/sections/footer-group.json <skill-dir>/catalog/sections/contact-form.liquid <skill-dir>/catalog/sections/main-cart.liquid <skill-dir>/catalog/sections/main-search.liquid <skill-dir>/catalog/sections/main-blog.liquid <skill-dir>/catalog/sections/main-article.liquid <skill-dir>/catalog/sections/main-404.liquid <skill-dir>/catalog/sections/main-list-collections.liquid <skill-dir>/catalog/sections/predictive-search.liquid <skill-dir>/catalog/sections/quick-add.liquid <theme>/sections/
-   cp <skill-dir>/catalog/templates/page.contact.json <skill-dir>/catalog/templates/cart.json <skill-dir>/catalog/templates/search.json <skill-dir>/catalog/templates/blog.json <skill-dir>/catalog/templates/article.json <skill-dir>/catalog/templates/404.json <skill-dir>/catalog/templates/list-collections.json <theme>/templates/
+   node <skill-dir>/studio/bin/create-theme.mjs <theme> --name "<shop name>" --author "<author>"
    ```
 
-   Then delete `<theme>/PROVENANCE.md`: it describes the skill's own copy of Skeleton. The Theme keeps Shopify's folder layout at its root (`layout/`, `sections/`, `templates/` …), which Shopify's GitHub integration requires, and has no build step. `LICENSE.md` is Skeleton's license and stays with the Theme. The other catalog sections are added through the Studio in step 4, which copies only the ones the Theme uses.
-3. In `<theme>/config/settings_schema.json`, set the first entry's `theme_name` to the shop's name (at most 50 characters) and `theme_author` to the author.
-4. Add the locale files of each shop language other than English:
+   It copies the Base Theme with its dotfiles and the catalog files every Theme starts with: the header, header group (with the `announcement-bar` above the header), footer and footer group, the header's `predictive-search` and `quick-add` sections, and the contact, cart, search, blog, article, 404 and collections list pages, each a template with its catalog main section. It leaves out the Base Theme's `PROVENANCE.md` (it describes the skill's own copy of Skeleton), sets the first entry of `config/settings_schema.json`'s `theme_name` to the shop's name (at most 50 characters) and `theme_author` to the author, and runs `git init -b main`, so the Creator can connect the Theme to Shopify's GitHub integration later. It refuses a folder that has files or is inside `<skill-dir>`, and prints why. The Theme keeps Shopify's folder layout at its root (`layout/`, `sections/`, `templates/` …), which Shopify's GitHub integration requires, and has no build step. `LICENSE.md` is Skeleton's license and stays with the Theme. The other catalog sections are added through the Studio in step 4, which copies only the ones the Theme uses.
+3. Add the locale files of each shop language other than English:
    1. Copy `locales/en.default.json` to `locales/<code>.json` and translate every value. Keep every key, and keep `{{ variables }}` and the HTML of `_html` keys as they are. Plural keys (`one`, `other`) get the forms the language needs (`zero`, `two`, `few`, `many`).
    2. Copy `locales/en.default.schema.json` to `locales/<code>.schema.json` and translate it the same way, so the Merchant sees the Theme Editor in that language.
    3. Keep `en.default.json` as is: English stays the Theme's default locale, and the storefront shows `<code>.json` to customers reading that language once the shop publishes it.
-5. Run `git init -b main` in `<theme>`, so the Creator can connect it to Shopify's GitHub integration later.
 
-**Done** when `<theme>` holds the Base Theme with the catalog header, announcement bar, footer, contact page, cart page, search page, blog page, article page, 404 page and collections list page, the Theme's name, and both locale files of every shop language other than English.
+**Done** when `create-theme` has created `<theme>` and it holds both locale files of every shop language other than English.
 
 ## 4. Open the Studio, write the Brand, compose the pages
 
@@ -182,7 +178,7 @@ When the Creator asks to update their Theme's sections, bring the catalog's fixe
       ```
 
       It keeps the Creator's edits (settings, text, custom CSS) and adds the catalog's. It exits with the number of conflicts, each between `<<<<<<< theme` and `>>>>>>> catalog` in the file: resolve each by hand, keeping what the Creator meant and the catalog's fix.
-4. Add what the merged sections need the way the Studio does when it copies a catalog section: every key of `<skill-dir>/base-theme/locales/en.default.json` and `en.default.schema.json` that the Theme's locale files lack, at any depth, never changing a value the Theme has (in each other shop language's files, translated as in step 3.4); every `<skill-dir>/base-theme/blocks/` file the Theme lacks; and every setting of `<skill-dir>/base-theme/config/settings_schema.json` whose `id` the Theme's lacks, in the group of the same name.
+4. Add what the merged sections need the way the Studio does when it copies a catalog section: every key of `<skill-dir>/base-theme/locales/en.default.json` and `en.default.schema.json` that the Theme's locale files lack, at any depth, never changing a value the Theme has (in each other shop language's files, translated as in step 3.3); every `<skill-dir>/base-theme/blocks/` file the Theme lacks; and every setting of `<skill-dir>/base-theme/config/settings_schema.json` whose `id` the Theme's lacks, in the group of the same name.
 5. Run `shopify theme check --path <theme>`: it must exit 0. Fix each error and run it again.
 6. Tell the Creator what changed, section by section: what the catalog fixed or added, each conflict and how you resolved it, and each section you skipped. Then commit in `<theme>` (`git add -A && git commit -m "Update the catalog sections"`), and start the Studio again as in step 4.1 when it ran.
 
@@ -207,7 +203,7 @@ When the Creator says the Theme is ready, deliver it. Delivery uploads a copy; i
 2. Run `shopify theme check --path <theme>`. It must exit 0 (zero errors); fix every error first, including any the Lighthouse fixes brought. Deliver nothing until it passes.
 3. Commit any open change in `<theme>`.
 4. Deliver it one way; the first is the default:
-   - **Push unpublished** (default), to the Merchant's store. When the preview ran on a development store (step 1), ask for the Merchant's `<shop>.myshopify.com` and check access to it the same way; a development store can't be handed to a Merchant. `<theme name>` is the `theme_name` from step 3.3:
+   - **Push unpublished** (default), to the Merchant's store. When the preview ran on a development store (step 1), ask for the Merchant's `<shop>.myshopify.com` and check access to it the same way; a development store can't be handed to a Merchant. `<theme name>` is the `theme_name` from step 3.2:
 
      ```sh
      shopify theme push --path <theme> --store <shop>.myshopify.com --unpublished --theme "<theme name>" --json

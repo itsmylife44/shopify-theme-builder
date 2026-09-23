@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseJSON } from '@shopify/theme-check-node'
+import { starterFiles } from '../skills/shopify-theme-builder/studio/server/create-theme.mjs'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
 const script = path.join(projectDir, 'scripts/check-theme.mjs')
@@ -86,9 +87,8 @@ describe('Contact page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/contact-form.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/page.contact.json')
+    expect(starterFiles).toContain('sections/contact-form.liquid')
+    expect(starterFiles).toContain('templates/page.contact.json')
   })
 })
 
@@ -117,9 +117,8 @@ describe('Cart page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/main-cart.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/cart.json')
+    expect(starterFiles).toContain('sections/main-cart.liquid')
+    expect(starterFiles).toContain('templates/cart.json')
   })
 })
 
@@ -216,9 +215,8 @@ describe('Search page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/main-search.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/search.json')
+    expect(starterFiles).toContain('sections/main-search.liquid')
+    expect(starterFiles).toContain('templates/search.json')
   })
 })
 
@@ -257,9 +255,8 @@ describe('Blog page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/main-blog.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/blog.json')
+    expect(starterFiles).toContain('sections/main-blog.liquid')
+    expect(starterFiles).toContain('templates/blog.json')
   })
 })
 
@@ -302,9 +299,8 @@ describe('Article page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/main-article.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/article.json')
+    expect(starterFiles).toContain('sections/main-article.liquid')
+    expect(starterFiles).toContain('templates/article.json')
   })
 })
 
@@ -335,9 +331,8 @@ describe('404 page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/main-404.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/404.json')
+    expect(starterFiles).toContain('sections/main-404.liquid')
+    expect(starterFiles).toContain('templates/404.json')
   })
 })
 
@@ -369,9 +364,8 @@ describe('Collections list page', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/main-list-collections.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/templates/list-collections.json')
+    expect(starterFiles).toContain('sections/main-list-collections.liquid')
+    expect(starterFiles).toContain('templates/list-collections.json')
   })
 })
 
@@ -607,8 +601,7 @@ describe('Predictive search', () => {
   })
 
   it('is copied into every new Theme by the skill', () => {
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/predictive-search.liquid')
+    expect(starterFiles).toContain('sections/predictive-search.liquid')
   })
 })
 
@@ -704,9 +697,8 @@ describe('Announcement bar', () => {
     const group = JSON.parse(readFileSync(path.join(skillDir, 'catalog/sections/header-group.json'), 'utf8'))
     expect(group.order).toEqual(['announcement-bar', 'header'])
     expect(group.sections['announcement-bar'].type).toBe('announcement-bar')
-    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('<skill-dir>/catalog/sections/announcement-bar.liquid')
-    expect(skill).toContain('<skill-dir>/catalog/sections/header-group.json')
+    expect(starterFiles).toContain('sections/announcement-bar.liquid')
+    expect(starterFiles).toContain('sections/header-group.json')
   })
 })
 
@@ -993,7 +985,7 @@ describe('Quick add', () => {
     })
 
     it('is copied into every new Theme by the skill', () => {
-      expect(read('SKILL.md')).toContain('<skill-dir>/catalog/sections/quick-add.liquid')
+      expect(starterFiles).toContain('sections/quick-add.liquid')
     })
   })
 })
