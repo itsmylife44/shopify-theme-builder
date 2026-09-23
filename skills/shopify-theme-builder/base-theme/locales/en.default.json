@@ -94,6 +94,11 @@
     "main_menu": "Main menu",
     "search": "Search"
   },
+  "localization": {
+    "country": "Country/region",
+    "language": "Language",
+    "update": "Update"
+  },
   "password": {
     "title": "This shop is private",
     "password": "Password",

@@ -104,7 +104,8 @@
     "show_search": "Show search",
     "quote": "Quote",
     "author": "Author",
-    "author_detail": "Author detail"
+    "author_detail": "Author detail",
+    "show_localization": "Show country and language selectors"
   },
   "info": {
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
@@ -114,7 +115,8 @@
     "hero_video": "Plays muted on a loop in place of the image, with controls to pause it.",
     "logo_list_image": "The image's alt text names the logo for screen readers.",
     "main_collection_enable_filtering": "Set up filters in the Shopify admin with the Search & Discovery app.",
-    "testimonials_author_detail": "For example a city or \"Verified buyer\"."
+    "testimonials_author_detail": "For example a city or \"Verified buyer\".",
+    "header_show_localization": "Shown only when the shop sells in more than one country or language. The footer always shows them."
   },
   "options": {
     "alignment": {

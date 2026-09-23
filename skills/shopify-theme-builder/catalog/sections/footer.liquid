@@ -1,4 +1,4 @@
-{% comment %}The shop's footer: menus, text, an email signup and the payment icons.{% endcomment %}
+{% comment %}The shop's footer: menus, text, an email signup, the country and language selectors and the payment icons.{% endcomment %}
 {% liquid
   assign social_ids = 'instagram,facebook,tiktok,x,youtube,pinterest' | split: ','
   assign social_names = 'Instagram,Facebook,TikTok,X,YouTube,Pinterest' | split: ','
@@ -79,6 +79,43 @@
       </ul>
     {% endif %}
 
+    {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
+      {% form 'localization', id: 'FooterLocalization', class: 'footer__localization' %}
+        {% if localization.available_countries.size > 1 %}
+          <label for="FooterCountry">{{ 'localization.country' | t }}</label>
+          <select id="FooterCountry" name="country_code">
+            {% for country in localization.available_countries %}
+              <option
+                value="{{ country.iso_code }}"
+                {% if country.iso_code == localization.country.iso_code %}
+                  selected
+                {% endif %}
+              >
+                {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        {% if localization.available_languages.size > 1 %}
+          <label for="FooterLanguage">{{ 'localization.language' | t }}</label>
+          <select id="FooterLanguage" name="language_code">
+            {% for language in localization.available_languages %}
+              <option
+                value="{{ language.iso_code }}"
+                lang="{{ language.iso_code }}"
+                {% if language.iso_code == localization.language.iso_code %}
+                  selected
+                {% endif %}
+              >
+                {{ language.endonym_name | capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        <button type="submit">{{ 'localization.update' | t }}</button>
+      {% endform %}
+    {% endif %}
+
     <div class="footer__bottom">
       <p>
         &copy; {{ 'now' | date: '%Y' }}
@@ -124,6 +161,7 @@
 
   .footer a:focus-visible,
   .footer input:focus-visible,
+  .footer select:focus-visible,
   .footer button:focus-visible {
     outline: 2px solid currentcolor;
     outline-offset: 2px;
@@ -189,6 +227,25 @@
     flex-direction: row;
     flex-wrap: wrap;
     gap: 0.5rem 1.5rem;
+  }
+
+  .footer__localization {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .footer__localization select,
+  .footer__localization button {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid currentcolor;
+    border-radius: var(--style-border-radius-inputs);
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
   }
 
   .footer__bottom {
