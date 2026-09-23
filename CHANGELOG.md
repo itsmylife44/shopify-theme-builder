@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Directions as Shopify presets: `PUT /api/directions/<name>` writes a Direction, the Theme's settings with its own style settings, as a preset in `config/settings_data.json` and its home template in `listings/<name>/templates/index.json`, the way the Theme Store installs a preset. `PUT /api/directions/current` switches the preview to one: `current` names it, the logo and other non-presentational settings stay, and its home template becomes `templates/index.json`. Both are checked like the other writes and undo in one step.
+
 - A Style tab in the Studio for the global style settings: the type scale and headings, shape and border width, buttons, density and page width, product cards, media and motion, each change saved as one undo step. The Brand tab also picks the accent font now. An agent reads the settings under `style` in `GET /api/theme` and writes them with `PUT /api/style`, which checks each value against the Theme's settings schema; `PUT /api/brand` takes an `accentFont`.
 
 - A process steps section for how a product is made: numbered steps, each an image (or Shopify's placeholder), a number in the heading font, a heading and a text, stacked on mobile and up to four in a row on desktop. The numbers come from the steps' order, and screen readers hear them once, from the ordered list; every size, gap, radius and the media treatment come from the style system.
