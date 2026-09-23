@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer as createHttpServer } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -92,6 +93,7 @@ async function openStudio(
   const url = server.resolvedUrls?.local[0]
   if (!url) throw new Error('Studio server has no local URL')
   return {
+    url,
     close: () => server.close(),
     async readPreview() {
       const response = await fetch(new URL('api/preview', url))
@@ -473,6 +475,115 @@ const pages = [
   { page: 'product', file: 'templates/product.json', main: 'product' },
   { page: 'collection', file: 'templates/collection.json', main: 'collection' },
 ]
+
+describe('Studio API: section settings', () => {
+  const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
+
+  async function withTestimonials() {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const { body } = await studio.addSection('testimonials')
+    const id = body.home.at(-1).id
+    return { theme, studio, id }
+  }
+
+  it("reads a section's text settings and its blocks' text settings, with their labels and current values", async () => {
+    const { studio, id } = await withTestimonials()
+    const { status, body } = await studio.send('GET', `api/home/sections/${id}`)
+    expect(status).toBe(200)
+    expect(body).toMatchObject({ id, type: 'testimonials', name: 'Testimonials', colorScheme: 'scheme-1' })
+    expect(body.settings).toEqual([{ id: 'heading', type: 'inline_richtext', label: 'Heading', value: 'What our customers say' }])
+    expect(body.blocks).toHaveLength(3)
+    expect(body.blocks[0]).toEqual({
+      id: expect.stringMatching(/^testimonial_/),
+      type: 'testimonial',
+      name: 'Testimonial',
+      settings: [
+        { id: 'quote', type: 'richtext', label: 'Quote', value: '<p>Share what a customer loved about your products.</p>' },
+        { id: 'author', type: 'text', label: 'Author', value: 'Customer name' },
+        { id: 'author_detail', type: 'text', label: 'Author detail', value: '' },
+      ],
+    })
+  })
+
+  it("writes a section's and its blocks' text settings into the page's template", async () => {
+    const { theme, studio, id } = await withTestimonials()
+    const block = (await studio.send('GET', `api/home/sections/${id}`)).body.blocks[1].id
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${id}`, {
+      settings: { heading: 'Dicono di noi' },
+      blocks: { [block]: { quote: '<p>Tazze bellissime.</p>', author: 'Giulia' } },
+    })
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    const section = readTemplate(theme).sections[id]
+    expect(section.settings.heading).toBe('Dicono di noi')
+    expect(section.blocks[block].settings).toEqual({ quote: '<p>Tazze bellissime.</p>', author: 'Giulia' })
+    const read = (await studio.send('GET', `api/home/sections/${id}`)).body
+    expect(read.settings[0].value).toBe('Dicono di noi')
+    expect(read.blocks[1].settings[1].value).toBe('Giulia')
+  })
+
+  it.each([
+    [{ settings: { subtitle: 'x' } }, 'subtitle'],
+    [{ settings: { color_scheme: 'scheme-2' } }, 'color_scheme'],
+    [{ settings: { heading: 42 } }, 'heading'],
+    [{ blocks: { nope: { author: 'x' } } }, 'nope'],
+    [{ settings: { heading: 'ok' }, blocks: { nope: {} } }, 'nope'],
+  ])('refuses %j, which names no text setting or block', async (change, named) => {
+    const { theme, studio, id } = await withTestimonials()
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${id}`, change)
+    expect(status).toBe(400)
+    expect(body.error).toContain(named)
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+  })
+
+  it('refuses rich text that is not HTML paragraphs', async () => {
+    const { studio, id } = await withTestimonials()
+    const block = (await studio.send('GET', `api/home/sections/${id}`)).body.blocks[0].id
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${id}`, { blocks: { [block]: { quote: 'Just words' } } })
+    expect(status).toBe(400)
+    expect(body.error).toContain('quote')
+  })
+
+  it('refuses a write from another origin, like a script in the preview or another website', async () => {
+    const { theme, studio, id } = await withTestimonials()
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const response = await fetch(new URL(`api/home/sections/${id}`, studio.url), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'text/plain', Origin: 'http://127.0.0.1:9999' },
+      body: JSON.stringify({ settings: { heading: 'Hacked' } }),
+    })
+    expect(response.status).toBe(403)
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+  })
+
+  it('answers 404 for a section the page does not have', async () => {
+    const { studio } = await withTestimonials()
+    expect((await studio.send('GET', 'api/home/sections/nope')).status).toBe(404)
+  })
+
+  it("lists every catalog section's name and description", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const { sectionInfo } = await studio.readTheme()
+    expect(sectionInfo.testimonials).toEqual({ name: 'Testimonials', description: expect.stringMatching(/\w.+\./) })
+    for (const file of readdirSync(path.join(realCatalog, 'sections')).filter((f) => f.endsWith('.liquid'))) {
+      expect(sectionInfo[file.slice(0, -'.liquid'.length)]?.description, file).toBeTruthy()
+    }
+  })
+
+  it("shows the Theme's own description of a section, else the catalog's", async () => {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/footer.liquid'), `{% comment %}Our own footer.{% endcomment %}\n${readFileSync(path.join(theme, 'sections/footer.liquid'), 'utf8')}`)
+    copyFileSync(path.join(realCatalog, 'sections/hero.liquid'), path.join(theme, 'sections/hero.liquid'))
+    const heroWithout = readFileSync(path.join(theme, 'sections/hero.liquid'), 'utf8').replace(/^{% comment %}.*?{% endcomment %}\n/, '')
+    writeFileSync(path.join(theme, 'sections/hero.liquid'), heroWithout)
+    const { sectionInfo } = await (await openStudio(theme, { catalog: realCatalog })).readTheme()
+    expect(sectionInfo.footer.description).toBe('Our own footer.')
+    expect(sectionInfo.hero.description).toMatch(/banner/)
+  })
+})
 
 describe('Studio API: section presets', () => {
   it("adds a section with its preset's settings and blocks, as the Theme Editor does", async () => {
@@ -961,6 +1072,33 @@ describe('Studio: live preview', () => {
       'needs a store',
     )
     expect(existsSync(path.join(path.dirname(cli), 'run.json'))).toBe(false)
+  })
+
+  it("serves the preview to the Studio's iframe, without x-frame-options and with the selection script", async () => {
+    const themeDev = createHttpServer((req, res) => {
+      if (req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'X-Frame-Options': 'DENY' })
+        res.end('<html><body><p>Shop</p></body></html>')
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('{"products":[{"handle":"clay-mug"}]}')
+      }
+    })
+    await new Promise<void>((resolve) => themeDev.listen(0, '127.0.0.1', resolve))
+    cleanup.push(() => new Promise((resolve) => themeDev.close(() => resolve())))
+    const themeDevUrl = `http://127.0.0.1:${(themeDev.address() as import('node:net').AddressInfo).port}`
+    const studio = await openStudio(fixtureTheme(), { cli: fakeShopify({ output: running.replace('http://127.0.0.1:9292', themeDevUrl) }) })
+    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
+    const { status, body } = await studio.send('GET', 'api/frame')
+    expect(status).toBe(200)
+    expect(body.paths).toEqual({ home: '/', product: '/products/clay-mug', collection: '/collections/all' })
+    const page = await fetch(`${body.url}/`)
+    expect(page.headers.get('x-frame-options')).toBeNull()
+    expect(page.headers.get('access-control-allow-origin')).toBeNull()
+    const html = await page.text()
+    expect(html).toContain('<p>Shop</p>')
+    expect(html).toMatch(/<script>[\s\S]*studio:select[\s\S]*<\/script><\/body>/)
+    expect(await (await fetch(`${body.url}/products.json`)).text()).toBe('{"products":[{"handle":"clay-mug"}]}')
   })
 
   const loginPrompt =

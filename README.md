@@ -31,10 +31,30 @@ The agent checks all of these first, plus the Studio's dependencies in the skill
 1. Ask your agent: *"Build me a Shopify theme for my shop. Here's my website: https://…"*
 2. The agent checks the prerequisites and asks for your store's `<shop>.myshopify.com` address, or creates a development store for you. The first time, log in to the Shopify CLI with `shopify auth login` in your own terminal.
 3. It reads your brand from the reference and asks only about what's left: colors, fonts, logo, style, the shop's language, the shop name and the theme's author.
-4. It creates the theme in a new folder with its own Git history, writes the brand, composes the pages and opens the Studio. A development store also needs its storefront password for the preview.
-5. Open the preview link in Chrome to see the real theme on your store. Adjust colors, fonts, the logo and page sections in the Studio, or ask the agent; the Studio runs Theme Check after every change.
+4. It creates the theme in a new folder with its own Git history, writes the brand, composes the pages, writes their text in your shop's language and opens the Studio. A development store also needs its storefront password for the preview.
+5. Open the Studio in Chrome: your real theme in the middle, its sections on the left, the selected section's colors and text on the right (see [The Studio](#the-studio)). Or ask the agent; either way Theme Check runs after every change.
 6. Need a section the catalog doesn't have? Ask for one; the agent writes it with the same conventions and validates it.
 7. When you're done, ask to deliver: the agent uploads the theme to the store **unpublished**, or packages it as a zip, or explains the GitHub integration. It never publishes: making a theme live is the Merchant's decision.
+
+## The Studio
+
+The Studio is a local app that opens next to your agent, in Google Chrome. It shows your real theme, rendered by Shopify through `shopify theme dev`, and saves every change straight into the theme's files, where your agent sees it too.
+
+![The Studio: the home page's sections on the left, the live preview in the middle, the selected section's settings on the right](docs/images/studio.png)
+
+- **Pages.** Switch between the home, product and collection pages in the top bar.
+- **Sections.** Click a section in the preview, or in the list on the left, to select it. On the right, pick its color scheme, write its text (and its blocks' text, like each testimonial), move it up or down, or remove it.
+- **Add sections** from the Section Catalog, or the Custom Sections your agent wrote, each with a line saying what it does.
+- **Brand.** Colors, fonts from Shopify's font library, and the logo, for the whole theme.
+- **Checks.** Theme Check runs after every change; the top bar shows whether it passes.
+- **Desktop and mobile** previews, and a link that opens the preview in its own tab.
+
+<p>
+  <img src="docs/images/studio-add-section.png" alt="Adding a section: the Section Catalog, each section with its description" width="49%">
+  <img src="docs/images/studio-brand.png" alt="The Brand tab with the color schemes and fonts, next to the mobile preview" width="49%">
+</p>
+
+Images, the header and footer menus, products and collections stay in Shopify's Theme Editor and admin.
 
 ## License
 
