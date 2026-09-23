@@ -12,6 +12,8 @@ const install = 'Install it with `npm install -g @shopify/cli`, then restart the
 const previewItem = /Preview your theme[^\n]*\n[^\n]*?(?:\[(\d+)\]|(https?:\/\/[^\s│]+))/
 // The CLI prints a login link and waits, then goes on to the preview. Only with CI set does it stop instead.
 const loginPrompt = /log in to Shopify/
+// The share link names the store and the development theme, whose Theme Editor the Studio links to.
+const shareLink = /(https:\/\/[^\s/│]+)\/\?preview_theme_id=(\d+)/
 const loginWaiting = "Log in to Shopify with the link the Shopify CLI printed in the Studio's terminal; the preview starts after."
 const loginStopped = 'Run `shopify auth login` in a terminal, then restart the Studio.'
 // Development stores always have a password page, and theme dev can't ask for it without a terminal.
@@ -34,6 +36,8 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
   /** @type {import('node:child_process').ChildProcess | undefined} */
   let child
   let stopped = false
+  /** @type {string | undefined} */
+  let editor
 
   /** @param {PreviewState} next */
   function set(next) {
@@ -59,6 +63,7 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
         terminal.write(chunk)
         // ponytail: keeps the last 4 KB only, enough for the status lines and the final error box.
         output = (output + stripVTControlCharacters(chunk.toString())).slice(-4096)
+        editor ??= editorUrl(output)
         if (state.status === 'running') return
         const url = previewUrl(output)
         if (url) set({ status: 'running', url })
@@ -81,6 +86,10 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
   return {
     get state() {
       return state
+    },
+    /** The Theme Editor of theme dev's development theme, once theme dev printed its share link. */
+    get editor() {
+      return editor
     },
     stop() {
       stopped = true
@@ -120,6 +129,15 @@ async function checkCli(cli) {
 function previewUrl(output) {
   const [, footnote, url] = output.match(previewItem) ?? []
   return url ?? (footnote ? output.match(new RegExp(`^\\[${footnote}\\] (\\S+)`, 'm'))?.[1] : undefined)
+}
+
+/**
+ * The Theme Editor link of the development theme in theme dev's share link, once it printed it.
+ * @param {string} output
+ */
+function editorUrl(output) {
+  const [, store, themeId] = output.match(shareLink) ?? []
+  return store ? `${store}/admin/themes/${themeId}/editor` : undefined
 }
 
 /**
