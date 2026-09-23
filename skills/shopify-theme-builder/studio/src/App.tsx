@@ -541,7 +541,7 @@ function useStore(needed: boolean) {
   return store
 }
 
-/** The selected section: color scheme, settings (its own and its blocks'), order and removal. */
+/** The selected section: color scheme, settings (its own and its blocks'), its blocks, order and removal. */
 function Inspector({
   state,
   page,
@@ -558,6 +558,7 @@ function Inspector({
   const [details, setDetails] = useState<SectionDetails | { error: string } | null>(null)
   // Edited values, by setting ("heading") or block and setting ("<block id>/quote").
   const [edits, setEdits] = useState<Record<string, Value>>({})
+  const [addingBlock, setAddingBlock] = useState<string | null>(null)
   const { saving, error, write } = useWrite(onSaved)
   const sections = state[page]
   const index = sections.findIndex((section) => section.id === sectionId)
@@ -613,6 +614,24 @@ function Inspector({
   async function remove() {
     if (!confirm(`Remove ${sectionLabel(state, sections[index].type)} from the ${pageNames[page].toLowerCase()} page? Its settings and blocks are deleted too.`)) return
     if (await write(url, { method: 'DELETE' })) onClose()
+  }
+
+  function moveBlock(blockIndex: number, offset: number) {
+    if (details === null || 'error' in details) return
+    const order = details.blocks.map((block) => block.id)
+    ;[order[blockIndex], order[blockIndex + offset]] = [order[blockIndex + offset], order[blockIndex]]
+    write(`${url}/order`, jsonRequest('PUT', { order }))
+  }
+
+  async function removeBlock(blockId: string, name: string) {
+    if (!confirm(`Remove ${name} from this section? Its settings are deleted too.`)) return
+    if (!(await write(`${url}/blocks/${encodeURIComponent(blockId)}`, { method: 'DELETE' }))) return
+    // Drop the removed block's unsaved edits, keyed "<block id>/<setting id>".
+    setEdits((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(`${blockId}/`))))
+  }
+
+  async function addBlock() {
+    if (await write(`${url}/blocks`, jsonRequest('POST', { type: addingBlock }))) setAddingBlock(null)
   }
 
   async function saveSettings(event: React.SubmitEvent<HTMLFormElement>) {
@@ -734,7 +753,7 @@ function Inspector({
           </Field>
         ) : null}
       </FieldGroup>
-      {details.settings.length > 0 || details.blocks.some((block) => block.settings.length > 0) ? (
+      {details.settings.length > 0 || details.blocks.length > 0 ? (
         <form onSubmit={saveSettings} className="flex flex-col gap-4">
           <Separator />
           {store && 'error' in store ? (
@@ -745,16 +764,40 @@ function Inspector({
           ) : null}
           <FieldGroup className="gap-4">
             {details.settings.map((setting) => settingField(setting, setting.id))}
-            {details.blocks.map((block, blockIndex) =>
-              block.settings.length > 0 ? (
+            {details.blocks.map((block, blockIndex) => {
+              const name = `${block.name} ${blockIndex + 1}`
+              return (
                 <FieldSet key={block.id} className="gap-3 rounded-md border p-3">
-                  <FieldLegend variant="label">
-                    {block.name} {blockIndex + 1}
+                  <FieldLegend variant="label" className="flex w-full items-center gap-1">
+                    <span className="mr-auto">{name}</span>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={`Move ${name} up`}
+                      disabled={saving || blockIndex === 0}
+                      onClick={() => moveBlock(blockIndex, -1)}
+                    >
+                      <ArrowUpIcon />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      aria-label={`Move ${name} down`}
+                      disabled={saving || blockIndex === details.blocks.length - 1}
+                      onClick={() => moveBlock(blockIndex, 1)}
+                    >
+                      <ArrowDownIcon />
+                    </Button>
+                    <Button type="button" size="icon-xs" variant="ghost" aria-label={`Remove ${name}`} disabled={saving} onClick={() => removeBlock(block.id, name)}>
+                      <Trash2Icon />
+                    </Button>
                   </FieldLegend>
                   {block.settings.map((setting) => settingField(setting, `${block.id}/${setting.id}`))}
                 </FieldSet>
-              ) : null,
-            )}
+              )
+            })}
           </FieldGroup>
           <div className="flex gap-2">
             <Button type="submit" disabled={saving || !changed}>
@@ -767,6 +810,39 @@ function Inspector({
             ) : null}
           </div>
         </form>
+      ) : null}
+      {details.blockTypes.length > 0 ? (
+        <Field>
+          <FieldLabel htmlFor="add-block">Add a block</FieldLabel>
+          <div className="flex gap-2">
+            <Select
+              items={details.blockTypes.map((type) => ({ value: type.type, label: type.name }))}
+              value={addingBlock}
+              disabled={saving || details.blocks.length >= details.maxBlocks}
+              onValueChange={setAddingBlock}
+            >
+              <SelectTrigger id="add-block" className="min-w-0 flex-1">
+                <SelectValue placeholder="Pick a block" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {details.blockTypes.map((type) => (
+                    <SelectItem key={type.type} value={type.type}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" disabled={saving || !addingBlock || details.blocks.length >= details.maxBlocks} onClick={addBlock}>
+              <PlusIcon data-icon="inline-start" />
+              Add
+            </Button>
+          </div>
+          {details.blocks.length >= details.maxBlocks ? (
+            <FieldDescription>This section holds at most {plural(details.maxBlocks, 'block')}.</FieldDescription>
+          ) : null}
+        </Field>
       ) : null}
       {error ? (
         <Alert variant="destructive">

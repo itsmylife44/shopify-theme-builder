@@ -810,6 +810,134 @@ describe('Studio API: section presets', () => {
   })
 })
 
+describe('Studio API: add, remove and reorder blocks', () => {
+  const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
+  const quotes = `{% for block in section.blocks %}<p {{ block.shopify_attributes }}>{{ block.settings.quote }}</p>{% endfor %}
+{% schema %}
+{
+  "name": "Quotes",
+  "max_blocks": 3,
+  "blocks": [
+    { "type": "quote", "name": "Quote", "settings": [{ "type": "text", "id": "quote", "label": "Quote" }] },
+    { "type": "portrait", "name": "Portrait", "limit": 1 },
+    { "type": "@app" }
+  ],
+  "presets": [{ "name": "Quotes", "blocks": [{ "type": "quote" }] }]
+}
+{% endschema %}
+`
+
+  async function withSection(type: string, catalog = realCatalog) {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/quotes.liquid'), quotes)
+    const studio = await openStudio(theme, { catalog })
+    const id = (await studio.addSection(type)).body.home.at(-1).id
+    const blocksUrl = `api/home/sections/${id}/blocks`
+    return {
+      theme,
+      studio,
+      id,
+      section: () => readTemplate(theme).sections[id],
+      read: async () => (await studio.send('GET', `api/home/sections/${id}`)).body,
+      addBlock: (type: unknown) => studio.send('POST', blocksUrl, { type }),
+      removeBlock: (block: string) => studio.send('DELETE', `${blocksUrl}/${encodeURIComponent(block)}`),
+      reorderBlocks: (order: unknown) => studio.send('PUT', `api/home/sections/${id}/order`, { order }),
+    }
+  }
+
+  it('lists the block types a section can add and its most blocks, leaving out app blocks', async () => {
+    expect(await (await withSection('testimonials')).read()).toMatchObject({ blockTypes: [{ type: 'testimonial', name: 'Testimonial' }], maxBlocks: 12 })
+    expect(await (await withSection('quotes')).read()).toMatchObject({
+      blockTypes: [
+        { type: 'quote', name: 'Quote' },
+        { type: 'portrait', name: 'Portrait' },
+      ],
+      maxBlocks: 3,
+    })
+    expect(await (await withSection('hero')).read()).toMatchObject({ blockTypes: [], maxBlocks: 50 })
+  })
+
+  it('adds a testimonial at the end of the section, with a clean Theme Check', async () => {
+    const { section, read, addBlock } = await withSection('testimonials')
+    const { status, body } = await addBlock('testimonial')
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    const { blocks, block_order } = section()
+    expect(block_order).toHaveLength(4)
+    expect(blocks[block_order[3]]).toEqual({ type: 'testimonial', settings: {} })
+    const details = await read()
+    expect(details.blocks).toHaveLength(4)
+    expect(details.blocks[3]).toMatchObject({ id: block_order[3], type: 'testimonial', name: 'Testimonial' })
+  })
+
+  it("refuses a block past the section's max_blocks or its type's limit, and a type the section has not", async () => {
+    const { theme, addBlock } = await withSection('quotes')
+    expect((await addBlock('portrait')).status).toBe(200)
+    const refusals: [unknown, string][] = [
+      ['portrait', 'portrait'],
+      ['@app', '@app'],
+      ['nope', 'nope'],
+      [42, 'type'],
+    ]
+    for (const [type, named] of refusals) {
+      const before = readFileSync(path.join(theme, home), 'utf8')
+      const { status, body } = await addBlock(type)
+      expect(status, String(type)).toBe(400)
+      expect(body.error).toContain(named)
+      expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+    }
+    expect((await addBlock('quote')).status).toBe(200)
+    const { status, body } = await addBlock('quote')
+    expect(status).toBe(400)
+    expect(body.error).toContain('3')
+  })
+
+  it('removes a block from the section, down to none', async () => {
+    const { section, addBlock, removeBlock } = await withSection('faq')
+    const [first, ...rest] = section().block_order
+    const { status, body } = await removeBlock(first)
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(section().block_order).toEqual(rest)
+    expect(section().blocks).not.toHaveProperty(first)
+    for (const block of rest) expect((await removeBlock(block)).status).toBe(200)
+    expect(section()).toMatchObject({ blocks: {}, block_order: [] })
+    expect((await addBlock('question')).status).toBe(200)
+    expect(section().block_order).toHaveLength(1)
+  })
+
+  it('answers 404 for a block the section does not have', async () => {
+    const { theme, removeBlock } = await withSection('faq')
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    expect((await removeBlock('nope')).status).toBe(404)
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+  })
+
+  it("reorders the section's blocks", async () => {
+    const { section, read, reorderBlocks } = await withSection('testimonials')
+    const order = section().block_order.toReversed()
+    const { status, body } = await reorderBlocks(order)
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(section().block_order).toEqual(order)
+    expect((await read()).blocks.map((block: { id: string }) => block.id)).toEqual(order)
+  })
+
+  it.each([
+    ['one missing', (order: string[]) => order.slice(1)],
+    ['one twice', (order: string[]) => [...order.slice(1), order[1]]],
+    ['an unknown id', (order: string[]) => [...order.slice(1), 'nope']],
+    ['not a list', () => 'nope'],
+  ])('refuses a block order with %s', async (_, change) => {
+    const { theme, section, reorderBlocks } = await withSection('testimonials')
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const { status, body } = await reorderBlocks(change(section().block_order))
+    expect(status).toBe(400)
+    expect(body.error).toContain('block')
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+  })
+})
+
 describe.each(pages)('Studio API: compose the $page page', ({ page, file, main }) => {
   const other = pages.find((candidate) => candidate.page !== page)!.file
 
