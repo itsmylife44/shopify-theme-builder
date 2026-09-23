@@ -17,7 +17,9 @@
   "cart": {
     "checkout": "Checkout",
     "continue_shopping": "Continue shopping",
+    "discounts": "Discounts",
     "empty": "Your cart is empty.",
+    "note": "Order note",
     "product": "Product",
     "quantity": "Quantity",
     "quantity_for": "Quantity for {{ product }}",
@@ -27,6 +29,7 @@
     "taxes_and_shipping": "Taxes and shipping calculated at checkout.",
     "title": "Cart",
     "total": "Total",
+    "unit_price": "Unit price",
     "update": "Update"
   },
   "contact": {

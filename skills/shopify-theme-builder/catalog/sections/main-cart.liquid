@@ -1,0 +1,287 @@
+{% comment %}The cart page's items, discounts, order note, checkout and accelerated checkout buttons.{% endcomment %}
+<div class="main-cart basic-page full-width color-{{ section.settings.color_scheme }}">
+  <h1>{{ 'cart.title' | t }}</h1>
+
+  {% if cart.item_count > 0 %}
+    <form action="{{ routes.cart_url }}" method="post" class="main-cart__form">
+      <table class="main-cart__items">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'cart.product' | t }}</th>
+            <th scope="col">{{ 'cart.quantity' | t }}</th>
+            <th scope="col">{{ 'cart.total' | t }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in cart.items %}
+            <tr>
+              <td>
+                <div class="main-cart__product">
+                  {% if item.image %}
+                    {% render 'image', class: 'main-cart__image', image: item.image, url: item.url, width: 160, height: 160, crop: 'center' %}
+                  {% else %}
+                    {{ 'product-1' | placeholder_svg_tag: 'main-cart__image placeholder' }}
+                  {% endif %}
+                  <div>
+                    <p>{{ item.product.title | escape | link_to: item.url }}</p>
+                    {% unless item.product.has_only_default_variant %}
+                      <p>{{ item.variant.title | escape }}</p>
+                    {% endunless %}
+                    <p>
+                      {% if item.original_price > item.final_price %}
+                        <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
+                        {{ item.final_price | money }}
+                        <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
+                        <s class="main-cart__muted">{{ item.original_price | money }}</s>
+                      {% else %}
+                        {{ item.final_price | money }}
+                      {% endif %}
+                    </p>
+                    {% if item.unit_price_measurement %}
+                      <p class="main-cart__muted">
+                        <span class="visually-hidden">{{ 'cart.unit_price' | t }}</span>
+                        {{ item.unit_price | money }}/
+                        {%- if item.unit_price_measurement.reference_value != 1 -%}
+                          {{- item.unit_price_measurement.reference_value -}}
+                        {%- endif -%}
+                        {{- item.unit_price_measurement.reference_unit -}}
+                      </p>
+                    {% endif %}
+                    {% if item.line_level_discount_allocations != empty %}
+                      <ul class="main-cart__discounts" role="list" aria-label="{{ 'cart.discounts' | t }}">
+                        {% for allocation in item.line_level_discount_allocations %}
+                          <li>{{ allocation.discount_application.title | escape }} (-{{ allocation.amount | money }})</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                    <p>
+                      <a
+                        href="{{ item.url_to_remove }}"
+                        aria-label="{{ 'cart.remove_item' | t: product: item.product.title | escape }}"
+                      >
+                        {{- 'cart.remove' | t -}}
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <input
+                  type="number"
+                  name="updates[]"
+                  value="{{ item.quantity }}"
+                  min="0"
+                  aria-label="{{ 'cart.quantity_for' | t: product: item.product.title | escape }}"
+                >
+              </td>
+              <td>
+                {% if item.original_line_price > item.final_line_price %}
+                  <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
+                  <s class="main-cart__muted">{{ item.original_line_price | money }}</s>
+                  <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
+                {% endif %}
+                {{ item.final_line_price | money }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="main-cart__footer">
+        {% if section.settings.show_note %}
+          <div class="main-cart__note basic-page__field">
+            <label for="CartNote-{{ section.id }}">{{ 'cart.note' | t }}</label>
+            <textarea id="CartNote-{{ section.id }}" name="note" rows="3">{{ cart.note }}</textarea>
+          </div>
+        {% endif %}
+
+        <div class="main-cart__summary">
+          {% if cart.cart_level_discount_applications != empty %}
+            <ul class="main-cart__discounts" role="list" aria-label="{{ 'cart.discounts' | t }}">
+              {% for discount in cart.cart_level_discount_applications %}
+                <li>{{ discount.title | escape }} (-{{ discount.total_allocated_amount | money }})</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          <p class="main-cart__subtotal">
+            {{ 'cart.subtotal' | t }}
+            {{ cart.total_price | money_with_currency }}
+          </p>
+          <p>{{ 'cart.taxes_and_shipping' | t }}</p>
+          <div class="main-cart__actions">
+            <button type="submit" name="update" class="main-cart__update">{{ 'cart.update' | t }}</button>
+            <button type="submit" name="checkout">{{ 'cart.checkout' | t }}</button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    {% if additional_checkout_buttons and section.settings.show_additional_checkout_buttons %}
+      <div class="main-cart__additional-checkout">
+        {{ content_for_additional_checkout_buttons }}
+      </div>
+    {% endif %}
+  {% else %}
+    <p>{{ 'cart.empty' | t }}</p>
+    <a class="basic-page__button" href="{{ routes.all_products_collection_url }}">
+      {{- 'cart.continue_shopping' | t -}}
+    </a>
+  {% endif %}
+</div>
+
+{% javascript %}
+  document.addEventListener('change', (event) => {
+    if (!event.target.matches('.main-cart__note textarea')) return;
+    fetch(`${window.Shopify?.routes?.root ?? '/'}cart/update.js`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: event.target.value }),
+    });
+  });
+{% endjavascript %}
+
+{% stylesheet %}
+  .main-cart__form {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .main-cart__items {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .main-cart__items th {
+    font-weight: inherit;
+    text-align: start;
+    opacity: 0.7;
+  }
+
+  .main-cart__items :is(th, td) {
+    padding: 1rem 1rem 1rem 0;
+    border-bottom: 1px solid currentcolor;
+    vertical-align: top;
+  }
+
+  .main-cart__items :is(th, td):last-child {
+    padding-inline-end: 0;
+    text-align: end;
+  }
+
+  .main-cart__product {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .main-cart__product > div > * + * {
+    margin-top: 0.25rem;
+  }
+
+  .main-cart__image {
+    flex: 0 0 5rem;
+    width: 5rem;
+    height: auto;
+  }
+
+  .main-cart__items input {
+    width: 5rem;
+  }
+
+  .main-cart__muted {
+    opacity: 0.7;
+  }
+
+  .main-cart__discounts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-cart__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: start;
+    gap: 2rem;
+  }
+
+  .main-cart__note {
+    flex: 1 1 18rem;
+    max-width: 30rem;
+  }
+
+  .main-cart__summary {
+    display: grid;
+    justify-items: end;
+    gap: 0.75rem;
+    margin-inline-start: auto;
+    text-align: end;
+  }
+
+  .main-cart__subtotal {
+    font-size: 1.25rem;
+  }
+
+  .main-cart__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: end;
+    gap: 0.5rem;
+  }
+
+  .basic-page .main-cart__actions .main-cart__update {
+    border: 1px solid currentcolor;
+    background: transparent;
+    color: inherit;
+  }
+
+  .main-cart__additional-checkout {
+    justify-self: end;
+    width: min(100%, 20rem);
+  }
+
+  .main-cart .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.main_cart",
+  "tag": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["cart"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_additional_checkout_buttons",
+      "label": "t:labels.show_accelerated_checkout_buttons",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_note",
+      "label": "t:labels.show_order_note",
+      "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.main_cart"
+    }
+  ]
+}
+{% endschema %}

@@ -955,6 +955,7 @@ describe('Studio API: home page', () => {
       expect(catalog[page]).toContain('hero')
       expect(catalog[page]).not.toContain('header')
       expect(catalog[page]).not.toContain('footer')
+      expect(catalog[page]).not.toContain('main-cart')
     }
     for (const type of ['header', 'footer']) expect((await studio.addSection(type)).status).toBe(400)
   })
