@@ -1,0 +1,44 @@
+{% comment %}Your own Liquid or HTML, like an app snippet, a tracking code or an embed.{% endcomment %}
+<div class="custom-liquid full-width color-{{ section.settings.color_scheme }}">
+  <div class="custom-liquid__inner">
+    {{ section.settings.custom_liquid }}
+  </div>
+</div>
+
+{% stylesheet %}
+  .custom-liquid {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .custom-liquid__inner {
+    grid-column: 2;
+    padding-block: 2rem;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.custom_liquid",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "liquid",
+      "id": "custom_liquid",
+      "label": "t:labels.liquid",
+      "info": "t:info.custom_liquid_setting"
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.custom_liquid"
+    }
+  ]
+}
+{% endschema %}
