@@ -1,21 +1,28 @@
 {% doc %}
   Renders a product card: image, title, price, unit price and an optional quick add. Without a product it
-  renders an example card with one of Shopify's product placeholders. The .product-card classes in
+  renders an example card with one of Shopify's product placeholders. Its anatomy is minimal (image, title,
+  price), detailed (adds the vendor, color swatches, a rating from the reviews metafield and a sale or sold out
+  badge) or editorial (a large title with the price under it and no button); the card_anatomy theme setting
+  picks it, unless a section passes its own. The .product-card classes in
   assets/critical.css style it from the --card-* and --media-* variables in snippets/css-variables.liquid; when
   the card hover setting shows the second image, the card stacks the product's second media over the first.
 
   @param {product} [product] - The product; leave it out for an example card
   @param {number} [placeholder] - Which product placeholder (1 to 6) an example card or a product without an image shows, 1 by default
   @param {boolean} [show_quick_add] - Show an add to cart button, or a link that opens quick add for a product with variants
+  @param {string} [anatomy] - minimal, detailed or editorial; theme or blank for the card_anatomy theme setting
 
   @example
-  {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add %}
+  {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
   {% render 'product-card', placeholder: 3 %}
 {% enddoc %}
 {% liquid
   assign placeholder = placeholder | default: 1
+  if anatomy == blank or anatomy == 'theme'
+    assign anatomy = settings.card_anatomy | default: 'minimal'
+  endif
 %}
-<div class="product-card">
+<div class="product-card product-card--{{ anatomy }}">
   {% if product %}
     <a class="product-card__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
       {% if product.featured_image %}
@@ -35,8 +42,72 @@
         {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
       {% endif %}
     </a>
-    <a class="product-card__title" href="{{ product.url }}">{{ product.title | escape }}</a>
-    <p class="price">{{ product.price | money }}</p>
+    {% if anatomy == 'detailed' %}
+      {% if product.available == false %}
+        <p class="product-card__badge text-label">{{ 'product.sold_out' | t }}</p>
+      {% elsif product.compare_at_price > product.price %}
+        <p class="product-card__badge product-card__badge--sale text-label">{{ 'product_card.sale' | t }}</p>
+      {% endif %}
+      {% if product.vendor != blank %}
+        <p class="product-card__vendor text-small">{{ product.vendor | escape }}</p>
+      {% endif %}
+    {% endif %}
+    <a class="product-card__title{% if anatomy == 'editorial' %} text-h4{% endif %}" href="{{ product.url }}">
+      {{- product.title | escape -}}
+    </a>
+    {% if anatomy == 'detailed' and product.compare_at_price > product.price %}
+      <p class="price">
+        <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
+        <span class="price__sale">{{ product.price | money }}</span>
+        <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
+        <s class="product-card__compare-at">{{ product.compare_at_price | money }}</s>
+      </p>
+    {% else %}
+      <p class="price">{{ product.price | money }}</p>
+    {% endif %}
+    {% if anatomy == 'detailed' %}
+      {% assign review_rating = product.metafields.reviews.rating.value %}
+      {% if review_rating != blank %}
+        {% assign review_count = product.metafields.reviews.rating_count.value %}
+        <p class="product-card__rating text-small">
+          <span aria-hidden="true">
+            ★ {{ review_rating.rating | round: 1 -}}
+            {%- if review_count %} ({{ review_count }}){% endif %}
+          </span>
+          <span class="visually-hidden">
+            {{- 'product_card.rating' | t: rating: review_rating.rating, max: review_rating.scale_max -}}
+            {%- if review_count %}, {{ 'product_card.review_count' | t: count: review_count }}{% endif -%}
+          </span>
+        </p>
+      {% endif %}
+      {% for option in product.options_with_values %}
+        {% if option.values.first.swatch %}
+          <ul class="product-card__swatches" role="list" aria-label="{{ option.name | escape }}">
+            {% for value in option.values limit: 5 %}
+              <li
+                class="product-card__swatch"
+                {% if value.swatch.image == blank and value.swatch.color %}
+                  style="background-color: rgb({{ value.swatch.color.rgb }});"
+                {% endif %}
+              >
+                {% if value.swatch.image %}
+                  {{
+                    value.swatch.image
+                    | image_url: width: 48, height: 48, crop: 'center'
+                    | image_tag: alt: '', width: 24, height: 24, sizes: '1.5rem', loading: 'lazy'
+                  }}
+                {% endif %}
+                <span class="visually-hidden">{{ value | escape }}</span>
+              </li>
+            {% endfor %}
+            {% if option.values.size > 5 %}
+              <li class="text-small">+{{ option.values.size | minus: 5 }}</li>
+            {% endif %}
+          </ul>
+          {% break %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
     {% assign unit_variant = product.selected_or_first_available_variant %}
     {% if unit_variant.unit_price_measurement %}
       <p class="product-card__unit-price text-small">
@@ -44,7 +115,7 @@
         {{ unit_variant.unit_price | unit_price_with_measurement: unit_variant.unit_price_measurement }}
       </p>
     {% endif %}
-    {% if show_quick_add %}
+    {% if show_quick_add and anatomy != 'editorial' %}
       {% if product.has_only_default_variant and product.requires_selling_plan == false %}
         <form class="product-card__quick-add" action="{{ routes.cart_add_url }}" method="post" data-quick-add-form>
           <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
@@ -76,7 +147,10 @@
     <div class="product-card__image">
       {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
     </div>
-    <p class="product-card__title">{{ 'product_card.product_title' | t }}</p>
+    {% if anatomy == 'detailed' %}
+      <p class="product-card__vendor text-small">{{ shop.name | escape }}</p>
+    {% endif %}
+    <p class="product-card__title{% if anatomy == 'editorial' %} text-h4{% endif %}">{{ 'product_card.product_title' | t }}</p>
     <p class="price">{{ 1999 | money }}</p>
   {% endif %}
 </div>

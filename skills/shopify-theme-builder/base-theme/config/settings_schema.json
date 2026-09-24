@@ -417,6 +417,27 @@
     "settings": [
       {
         "type": "select",
+        "id": "card_anatomy",
+        "label": "t:labels.card_anatomy",
+        "info": "t:info.card_anatomy",
+        "options": [
+          {
+            "value": "minimal",
+            "label": "t:options.card_anatomy.minimal"
+          },
+          {
+            "value": "detailed",
+            "label": "t:options.card_anatomy.detailed"
+          },
+          {
+            "value": "editorial",
+            "label": "t:options.card_anatomy.editorial"
+          }
+        ],
+        "default": "minimal"
+      },
+      {
+        "type": "select",
         "id": "card_image_ratio",
         "label": "t:labels.image_ratio",
         "options": [

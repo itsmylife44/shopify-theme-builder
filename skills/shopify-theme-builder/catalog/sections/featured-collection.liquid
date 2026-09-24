@@ -21,14 +21,14 @@
       {% if show_products %}
         {% for product in featured.products limit: section.settings.products_to_show %}
           <li>
-            {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add %}
+            {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
           </li>
         {% endfor %}
       {% else %}
         {% for i in (1..section.settings.products_to_show) %}
           {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
           <li>
-            {% render 'product-card', placeholder: placeholder %}
+            {% render 'product-card', placeholder: placeholder, anatomy: section.settings.card_anatomy %}
           </li>
         {% endfor %}
       {% endif %}
@@ -130,6 +130,30 @@
       "default": true
     },
     {
+      "type": "select",
+      "id": "card_anatomy",
+      "label": "t:labels.card_anatomy",
+      "options": [
+        {
+          "value": "theme",
+          "label": "t:options.card_anatomy.theme"
+        },
+        {
+          "value": "minimal",
+          "label": "t:options.card_anatomy.minimal"
+        },
+        {
+          "value": "detailed",
+          "label": "t:options.card_anatomy.detailed"
+        },
+        {
+          "value": "editorial",
+          "label": "t:options.card_anatomy.editorial"
+        }
+      ],
+      "default": "theme"
+    },
+    {
       "type": "checkbox",
       "id": "show_quick_add",
       "label": "t:labels.show_quick_add",
@@ -139,6 +163,31 @@
   "presets": [
     {
       "name": "t:general.featured_collection"
+    },
+    {
+      "name": "t:general.featured_collection_minimal",
+      "settings": {
+        "card_anatomy": "minimal",
+        "products_to_show": 4,
+        "columns": 4
+      }
+    },
+    {
+      "name": "t:general.featured_collection_detailed",
+      "settings": {
+        "card_anatomy": "detailed",
+        "products_to_show": 8,
+        "columns": 4
+      }
+    },
+    {
+      "name": "t:general.featured_collection_editorial",
+      "settings": {
+        "card_anatomy": "editorial",
+        "products_to_show": 3,
+        "columns": 3,
+        "show_quick_add": false
+      }
     }
   ]
 }

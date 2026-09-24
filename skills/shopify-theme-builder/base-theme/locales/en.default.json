@@ -117,7 +117,13 @@
     "enter": "Enter"
   },
   "product_card": {
-    "product_title": "Example product"
+    "product_title": "Example product",
+    "sale": "Sale",
+    "rating": "Rated {{ rating }} out of {{ max }}",
+    "review_count": {
+      "one": "{{ count }} review",
+      "other": "{{ count }} reviews"
+    }
   },
   "product": {
     "add_to_cart": "Add to cart",

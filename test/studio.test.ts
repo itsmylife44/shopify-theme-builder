@@ -444,6 +444,7 @@ describe('Studio API: style settings', () => {
       'button_font_weight',
       'density',
       'page_width',
+      'card_anatomy',
       'card_image_ratio',
       'card_style',
       'card_text_alignment',
