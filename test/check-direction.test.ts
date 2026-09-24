@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -482,6 +482,14 @@ describe('check-direction', () => {
       1,
       'config/settings_data.json contrast: scheme-1: border on background is 1.1:1, needs 3:1.\nDirection check: 1 finding\n',
     ])
+  })
+
+  it('runs through a symlinked copy of the skill, as npx skills add installs it', () => {
+    const link = path.join(mkdtempSync(path.join(tmpdir(), 'skill-link-')), 'shopify-theme-builder')
+    dirs.push(path.dirname(link))
+    symlinkSync(skillDir, link)
+    const run = spawnSync(process.execPath, [path.join(link, 'scripts/check-direction.mjs'), sampleTheme()], { encoding: 'utf8' })
+    expect([run.status, run.stdout]).toEqual([0, 'Direction check: 0 findings\n'])
   })
 
   it('reports a Theme without DIRECTION.md', () => {

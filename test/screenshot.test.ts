@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -72,6 +73,18 @@ describe('screenshot script (review.md step 2)', () => {
         encoding: 'utf8',
         env: { ...process.env, CHROME_PATH: path.join(tmpdir(), 'no-such-chrome') },
       })
+      expect(run.status).toBe(1)
+      expect(run.stderr).toMatch(/No Google Chrome, Chromium or Microsoft Edge found/)
+    })
+
+    it('runs through a symlinked copy of the skill, as npx skills add installs it', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'skill-link-'))
+      symlinkSync(path.dirname(path.dirname(command)), path.join(dir, 'shopify-theme-builder'))
+      const run = spawnSync(process.execPath, [path.join(dir, 'shopify-theme-builder/scripts/screenshot.mjs'), 'http://127.0.0.1:9/', path.join(tmpdir(), 'none.png')], {
+        encoding: 'utf8',
+        env: { ...process.env, CHROME_PATH: path.join(tmpdir(), 'no-such-chrome') },
+      })
+      rmSync(dir, { recursive: true, force: true })
       expect(run.status).toBe(1)
       expect(run.stderr).toMatch(/No Google Chrome, Chromium or Microsoft Edge found/)
     })

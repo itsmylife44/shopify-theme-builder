@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Checks a Theme against the tells of references/design/tells.md and its DIRECTION.md, and prints one line per
 // finding. Exits 1 when there is any. Usage: node <skill-dir>/scripts/check-direction.mjs <theme>
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseJSON } from '@shopify/theme-check-node'
@@ -607,7 +607,8 @@ function readJSON(theme, file) {
   return /** @type {any} */ (data)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Real paths on both sides: npx skills add installs the skill as a symlink, and import.meta.url is the real path.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const theme = process.argv[2]
   if (!theme) {
     console.error('Usage: node check-direction.mjs <theme>')
