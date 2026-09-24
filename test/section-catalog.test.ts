@@ -2992,6 +2992,34 @@ describe('Buttons', () => {
     expect(critical).toMatch(/\.button--secondary {[^}]*background-color: var\(--color-secondary-button\)/)
   })
 
+  it('derives hover colors from the scheme: a filled button mixes toward its label, an outline one fills, the secondary one tints', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    expect(variables).toContain(
+      '--color-button-hover: {% if outline_button %}{{ scheme.settings.button }}{% else %}color-mix(in oklch, {{ scheme.settings.button }}, {{ scheme.settings.button_label }} 15%){% endif %};',
+    )
+    expect(variables).toContain('--color-button-hover-label: {{ scheme.settings.button_label }};')
+    expect(variables).toContain('--color-button-hover-border: var(--color-button-hover);')
+    expect(variables).toContain('--color-secondary-button-hover: color-mix(in oklch, {{ scheme.settings.background }}, {{ scheme.settings.text }} 10%);')
+  })
+
+  it('gives the buttons and the unbranded Buy it now a hover, eased by the motion variables, and a pressed state', () => {
+    const critical = read('base-theme/assets/critical.css')
+    const [, hover] = critical.match(/@media \(hover: hover\) {\s*(\.button:hover[\s\S]*?)\n}/)!
+    expect(hover).toMatch(
+      /\.button:hover:not\(:disabled\),\s*\.shopify-payment-button \.shopify-payment-button__button--unbranded:hover:not\(\[disabled\]\) {\s*border-color: var\(--color-button-hover-border\);\s*background-color: var\(--color-button-hover\);\s*color: var\(--color-button-hover-label\);\s*}/,
+    )
+    // A load more link is both .button and .button--secondary, so the secondary hover sets every color the primary one does.
+    expect(hover).toMatch(
+      /\.button--secondary:hover:not\(:disabled\) {\s*border-color: var\(--color-secondary-button-border\);\s*background-color: var\(--color-secondary-button-hover\);\s*color: var\(--color-secondary-button-label\);\s*}/,
+    )
+    // The hover rule comes after the rest rule it shares a selector with, so it wins over it.
+    expect(critical.indexOf('@media (hover: hover) {\n  .button:hover')).toBeGreaterThan(critical.indexOf('.shopify-payment-button__button--unbranded:hover:not([disabled]) {'))
+    expect(critical).toMatch(
+      /@media \(prefers-reduced-motion: no-preference\) {\s*\.button,\s*\.button--secondary,\s*\.shopify-payment-button \.shopify-payment-button__button--unbranded {\s*transition:\s*background-color var\(--motion-duration\) var\(--motion-easing\),\s*border-color var\(--motion-duration\) var\(--motion-easing\),\s*color var\(--motion-duration\) var\(--motion-easing\),\s*scale var\(--motion-duration\) var\(--motion-easing\);\s*}\s*}/,
+    )
+    expect(critical).toMatch(/:is\(\.button, \.button--secondary, \.shopify-payment-button__button--unbranded\):active:not\(:disabled\) {\s*scale: 0\.98;\s*}/)
+  })
+
   it("styles Shopify's unbranded Buy it now as the primary button, hover included, and makes Add to cart secondary beside it", () => {
     const critical = read('base-theme/assets/critical.css')
     // Shopify's own rules are .shopify-payment-button__button--unbranded and its :hover:not([disabled]): the theme's must outrank both.

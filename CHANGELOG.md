@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Buttons no longer snap: on hover a filled primary button mixes a little toward its label color, an outline one fills with the button color, and the secondary button takes a tint of the text color, all derived from the color scheme (`--color-button-hover*`, `--color-secondary-button-hover`) and eased over the motion setting's duration (none under reduced motion). Pressed, every button shrinks to 98%. Shopify's unbranded Buy it now does the same as the primary button.
+
 - Buying facts: the agent asks for shipping costs and the free-shipping threshold, delivery times, the returns window, sizing and the reviews app with the store decisions, proposing defaults the Creator confirms, and writes only the confirmed ones on the product page. A new Free-shipping threshold theme setting (`free_shipping_threshold`, in the store currency, set with `PUT /api/style`) makes the cart page and drawer show "€X to free shipping" or "Free shipping" with a progress bar, and the shipping note "Free shipping on orders over €X"; both show nothing when it's blank or the customer shops in another currency. `check-direction.mjs` reports a product-page block left on the catalog's default running text (`default-text`).
 
 - Product images open full screen: clicking or tapping one on the product page opens it at 3000 pixels in a `<dialog>`, with pinch to zoom and pan on touch, previous and next buttons and arrow keys between images (mirrored in right-to-left shops), Escape and a close button, and focus back on the image once closed. The main product's new Image zoom setting (`image_zoom`) turns it off with `none`; `lightbox` is the default.

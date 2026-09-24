@@ -264,6 +264,41 @@ h6,
   cursor: not-allowed;
 }
 
+/* Hover, on devices that hover: the primary button and Buy it now take the hover colors (after the rule above,
+   so they outrank it), the secondary button a tint. Pressed, every button shrinks a little. The focus ring is
+   the shared one above. */
+@media (hover: hover) {
+  .button:hover:not(:disabled),
+  .shopify-payment-button .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+    border-color: var(--color-button-hover-border);
+    background-color: var(--color-button-hover);
+    color: var(--color-button-hover-label);
+  }
+
+  /* A load more link is both classes: the secondary hover wins, keeping its own border and label. */
+  .button--secondary:hover:not(:disabled) {
+    border-color: var(--color-secondary-button-border);
+    background-color: var(--color-secondary-button-hover);
+    color: var(--color-secondary-button-label);
+  }
+}
+
+:is(.button, .button--secondary, .shopify-payment-button__button--unbranded):active:not(:disabled) {
+  scale: 0.98;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button,
+  .button--secondary,
+  .shopify-payment-button .shopify-payment-button__button--unbranded {
+    transition:
+      background-color var(--motion-duration) var(--motion-easing),
+      border-color var(--motion-duration) var(--motion-easing),
+      color var(--motion-duration) var(--motion-easing),
+      scale var(--motion-duration) var(--motion-easing);
+  }
+}
+
 /* Touch targets: every control is at least --target-size-min square, and buttons, selects and
    fields --target-size tall. Sections give their icon controls, option labels and links in
    menus the same variables. */

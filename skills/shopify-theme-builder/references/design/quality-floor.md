@@ -47,3 +47,4 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Spacing between sections follows one rhythm (the Theme's density), with no section doubled up or squeezed.
 - Empty states read well: an empty cart, a search with no results, a collection with no products.
 - One radius family everywhere: the Theme's shape setting (`check-direction.mjs` finds a radius of its own).
+- Buttons never snap: every button, and every link styled as one, takes the shared `button` or `button--secondary` class, which gives it a hover and a pressed state from the color scheme and the motion setting; a Custom Section's button gets none of its own.
