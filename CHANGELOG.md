@@ -127,6 +127,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - A new Theme's product page no longer breaks every page of the preview. The Studio gave the main product's private blocks ids starting with `_` (like `_buy-buttons_1a2b3c`), which Shopify rejects, failing the whole upload. A block of a private type now gets its id without the underscore (`buy-buttons_1a2b3c`), and `PUT /api/directions/<name>` refuses a home template with a section or block id starting with `_`.
 
+- The Studio reads and edits the settings of theme blocks, like the main product's collapsible content, shipping note and custom Liquid. It looked for a block's schema only in its section, where a theme block is listed by its type alone, so `GET /api/<page>/sections/<id>` showed these blocks without settings and `PATCH` refused them. It now falls back to the block's schema in the Theme's `blocks/<type>.liquid`.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.

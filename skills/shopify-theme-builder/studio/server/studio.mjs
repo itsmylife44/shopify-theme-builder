@@ -1303,7 +1303,7 @@ function updateSection(theme, file, id, body) {
     for (const [blockId, values] of Object.entries(/** @type {Record<string, object>} */ (blocks ?? {}))) {
       const block = section.blocks?.[blockId]
       if (!Object.hasOwn(section.blocks ?? {}, blockId)) throw new BadRequest(`The ${id} section has no block ${blockId}.`)
-      const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
+      const blockSchema = readBlockSchema(theme, schema, block.type)
       setValues(block, values, blockSchema?.settings, `the ${block.type} block`)
     }
   })
@@ -1418,7 +1418,7 @@ function readSection(theme, file, id) {
     media: media(schema.settings, section.settings),
     blocks: blockOrder(section).map((blockId) => {
       const block = blocks[blockId]
-      const blockSchema = schema.blocks?.find((/** @type {{ type: string }} */ candidate) => candidate.type === block.type)
+      const blockSchema = readBlockSchema(theme, schema, block.type)
       return {
         id: blockId,
         type: block.type,
@@ -1534,6 +1534,20 @@ function colorSchemeSetting(theme, type) {
   const file = path.join(theme, 'sections', `${type}.liquid`)
   if (!sectionName.test(type) || !existsSync(file)) return undefined
   return readSchema(file)?.settings?.find((/** @type {{ type: string }} */ setting) => setting.type === 'color_scheme')
+}
+
+/**
+ * A block's schema: its entry in the section's schema, else a theme block's in the Theme's blocks/<type>.liquid,
+ * since a section lists a theme block by its type alone.
+ * @param {string} theme
+ * @param {{ blocks?: { type: string, name?: string }[] }} schema The section's schema.
+ * @param {string} type
+ */
+function readBlockSchema(theme, schema, type) {
+  const inline = schema.blocks?.find((candidate) => candidate.type === type && candidate.name)
+  if (inline) return inline
+  const file = path.join(theme, 'blocks', `${type}.liquid`)
+  return existsSync(file) ? readSchema(file) : undefined
 }
 
 /**
