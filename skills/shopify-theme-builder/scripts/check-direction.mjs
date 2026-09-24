@@ -54,6 +54,14 @@ export function checkDirection(theme) {
   const settings = readSettings(theme)
   const groups = readPages(theme, 'sections', (name) => name.endsWith('-group.json'))
   const pages = readPages(theme, 'templates', (name) => name.endsWith('.json'))
+  const home = pages.filter((page) => page.file === 'templates/index.json')
+  // The home page, and each Direction's home, with the settings of the Direction's preset.
+  const homes = [
+    ...home.map((page) => ({ page, values: settings.values })),
+    ...listFiles(theme, 'listings', () => true).flatMap((dir) =>
+      readPages(theme, `${dir}/templates`, (name) => name === 'index.json').map((page) => ({ page, values: settings.listings[path.basename(dir)] ?? settings.values })),
+    ),
+  ]
   return [
     ...checkContrast(settings),
     ...checkFonts(theme, settings),
@@ -62,7 +70,8 @@ export function checkDirection(theme) {
     ...pages.flatMap(checkCallsToAction),
     ...pages.flatMap(checkEyebrows),
     ...pages.flatMap((page) => checkRatios(theme, settings, page)),
-    ...pages.filter((page) => page.file === 'templates/index.json').flatMap(checkPlaceholders),
+    ...home.flatMap(checkPlaceholders),
+    ...homes.flatMap(({ page, values }) => checkHome(theme, values, page)),
     ...[...groups, ...pages].flatMap(checkCopy),
   ]
 }
@@ -197,13 +206,25 @@ function checkRatios(theme, { values }, { file, sections }) {
       const value = match[1].trim()
       return notImage.test(selector) || /var\(|\{\{/.test(value) ? [] : [value]
     })
-    if (/render\s+'product-card'/.test(text) && values.card_image_ratio) ratios.push(values.card_image_ratio)
+    if (productCard.test(text) && values.card_image_ratio) ratios.push(values.card_image_ratio)
     return [...new Set(ratios.map(normalRatio))].map((ratio) => ({ ratio, id: section.id }))
   })
   const ratios = groupBy(images, (image) => image.ratio)
   if (ratios.size <= 2) return []
   const list = [...ratios].map(([ratio, same]) => `${ratio} (${same.map((image) => image.id).join(', ')})`).join(', ')
   return [finding('image-ratios', file, `${ratios.size} image ratios: ${list}. Keep a page to two at most, the card ratio among them.`)]
+}
+
+const productCard = /render\s+'product-card'/
+
+/**
+ * Whether a section of the Theme renders product cards.
+ * @param {string} theme
+ * @param {string} type
+ */
+function showsProductCards(theme, type) {
+  const source = path.join(theme, 'sections', `${type}.liquid`)
+  return existsSync(source) && productCard.test(readFileSync(source, 'utf8'))
 }
 
 /**
@@ -256,6 +277,55 @@ function checkPlaceholders({ file, sections }) {
   })
 }
 
+// What moves or responds on a home page: these sections, and product cards with the second image on hover.
+/** @type {Record<string, (settings: Record<string, any>) => boolean>} */
+const movingSections = {
+  slideshow: () => true,
+  marquee: () => true,
+  testimonials: (settings) => settings.layout === 'carousel',
+  'collection-list': (settings) => settings.layout === 'carousel',
+}
+// The sections that show only type when no image setting is set.
+const typeOnlySections = ['rich-text', 'type-banner', 'newsletter', 'spec-tiles']
+
+/**
+ * A home page where no section moves or responds, of fewer than 6 sections, or with type-only sections next to each
+ * other.
+ * @param {string} theme
+ * @param {Record<string, any>} values the global settings the home shows with
+ * @param {Page} page
+ * @returns {Finding[]}
+ */
+function checkHome(theme, values, { file, sections }) {
+  const moves = sections.some(
+    (section) => movingSections[section.type]?.(section.settings) || (values.card_hover === 'second_image' && showsProductCards(theme, section.type)),
+  )
+  // The runs of type-only sections next to each other.
+  /** @type {Section[][]} */
+  const runs = [[]]
+  for (const section of sections) {
+    if (typeOnlySections.includes(section.type) && !section.settings.image) runs[runs.length - 1].push(section)
+    else if (runs[runs.length - 1].length > 0) runs.push([])
+  }
+  return [
+    ...(moves
+      ? []
+      : [
+          finding(
+            'movement',
+            file,
+            'No section moves or responds: add a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover (card_hover).',
+          ),
+        ]),
+    ...(sections.length < 6 ? [finding('section-count', file, `${sections.length} sections: a home has 6 to 8, alternating image-led and type-led.`)] : []),
+    ...runs
+      .filter((run) => run.length > 1)
+      .map((run) =>
+        finding('type-only', file, `${run.map((section) => section.id).join(', ')}: type-only sections in a row. Put an image-led section between them, or set an image.`),
+      ),
+  ]
+}
+
 // A section setting that holds a small label above the heading.
 const eyebrow = /eyebrow|kicker|overline|subheading|subtitle|tagline|pretitle/
 
@@ -286,9 +356,10 @@ function owners(section) {
 
 /**
  * The global settings that apply, resolving a preset name the way Shopify does, over their schema defaults; the
- * color schemes' default colors; and the name of the preset the Theme shows, when it shows one.
+ * color schemes' default colors; the name of the preset the Theme shows, when it shows one; and each preset's
+ * settings by its listings/ folder, as the Studio names it.
  * @param {string} theme
- * @returns {{ values: Record<string, any>, schemeDefaults: Record<string, string>, preset: string | undefined }}
+ * @returns {{ values: Record<string, any>, schemeDefaults: Record<string, string>, preset: string | undefined, listings: Record<string, Record<string, any>> }}
  */
 function readSettings(theme) {
   const data = readJSON(theme, settingsData)
@@ -303,7 +374,10 @@ function readSettings(theme) {
       if (setting.id === 'color_schemes') schemeDefaults = defaults(setting.definition)
     }
   }
-  return { values: { ...values, ...(preset ? data.presets?.[preset] : data.current) }, schemeDefaults, preset }
+  const listings = Object.fromEntries(
+    Object.entries(data.presets ?? {}).map(([name, presetValues]) => [name.toLowerCase().replace(' ', '-'), { ...values, ...presetValues }]),
+  )
+  return { values: { ...values, ...(preset ? data.presets?.[preset] : data.current) }, schemeDefaults, preset, listings }
 }
 
 const fontRoles = /** @type {const} */ ([

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -62,8 +62,15 @@ function sampleTheme() {
       rows: { type: 'featured-collection', settings: { heading: 'This harvest', collection: 'oil' } },
       story: { type: 'image-with-text', settings: { image: 'shopify://shop_images/mill.jpg', heading: 'The mill', text: '<p>Stone wheels since 1921.</p>', button_label: 'Shop the oil', button_link: '/collections/oil' } },
       note: { type: 'rich-text', settings: { heading: 'Harvest date on every tin', text: '<p>We stamp it by hand.</p>' } },
+      ticker: {
+        type: 'marquee',
+        settings: { speed: 'slow' },
+        blocks: { grove: { type: 'item', settings: { text: 'Coratina, Andria' } }, date: { type: 'item', settings: { text: 'Pressed 14 October' } } },
+        block_order: ['grove', 'date'],
+      },
+      specs: { type: 'spec-tiles', settings: { heading: 'In every tin' } },
     },
-    order: ['hero', 'rows', 'story', 'note'],
+    order: ['hero', 'rows', 'story', 'note', 'ticker', 'specs'],
   })
   writeJSON(theme, 'templates/product.json', {
     sections: { main: { type: 'main-product', settings: {} }, related: { type: 'related-products', settings: { heading: 'From the same grove' } } },
@@ -203,11 +210,11 @@ describe('check-direction', () => {
     })
     expect(checkDirection(theme)).toEqual([])
 
+    // Down to 5 sections, which another check reports.
     setTemplate(theme, 'templates/index.json', (template) => {
-      delete template.sections.note
-      template.order = template.order.filter((id: string) => id !== 'note')
+      template.order = template.order.filter((id: string) => !['note', 'ticker', 'specs'].includes(id))
     })
-    expect(checkDirection(theme)).toEqual([
+    expect(checkDirection(theme).filter((finding) => finding.check === 'eyebrows')).toEqual([
       { check: 'eyebrows', file: 'templates/index.json', message: '2 of 5 sections carry an eyebrow label (grove, mill); at most one in three should.' },
     ])
   })
@@ -316,6 +323,77 @@ describe('check-direction', () => {
       template.order = template.order.filter((id: string) => id !== 'steps')
     })
     expect(placeholders()).toEqual([])
+  })
+
+  it("reports a home, the Theme's and each Direction's, where no section moves or responds", () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.ticker = { type: 'timeline', settings: { heading: 'From grove to tin' } }
+    })
+    mkdirSync(path.join(theme, 'listings/harvest-date/templates'), { recursive: true })
+    writeJSON(theme, 'listings/harvest-date/templates/index.json', readJSON(theme, 'templates/index.json'))
+    const movement = () => checkDirection(theme).filter((finding) => finding.check === 'movement')
+    const message =
+      'No section moves or responds: add a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover (card_hover).'
+    expect(movement()).toEqual([
+      { check: 'movement', file: 'templates/index.json', message },
+      { check: 'movement', file: 'listings/harvest-date/templates/index.json', message },
+    ])
+
+    // A carousel moves. Product cards with the second image on hover respond, with the card_hover of the Direction's
+    // own preset.
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.ticker = { type: 'testimonials', settings: { heading: 'Chefs on the new oil', layout: 'carousel' } }
+    })
+    setSettings(theme, (settings) => {
+      settings.card_hover = 'none'
+    })
+    const data = readJSON(theme, 'config/settings_data.json')
+    data.presets['Harvest Date'] = { ...data.presets['Press Cloth'], card_hover: 'second_image' }
+    writeJSON(theme, 'config/settings_data.json', data)
+    expect(movement()).toEqual([])
+  })
+
+  it('reports a home of fewer than 6 sections', () => {
+    const theme = sampleTheme()
+    const sectionCount = () => checkDirection(theme).filter((finding) => finding.check === 'section-count')
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.order = template.order.filter((id: string) => id !== 'specs')
+      template.sections.hidden = { type: 'timeline', disabled: true, settings: { heading: 'From grove to tin' } }
+      template.order.push('hidden')
+    })
+    expect(sectionCount()).toEqual([
+      { check: 'section-count', file: 'templates/index.json', message: '5 sections: a home has 6 to 8, alternating image-led and type-led.' },
+    ])
+
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.hidden.disabled = false
+    })
+    expect(sectionCount()).toEqual([])
+  })
+
+  it('reports type-only sections next to each other on a home', () => {
+    const theme = sampleTheme()
+    const typeOnly = () => checkDirection(theme).filter((finding) => finding.check === 'type-only')
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.letter = { type: 'newsletter', settings: { heading: 'Harvest letters' } }
+      template.order = ['hero', 'rows', 'story', 'note', 'specs', 'letter', 'ticker']
+    })
+    expect(typeOnly()).toEqual([
+      {
+        check: 'type-only',
+        file: 'templates/index.json',
+        message: 'note, specs, letter: type-only sections in a row. Put an image-led section between them, or set an image.',
+      },
+    ])
+
+    // A newsletter with its image set isn't type-only.
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.letter.settings = { ...template.sections.letter.settings, layout: 'split', image: 'shopify://shop_images/grove.jpg' }
+    })
+    expect(typeOnly().map((finding) => finding.message)).toEqual([
+      'note, specs: type-only sections in a row. Put an image-led section between them, or set an image.',
+    ])
   })
 
   it('prints one line per finding and exits 1 when there is any, 0 when there is none', () => {
