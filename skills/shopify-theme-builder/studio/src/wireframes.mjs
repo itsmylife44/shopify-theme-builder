@@ -6,8 +6,8 @@
 //   image      an image; the images of a column share the height its other parts leave
 //   image@bl   an image filling the column, with the column's other parts over it at a position:
 //              t(op), m(iddle) or b(ottom), then l(eft), c(entre) or r(ight)
-//   display (oversized type), heading, title, text (two lines), line, button, input, icon, logo, rule,
-//   thumbs (a thumbnail strip), dots, _ (a gap)
+//   display (oversized type), heading, title, text (two lines), line, button, input, icon, number (a big step
+//   number), logo, rule, thumbs (a thumbnail strip), dots, _ (a gap)
 // and modifiers: `center` centres the parts, `panel` puts them on a panel, `x3` repeats the column three times.
 
 /**
@@ -39,6 +39,7 @@ const parts = {
   button: { height: 6, lines: [{ width: 22, height: 6, tone: 'strong' }] },
   input: { height: 7, lines: [{ width: 1, height: 7, tone: 'outline' }] },
   icon: { height: 6, lines: [{ width: 6, height: 6, tone: 'strong' }] },
+  number: { height: 10, lines: [{ width: 7, height: 10, tone: 'strong' }] },
   logo: { height: 5, lines: [{ width: 18, height: 5, tone: 'text' }] },
   rule: { height: 0.8, lines: [{ width: 1, height: 0.8, tone: 'text' }] },
   dots: { height: 2, lines: [{ width: 10, height: 2, tone: 'text' }] },
@@ -323,7 +324,24 @@ export const wireframes = {
       description: 'Short texts on badges scrolling in a line',
     },
   },
-  multicolumn: { 't:general.multicolumn': { wireframe: 'center heading / 3* center icon title text x3' } },
+  multicolumn: {
+    't:general.multicolumn': {
+      wireframe: 'center heading / 3* center icon title text x3',
+      description: 'An icon or image above each centered column',
+    },
+    't:general.multicolumn_images': {
+      wireframe: 'heading / 3* image title text x3',
+      description: 'A wide image above each column, text to the start',
+    },
+    't:general.multicolumn_numbered': {
+      wireframe: 'center heading / 3* center number title text x3',
+      description: 'A big step number above each column',
+    },
+    't:general.multicolumn_cards': {
+      wireframe: 'center heading / 3* center panel icon title text x3',
+      description: 'Each column on a card',
+    },
+  },
   newsletter: { 't:general.newsletter': { wireframe: 'center heading text input button' } },
   'press-quotes': {
     't:general.press_quotes': {

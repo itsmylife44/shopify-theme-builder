@@ -129,7 +129,10 @@
     "spec_tiles_boxes": "Spec tiles: boxes",
     "announcement_bar_stacked": "Announcement bar: stacked",
     "editorial_split_right": "Editorial split: image right",
-    "press_quotes_wall": "Press quotes: wall"
+    "press_quotes_wall": "Press quotes: wall",
+    "multicolumn_images": "Multicolumn: images on top",
+    "multicolumn_numbered": "Multicolumn: numbered",
+    "multicolumn_cards": "Multicolumn: cards"
   },
   "labels": {
     "accent": "Accent",
@@ -336,7 +339,11 @@
       "wall": "Wall",
       "logo_left_menu_center": "Logo left, menu center",
       "logo_center_menu_below": "Logo center, menu below",
-      "logo_left_drawer": "Logo left, menu in a drawer"
+      "logo_left_drawer": "Logo left, menu in a drawer",
+      "icons": "Icons",
+      "images": "Images on top",
+      "numbered": "Numbered",
+      "cards": "Cards"
     },
     "cart_type": {
       "drawer": "Drawer",
