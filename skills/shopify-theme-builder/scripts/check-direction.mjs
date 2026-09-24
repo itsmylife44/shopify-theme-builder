@@ -26,6 +26,14 @@ const filler = [
   'quietly trusted by',
   'on our shelves',
 ].map((word) => new RegExp(`\\b${word}\\b`, 'i'))
+// Text that looks like a to-do left for later: TODO or TBD in capitals (Spanish "todo" is a word), bracketed text,
+// lorem ipsum, "to be completed".
+const todo = [
+  /\b(TODO|TBD)\b/,
+  /\[[^\]]*[a-z][^\]]*\]|\blorem ipsum\b|\b(da (completare|definire|inserire|confermare)|to be (completed|confirmed|added|defined|determined))\b/i,
+]
+// Liquid code, which isn't text shoppers see.
+const liquid = /{{[\s\S]*?}}|{%[\s\S]*?%}/g
 // A link or a handle (like a collection's), which the storefront doesn't show as text.
 const notCopy = /^(\/|shopify:\/\/|https?:\/\/)|^[a-z0-9]+(-[a-z0-9]+)+$/
 
@@ -119,7 +127,7 @@ function checkRepeats({ file, sections }) {
 }
 
 /**
- * The filler words and em dashes in the text of each section and block of a page.
+ * The filler words and em dashes, and the to-dos, in the text of each section and block of a page.
  * @param {Page} page
  * @returns {Finding[]}
  */
@@ -130,7 +138,12 @@ function checkCopy({ file, sections }) {
       const text = value.replace(/<[^>]*>/g, ' ')
       const words = filler.flatMap((word) => text.match(word)?.[0].toLowerCase() ?? [])
       if (text.includes('—')) words.push('—')
-      return words.length > 0 ? [finding('copy', file, `${owner}, ${id}: ${words.map((word) => `"${word}"`).join(', ')}.`)] : []
+      const shown = text.replace(liquid, ' ')
+      const left = todo.map((pattern) => shown.match(pattern)?.[0]).find(Boolean)
+      return [
+        ...(words.length > 0 ? [finding('copy', file, `${owner}, ${id}: ${words.map((word) => `"${word}"`).join(', ')}.`)] : []),
+        ...(left ? [finding('todo', file, `${owner}, ${id}: "${left}". Write the fact, or leave it out and tell the Creator.`)] : []),
+      ]
     }),
   )
 }
