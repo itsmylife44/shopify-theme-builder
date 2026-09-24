@@ -482,7 +482,7 @@ const styleGroups = {
   Shape: ['shape_family', 'border_width'],
   Buttons: ['button_primary_style', 'button_text_case', 'button_font_weight'],
   Spacing: ['density', 'page_width'],
-  Cards: ['card_anatomy', 'card_image_ratio', 'card_style', 'card_text_alignment', 'card_hover'],
+  Cards: ['card_anatomy', 'card_image_ratio', 'card_style', 'card_text_alignment', 'card_text_style', 'card_hover'],
   Media: ['media_treatment', 'media_tint'],
   Motion: ['motion'],
 }

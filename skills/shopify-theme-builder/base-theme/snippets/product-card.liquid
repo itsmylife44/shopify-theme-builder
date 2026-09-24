@@ -3,9 +3,11 @@
   renders an example card with one of Shopify's product placeholders. Its anatomy is minimal (image, title,
   price), detailed (adds the vendor, color swatches, a rating from the reviews metafield and a sale or sold out
   badge) or editorial (a large title with the price under it and no button); the card_anatomy theme setting
-  picks it, unless a section passes its own. The .product-card classes in
-  assets/critical.css style it from the --card-* and --media-* variables in snippets/css-variables.liquid; when
-  the card hover setting shows the second image, the card stacks the product's second media over the first.
+  picks it, unless a section passes its own. The card_text_style theme setting styles the title and price of a
+  minimal or detailed card (quiet, caps or bold); an editorial card keeps its large title. The .product-card
+  classes in assets/critical.css style it from the --card-* and --media-* variables in
+  snippets/css-variables.liquid; when the card hover setting shows the second image, the card stacks the
+  product's second media over the first.
 
   @param {product} [product] - The product; leave it out for an example card
   @param {number} [placeholder] - Which product placeholder (1 to 6) an example card or a product without an image shows, 1 by default
@@ -22,7 +24,7 @@
     assign anatomy = settings.card_anatomy | default: 'minimal'
   endif
 %}
-<div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}">
+<div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}{% unless anatomy == 'editorial' %} product-card--text-{{ settings.card_text_style }}{% endunless %}">
   {% if product %}
     <a class="product-card__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
       {% if product.featured_image %}

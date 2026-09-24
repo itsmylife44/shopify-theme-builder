@@ -484,6 +484,27 @@
       },
       {
         "type": "select",
+        "id": "card_text_style",
+        "label": "t:labels.text_style",
+        "info": "t:info.card_text_style",
+        "options": [
+          {
+            "value": "quiet",
+            "label": "t:options.card_text_style.quiet"
+          },
+          {
+            "value": "caps",
+            "label": "t:options.card_text_style.caps"
+          },
+          {
+            "value": "bold",
+            "label": "t:options.card_text_style.bold"
+          }
+        ],
+        "default": "quiet"
+      },
+      {
+        "type": "select",
         "id": "card_hover",
         "label": "t:labels.card_hover",
         "info": "t:info.card_hover",
