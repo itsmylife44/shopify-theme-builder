@@ -1573,6 +1573,24 @@ describe('Marquee', () => {
     expect(css).toMatch(/\.marquee--badge \.marquee__item {[^}]*border: var\(--border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-badges\);/)
   })
 
+  it('sets badges at the same heading size as texts, padded from the spacing scale', () => {
+    expect(source).toMatch(/<li\s+class="marquee__item text-h3"/)
+    expect(source).not.toContain('text-label')
+    expect(css).toMatch(/\.marquee--badge \.marquee__item {[^}]*padding: var\(--space-xs\) var\(--space-lg\);/)
+  })
+
+  it('keeps its band close to one row of items, never taller than the section spacing', () => {
+    expect(css).toMatch(/\.marquee {[^}]*padding-block: min\(var\(--section-spacing\), var\(--space-2xl\)\);/)
+  })
+
+  it('stays one line when still, scrolling sideways with snap points instead of wrapping', () => {
+    expect(css).not.toMatch(/flex-wrap: wrap/)
+    expect(css).toMatch(/\.marquee__list {[^}]*flex-wrap: nowrap;[^}]*justify-content: safe center;/)
+    expect(css).toMatch(/\.marquee__viewport {[^}]*overflow-x: auto;[^}]*scroll-snap-type: x proximity;/)
+    expect(css).toMatch(/\.marquee__item {[^}]*scroll-snap-align: start;/)
+    expect(noPreference).toMatch(/\.marquee--animated \.marquee__viewport {[^}]*overflow: hidden;/)
+  })
+
   it('reads the items once to assistive technology, however often they repeat', () => {
     expect(source).toMatch(/<ul class="marquee__list" role="list"{% unless forloop\.first %} aria-hidden="true"{% endunless %}>/)
   })
