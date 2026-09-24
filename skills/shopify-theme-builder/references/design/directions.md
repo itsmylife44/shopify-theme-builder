@@ -14,7 +14,7 @@ A Direction decides each axis below. Three Directions must **differ on at least 
 | Color | A strategy (below) and the color schemes that carry it | `colorSchemes` in `PUT /api/brand` |
 | Shape | One family for buttons, inputs, cards, media and badges; border width; buttons | `shape_family` (square, soft, round), `border_width`, `button_primary_style`, `button_text_case`, `button_font_weight` |
 | Spacing | Section rhythm and container | `density` (compact, normal, airy: about 48, 80 or 112px between sections on desktop, halved on mobile), `page_width` |
-| Cards | Product card anatomy | `card_image_ratio` (1 / 1, 4 / 5, 2 / 3), `card_style` (plain, bordered, surface), `card_text_alignment`, `card_hover` (none, second_image, zoom) |
+| Cards | Product card anatomy | `card_anatomy` (minimal, detailed, editorial), `card_image_ratio` (1 / 1, 4 / 5, 2 / 3), `card_style` (plain, bordered, surface), `card_text_alignment`, `card_hover` (none, second_image, zoom) |
 | Media | How photos sit on the page | `media_treatment` (full_bleed, or framed: contained on a tint, for cut-outs), `media_tint` |
 | Motion | A character, not decoration | `motion` (none; subtle: 0.25s fades; expressive: 1s rises and slow image zooms). Always off under reduced motion |
 | Composition | The home page: which sections, in what order, on which color schemes, and how the hero sits | The Direction's `template`; a `hero` or `slideshow` takes a `height` (small, medium, large, full_screen), and the hero or each slide a `content_position` (`top_left` to `bottom_right`) and `content_style` (bare text over the media with an `overlay_opacity`, boxed, or split beside the media) |

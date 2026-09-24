@@ -104,7 +104,10 @@
     "slideshow_text_on_image": "Slideshow: text on image",
     "header_centered": "Header: centered logo",
     "header_drawer": "Header: drawer menu",
-    "header_sticky": "Header: sticky"
+    "header_sticky": "Header: sticky",
+    "featured_collection_minimal": "Featured collection: minimal cards",
+    "featured_collection_detailed": "Featured collection: detailed cards",
+    "featured_collection_editorial": "Featured collection: editorial cards"
   },
   "labels": {
     "accent": "Accent",
@@ -201,6 +204,7 @@
     "card_style": "Style",
     "text_alignment": "Text alignment",
     "card_hover": "Image on hover",
+    "card_anatomy": "Card anatomy",
     "media_treatment": "Treatment",
     "media_tint": "Tint behind images",
     "motion": "Animations",
@@ -254,6 +258,7 @@
     "shape_family": "Rounds buttons, inputs, cards, images and badges together. Round makes buttons and badges pills.",
     "shipping_note_text": "Shown next to the buy button. Links to the shipping and refund policies follow it once they're set in the Shopify admin, under Settings › Policies.",
     "card_hover": "The second image is the product's second media. Only on devices with a mouse.",
+    "card_anatomy": "Minimal: image, title and price. Detailed: adds the vendor, color swatches, a rating from a reviews app and a sale or sold out badge. Editorial: a large title and no button.",
     "media_treatment": "Full-bleed crops each image to fill its box. Framed shows the whole image, inset in its box on the tint.",
     "media_tint": "Suits cut-out product photos: their white background takes the tint. Pick a light color, or clear it for none.",
     "motion": "Subtle fades sections in as they scroll into view and eases hovers. Expressive raises them and zooms images slowly. Always off for customers who reduce motion on their device, and never on what shows first.",
@@ -356,6 +361,12 @@
       "square": "1:1 square",
       "portrait": "4:5 portrait",
       "tall": "2:3 tall"
+    },
+    "card_anatomy": {
+      "theme": "Theme default",
+      "minimal": "Minimal",
+      "detailed": "Detailed",
+      "editorial": "Editorial"
     },
     "card_style": {
       "plain": "Plain",

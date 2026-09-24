@@ -1569,9 +1569,9 @@ describe('Quick add', () => {
   it.each(Object.entries(cards))('has a setting to show quick add on %s cards', (name, item) => {
     const source = read(`catalog/sections/${name}.liquid`)
     expect(parse(source).settings).toContainEqual({ type: 'checkbox', id: 'show_quick_add', label: 't:labels.show_quick_add', default: true })
-    expect(source).toMatch(new RegExp(`{% render 'product-card', product: ${item}, show_quick_add: section\\.settings\\.show_quick_add %}`))
+    expect(source).toMatch(new RegExp(`{% render 'product-card', product: ${item}, show_quick_add: section\\.settings\\.show_quick_add[,\\s%]`))
     const card = read('base-theme/snippets/product-card.liquid')
-    expect(card).toContain('{% if show_quick_add %}')
+    expect(card).toMatch(/{% if show_quick_add( and anatomy != 'editorial')? %}/)
     expect(card).toContain('{% if product.has_only_default_variant and product.requires_selling_plan == false %}')
   })
 
@@ -2439,6 +2439,75 @@ describe('Product card', () => {
     expect(critical).toMatch(/\.product-card {[^}]*text-align: var\(--card-text-align\)/)
     expect(critical).toMatch(/\.product-card__image {[^}]*aspect-ratio: var\(--card-image-ratio\)/)
     expect(critical).toMatch(/\.product-card__quick-add-button {[^}]*align-self: var\(--card-text-align\)/)
+  })
+})
+
+describe('Card anatomies', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const parse = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const global = parseJSON(read('base-theme/config/settings_schema.json'))
+    .flatMap((group: { settings?: object[] }) => group.settings ?? [])
+    .find((s: { id?: string }) => s.id === 'card_anatomy')
+  const card = read('base-theme/snippets/product-card.liquid')
+  const critical = read('base-theme/assets/critical.css')
+  const sections = ['featured-collection', 'main-collection', 'main-search', 'related-products']
+
+  it('offers three anatomies as a theme setting, minimal by default', () => {
+    expect(global).toMatchObject({ type: 'select', label: 't:labels.card_anatomy' })
+    expect(values(global)).toEqual(['minimal', 'detailed', 'editorial'])
+    expect(global.default).toBe('minimal')
+  })
+
+  it('takes the anatomy a section passes, or the theme setting for the theme default', () => {
+    expect(card).toContain('@param {string} [anatomy]')
+    expect(card).toMatch(/if anatomy == blank or anatomy == 'theme'\s*assign anatomy = settings\.card_anatomy/)
+    expect(card).toContain('<div class="product-card product-card--{{ anatomy }}">')
+  })
+
+  it.each(sections)('lets %s override the anatomy on its cards and example cards', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    const setting = parse(source).settings.find((s: { id?: string }) => s.id === 'card_anatomy')
+    expect(setting).toMatchObject({ type: 'select', label: 't:labels.card_anatomy', default: 'theme' })
+    expect(values(setting)).toEqual(['theme', ...values(global)])
+    const renders = source.match(/{% render 'product-card'[^%]*%}/g)!
+    for (const render of renders) expect(render).toContain('anatomy: section.settings.card_anatomy')
+  })
+
+  it('shows the vendor, color swatches, a rating and badges on the detailed card', () => {
+    expect(card).toMatch(/{% if anatomy == 'detailed' %}[\s\S]*product\.vendor \| escape/)
+    // A swatch is nil without a saved color or image, so only an option with swatches shows them.
+    expect(card).toContain('option.values.first.swatch')
+    expect(card).toMatch(/swatch\.image\s*\| image_url: width: \d+[^}]*\| image_tag:[^}]*sizes: /)
+    expect(card).toContain('background-color: rgb({{ value.swatch.color.rgb }});')
+    // The rating slot: the standard reviews metafield review apps write.
+    expect(card).toContain('product.metafields.reviews.rating.value')
+    expect(card).toContain("'product_card.rating' | t:")
+    expect(card).toMatch(/{% if product\.available == false %}[\s\S]*'product\.sold_out' \| t[\s\S]*{% elsif product\.compare_at_price > product\.price %}[\s\S]*'product_card\.sale' \| t/)
+    expect(critical).toMatch(/\.product-card__badge {[^}]*border-radius: var\(--style-border-radius-badges\)/)
+    // A sale shows the price it replaces, crossed out, beside the sale price.
+    expect(card).toMatch(/{% if anatomy == 'detailed' and product\.compare_at_price > product\.price %}[\s\S]*<span class="price__sale">{{ product\.price \| money }}<\/span>[\s\S]*<s class="product-card__compare-at">/)
+    expect(card).toContain("'product_card.review_count' | t: count: review_count")
+  })
+
+  it('gives the editorial card a large title with the price under it and no button', () => {
+    expect(card).toMatch(/product-card__title{% if anatomy == 'editorial' %} text-h4{% endif %}/)
+    expect(card).toMatch(/{% if show_quick_add and anatomy != 'editorial' %}/)
+    expect(critical).toMatch(/\.product-card--editorial \.product-card__title,[^{]*h6 {[^}]*font-family: var\(--font-heading--family\)/)
+  })
+
+  it('offers each anatomy as a named featured collection preset', () => {
+    const schema = parse(read('catalog/sections/featured-collection.liquid'))
+    const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+    expect(schema.presets[0]).toEqual({ name: 't:general.featured_collection' })
+    expect(schema.presets.length).toBeGreaterThanOrEqual(4)
+    for (const preset of schema.presets.slice(1)) {
+      expect(preset.name).toMatch(/^t:general\.featured_collection_/)
+      for (const [id, value] of Object.entries(preset.settings)) {
+        expect(settings[id].type === 'checkbox' ? typeof value === 'boolean' : fits(settings[id], value), `${id}: ${value}`).toBe(true)
+      }
+    }
+    expect(schema.presets.slice(1).map((preset: { settings: { card_anatomy: string } }) => preset.settings.card_anatomy)).toEqual(values(global))
   })
 })
 

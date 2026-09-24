@@ -28,13 +28,13 @@
             {% for i in (1..section.settings.products_to_show) %}
               {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
               <li>
-                {% render 'product-card', placeholder: placeholder %}
+                {% render 'product-card', placeholder: placeholder, anatomy: section.settings.card_anatomy %}
               </li>
             {% endfor %}
           {% else %}
             {% for recommendation in recommendations.products %}
               <li>
-                {% render 'product-card', product: recommendation, show_quick_add: section.settings.show_quick_add %}
+                {% render 'product-card', product: recommendation, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
               </li>
             {% endfor %}
           {% endif %}
@@ -154,6 +154,30 @@
       "max": 5,
       "step": 1,
       "default": 4
+    },
+    {
+      "type": "select",
+      "id": "card_anatomy",
+      "label": "t:labels.card_anatomy",
+      "options": [
+        {
+          "value": "theme",
+          "label": "t:options.card_anatomy.theme"
+        },
+        {
+          "value": "minimal",
+          "label": "t:options.card_anatomy.minimal"
+        },
+        {
+          "value": "detailed",
+          "label": "t:options.card_anatomy.detailed"
+        },
+        {
+          "value": "editorial",
+          "label": "t:options.card_anatomy.editorial"
+        }
+      ],
+      "default": "theme"
     },
     {
       "type": "checkbox",

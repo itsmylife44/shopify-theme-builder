@@ -82,6 +82,8 @@ body {
   color: var(--color-foreground);
 }
 
+/* The editorial product card's title takes the heading font too, at the size its text-h4 class gives. */
+.product-card--editorial .product-card__title,
 h1,
 h2,
 h3,
@@ -331,6 +333,50 @@ a.product-card__title:hover {
 
 .product-card__quick-add {
   display: contents;
+}
+
+/* The detailed card: a sold out or sale badge, the vendor, a rating and color swatches. */
+.product-card__badge {
+  align-self: var(--card-text-align);
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--style-border-radius-badges);
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+}
+
+.product-card__badge--sale {
+  background-color: var(--color-accent);
+}
+
+.product-card__vendor,
+.product-card__rating,
+.product-card__compare-at {
+  opacity: var(--opacity-muted);
+}
+
+.product-card__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: var(--card-text-align);
+  gap: var(--space-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-card__swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--style-border-radius-badges);
+}
+
+.product-card__swatch img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .product-card__quick-add-button {
