@@ -502,7 +502,7 @@ describe('Product page shipping note and collapsible content', () => {
   })
 
   it('moves the vendor and dynamic checkout settings to the title and buy buttons blocks', () => {
-    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'gallery_layout'])
+    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'gallery_layout', 'image_zoom'])
     expect(parse(read('base-theme/blocks/_product-title.liquid')).settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
     expect(parse(read('base-theme/blocks/_buy-buttons.liquid')).settings).toContainEqual({
       type: 'checkbox',
@@ -581,6 +581,63 @@ describe('Product page layouts', () => {
       expect(locale.general[preset.name.replace('t:general.', '')]).toMatch(/^Product: /)
       expect(preset.blocks).toEqual(schema.presets[0].blocks)
     }
+  })
+})
+
+describe('Product image zoom', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-product.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.schema.json'), 'utf8'))
+  const lightbox = source.slice(source.indexOf('<dialog class="main-product__lightbox"'), source.indexOf('</dialog>'))
+
+  it('has an image_zoom setting, a lightbox by default or none', () => {
+    const setting = schema.settings.find((s: { id: string }) => s.id === 'image_zoom')
+    expect(setting).toMatchObject({ type: 'select', label: 't:labels.image_zoom', default: 'lightbox' })
+    expect(setting.options.map((option: { value: string }) => option.value)).toEqual(['lightbox', 'none'])
+    for (const { label } of setting.options) expect(locale.options.image_zoom[label.split('.').pop()]).toBeTruthy()
+    expect(locale.labels.image_zoom).toBeTruthy()
+  })
+
+  it('opens each product image in a full-screen dialog at 3000px, only when the setting is lightbox', () => {
+    const media = source.slice(source.indexOf('class="main-product__media"'), source.indexOf('</ul>'))
+    expect(media).toMatch(/{% if zoom %}\s*<button\s+type="button"\s+class="main-product__zoom"\s+data-index="{{ image_index \| minus: 1 }}"\s+aria-haspopup="dialog"/)
+    expect(media).toContain("aria-label=\"{{ 'product.zoom' | t: index: image_index, count: images.size }}\"")
+    expect(source).toMatch(/if section\.settings\.image_zoom == 'lightbox' and images != empty\s*assign zoom = true/)
+    expect(source).toMatch(/{% if zoom %}\s*<media-lightbox>\s*<dialog class="main-product__lightbox"/)
+    expect(lightbox).toContain("image_url: width: 3000")
+    expect(source).toContain('this.dialog.showModal()')
+    expect(source).toContain('this.lightbox?.open(Number(zoom.dataset.index), zoom)')
+  })
+
+  it('follows the dialog pattern: labelled, a close button, Escape closes, focus back on the image', () => {
+    expect(lightbox).toMatch(/<dialog class="main-product__lightbox[^"]*"[^>]*aria-label="{{ 'product\.lightbox' \| t }}"/)
+    expect(lightbox).toMatch(/<form method="dialog">\s*<button class="main-product__lightbox-close" aria-label="{{ 'product\.close_lightbox' \| t }}"/)
+    // Escape closes a modal <dialog> natively; closing returns focus to the image that opened it.
+    expect(source).toMatch(/addEventListener\('close', \(\) => this\.opener\?\.focus\(\)\)/)
+    expect(source).not.toMatch(/key === 'Escape'/)
+    // Only the current image is in the accessibility tree, and its position is announced.
+    expect(lightbox).toContain('{% unless forloop.first %}hidden{% endunless %}')
+    expect(lightbox).toMatch(/aria-live="polite"/)
+  })
+
+  it('moves between images with arrow buttons and the arrow keys, mirrored right to left', () => {
+    expect(lightbox).toMatch(/data-step="-1" aria-label="{{ 'product\.previous_media' \| t }}"/)
+    expect(lightbox).toMatch(/data-step="1" aria-label="{{ 'product\.next_media' \| t }}"/)
+    expect(source).toMatch(/\.main-product__lightbox-arrow svg:dir\(rtl\) {\s*scale: -1 1;/)
+    expect(source).toContain("getComputedStyle(this).direction === 'rtl'")
+    expect(source).toMatch(/'ArrowRight'/)
+    expect(source).toMatch(/'ArrowLeft'/)
+  })
+
+  it('pinches to zoom and pans the zoomed image on touch', () => {
+    expect(source).toMatch(/\.main-product__lightbox-image {[^}]*touch-action: none;/)
+    for (const event of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) expect(source).toContain(`'${event}'`)
+    expect(source).toContain('Math.hypot(')
+  })
+
+  it('tells the agent about the lightbox', () => {
+    expect(readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')).toMatch(/`image_zoom`/)
   })
 })
 
@@ -2917,8 +2974,8 @@ describe('Buttons', () => {
   it('gives every button with a text label, and every submit input, the shared button class', () => {
     for (const file of files) {
       for (const [, tag, content] of read(file).matchAll(/(<button\b[^>]*>)([\s\S]*?)<\/button>/g)) {
-        // Icon controls (close, menu, arrows, a video cover) hold only an SVG or an image.
-        if (!content.replace(/<svg[\s\S]*?<\/svg>|{{[\s\S]*?image_tag[\s\S]*?}}|<[^>]+>/g, '').trim()) continue
+        // Icon controls (close, menu, arrows, a video cover, a product image to zoom) hold only an SVG or an image; Liquid tags show no text.
+        if (!content.replace(/<svg[\s\S]*?<\/svg>|{{[\s\S]*?image_tag[\s\S]*?}}|{%[\s\S]*?%}|<[^>]+>/g, '').trim()) continue
         expect(tag, file).toMatch(/class="[^"]*\bbutton(--secondary)?\b/)
       }
       for (const [tag] of read(file).matchAll(/<input\b[^>]*type="submit"[^>]*>/g)) {

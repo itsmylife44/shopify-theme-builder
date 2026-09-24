@@ -6,6 +6,12 @@
   assign media_rest = product.media | reject: 'id', featured_media.id
   assign ordered_media = media_first | concat: media_rest
   assign models = product.media | where: 'media_type', 'model'
+  assign images = ordered_media | where: 'media_type', 'image'
+  assign zoom = false
+  if section.settings.image_zoom == 'lightbox' and images != empty
+    assign zoom = true
+  endif
+  assign image_index = 0
 %}
 
 {% if models != empty %}
@@ -36,7 +42,17 @@
                     assign loading = 'eager'
                     assign fetchpriority = 'high'
                   endif
+                  assign image_index = image_index | plus: 1
                 %}
+                {% if zoom %}
+                  <button
+                    type="button"
+                    class="main-product__zoom"
+                    data-index="{{ image_index | minus: 1 }}"
+                    aria-haspopup="dialog"
+                    aria-label="{{ 'product.zoom' | t: index: image_index, count: images.size }}"
+                  >
+                {% endif %}
                 {{
                   media.preview_image
                   | image_url: width: 1500
@@ -46,6 +62,9 @@
                     loading: loading,
                     fetchpriority: fetchpriority
                 }}
+                {% if zoom %}
+                  </button>
+                {% endif %}
               {% when 'model' %}
                 <product-model class="main-product__model">
                   {{ media | model_viewer_tag }}
@@ -91,6 +110,47 @@
             </svg>
           </button>
         </div>
+      {% endif %}
+      {% if zoom %}
+        <media-lightbox>
+          <dialog class="main-product__lightbox" aria-label="{{ 'product.lightbox' | t }}" scroll-lock>
+            <ul class="main-product__lightbox-images" role="list">
+              {% for image in images %}
+                <li class="main-product__lightbox-image" {% unless forloop.first %}hidden{% endunless %}>
+                  {{ image.preview_image | image_url: width: 3000 | image_tag: srcset: nil, sizes: '100vw', loading: 'lazy' }}
+                </li>
+              {% endfor %}
+            </ul>
+            <form method="dialog">
+              <button class="main-product__lightbox-close" aria-label="{{ 'product.close_lightbox' | t }}">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m5 5 10 10M15 5 5 15" />
+                </svg>
+              </button>
+            </form>
+            {% if images.size > 1 %}
+              <div class="main-product__lightbox-arrows">
+                <button type="button" class="main-product__lightbox-arrow" data-step="-1" aria-label="{{ 'product.previous_media' | t }}">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
+                  </svg>
+                </button>
+                <button type="button" class="main-product__lightbox-arrow" data-step="1" aria-label="{{ 'product.next_media' | t }}">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+                  </svg>
+                </button>
+              </div>
+              <p
+                class="main-product__lightbox-count text-label"
+                aria-live="polite"
+                data-template="{{ 'product.media_position' | t: index: '[index]', count: images.size }}"
+              >
+                {{- 'product.media_position' | t: index: 1, count: images.size -}}
+              </p>
+            {% endif %}
+          </dialog>
+        </media-lightbox>
       {% endif %}
     </media-gallery>
 
@@ -177,6 +237,11 @@
 
   class MediaGallery extends HTMLElement {
     connectedCallback() {
+      this.lightbox = this.querySelector('media-lightbox');
+      this.addEventListener('click', (event) => {
+        const zoom = event.target.closest('.main-product__zoom');
+        if (zoom) this.lightbox?.open(Number(zoom.dataset.index), zoom);
+      });
       this.list = this.querySelector('.main-product__media');
       this.strip = this.querySelector('.main-product__thumbnails');
       this.querySelectorAll('.main-product__arrow').forEach((arrow) =>
@@ -215,6 +280,96 @@
   }
 
   if (!customElements.get('media-gallery')) customElements.define('media-gallery', MediaGallery);
+
+  class MediaLightbox extends HTMLElement {
+    connectedCallback() {
+      this.dialog = this.querySelector('dialog');
+      this.slides = [...this.querySelectorAll('.main-product__lightbox-image')];
+      this.count = this.querySelector('.main-product__lightbox-count');
+      this.pointers = new Map();
+      // A modal dialog closes on Escape by itself; give focus back to the image that opened it.
+      this.dialog.addEventListener('close', () => this.opener?.focus());
+      this.querySelectorAll('.main-product__lightbox-arrow').forEach((arrow) =>
+        arrow.addEventListener('click', () => this.show(this.index + Number(arrow.dataset.step)))
+      );
+      this.dialog.addEventListener('keydown', (event) => {
+        if (this.slides.length < 2 || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        const next = getComputedStyle(this).direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+        this.show(this.index + (event.key === next ? 1 : -1));
+      });
+      for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+        this.dialog.addEventListener(type, this.onPointer);
+      }
+    }
+
+    open(index, opener) {
+      this.opener = opener;
+      this.show(index);
+      this.dialog.showModal();
+    }
+
+    show(index) {
+      this.index = (index + this.slides.length) % this.slides.length;
+      this.slides.forEach((slide, i) => (slide.hidden = i !== this.index));
+      this.pointers.clear();
+      this.zoom = { scale: 1, x: 0, y: 0 };
+      this.transform();
+      if (this.count) this.count.textContent = this.count.dataset.template.replace('[index]', this.index + 1);
+    }
+
+    transform() {
+      const image = this.slides[this.index].querySelector('img');
+      if (image) image.style.transform = `translate(${this.zoom.x}px, ${this.zoom.y}px) scale(${this.zoom.scale})`;
+    }
+
+    // The fingers' midpoint, from the center of the image, and the distance between two of them.
+    gesture() {
+      const points = [...this.pointers.values()];
+      const box = this.slides[this.index].getBoundingClientRect();
+      const [a, b] = points;
+      return {
+        box,
+        midX: points.reduce((sum, point) => sum + point.clientX, 0) / points.length - box.x - box.width / 2,
+        midY: points.reduce((sum, point) => sum + point.clientY, 0) / points.length - box.y - box.height / 2,
+        distance: b ? Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) : 0,
+      };
+    }
+
+    // Two fingers pinch, one pans a zoomed image: the point of the image under the fingers stays under them.
+    onPointer = (event) => {
+      if (event.type === 'pointerdown') {
+        const slide = event.target.closest('.main-product__lightbox-image');
+        if (!slide) return;
+        slide.setPointerCapture(event.pointerId);
+        this.pointers.set(event.pointerId, event);
+      } else if (!this.pointers.has(event.pointerId)) {
+        return;
+      } else if (event.type === 'pointermove') {
+        this.pointers.set(event.pointerId, event);
+        this.move();
+        return;
+      } else {
+        this.pointers.delete(event.pointerId);
+      }
+      if (this.pointers.size) this.start = { ...this.zoom, ...this.gesture() };
+    };
+
+    move() {
+      const { box, midX, midY, distance } = this.gesture();
+      const start = this.start;
+      const pinch = distance && start.distance ? distance / start.distance : 1;
+      const scale = Math.min(4, Math.max(1, start.scale * pinch));
+      const clamp = (value, size) => Math.min((scale - 1) * size / 2, Math.max(-(scale - 1) * size / 2, value));
+      this.zoom = {
+        scale,
+        x: clamp(midX - (scale * (start.midX - start.x)) / start.scale, box.width),
+        y: clamp(midY - (scale * (start.midY - start.y)) / start.scale, box.height),
+      };
+      this.transform();
+    }
+  }
+
+  if (!customElements.get('media-lightbox')) customElements.define('media-lightbox', MediaLightbox);
 {% endjavascript %}
 
 {% stylesheet %}
@@ -385,6 +540,103 @@
     scale: -1 1;
   }
 
+  .main-product__zoom {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: zoom-in;
+  }
+
+  .main-product__lightbox {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    padding: 0;
+    border: 0;
+  }
+
+  .main-product__lightbox[open] {
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  }
+
+  /* Positioned, so the controls stay above the zoomed image, which a transform lifts. */
+  .main-product__lightbox > * {
+    position: relative;
+    grid-area: 1 / 1;
+  }
+
+  .main-product__lightbox-images {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-product__lightbox-image {
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  .main-product__lightbox-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .main-product__lightbox form {
+    align-self: start;
+    justify-self: end;
+    padding: var(--space-sm);
+  }
+
+  .main-product__lightbox-arrows {
+    display: flex;
+    align-self: center;
+    justify-content: space-between;
+    padding-inline: var(--space-sm);
+    pointer-events: none;
+  }
+
+  .main-product__lightbox-count {
+    align-self: end;
+    justify-self: center;
+    margin-block-end: var(--space-md);
+    padding: var(--space-2xs) var(--space-xs);
+    background-color: var(--color-background);
+  }
+
+  .main-product__lightbox-close,
+  .main-product__lightbox-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: 0;
+    border: 0;
+    background-color: var(--color-background);
+    color: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .main-product__lightbox-close svg {
+    width: 2rem;
+  }
+
+  .main-product__lightbox-arrow svg {
+    width: 1.5rem;
+  }
+
+  .main-product__lightbox-arrow svg:dir(rtl) {
+    scale: -1 1;
+  }
+
   .main-product__media-item img {
     padding: var(--media-inset);
     mix-blend-mode: var(--media-blend);
@@ -458,6 +710,16 @@
         { "value": "carousel", "label": "t:options.gallery_layout.carousel" }
       ],
       "default": "grid"
+    },
+    {
+      "type": "select",
+      "id": "image_zoom",
+      "label": "t:labels.image_zoom",
+      "options": [
+        { "value": "lightbox", "label": "t:options.image_zoom.lightbox" },
+        { "value": "none", "label": "t:options.image_zoom.none" }
+      ],
+      "default": "lightbox"
     }
   ],
   "blocks": [
