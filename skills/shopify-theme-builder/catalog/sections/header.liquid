@@ -604,6 +604,37 @@
     .header__menu-button ~ .header__icons .header__localization {
       display: none;
     }
+
+    .header__inner {
+      flex-wrap: nowrap;
+      column-gap: var(--space-xs);
+    }
+
+    .header--logo_center_menu_below .header__inner {
+      grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+    }
+
+    .header__menu-button,
+    .header__icons {
+      flex-shrink: 0;
+    }
+
+    .header__icons {
+      gap: 0;
+      margin-inline-start: auto;
+    }
+
+    .header__logo {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .header__logo-image {
+      max-width: 100%;
+      object-fit: contain;
+    }
   }
 
   @media (min-width: 750px) {
