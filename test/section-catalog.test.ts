@@ -2640,10 +2640,10 @@ describe('Card and media settings', () => {
     expect(variables).toContain("--card-text-align: {{ settings.card_text_alignment | replace: 'left', 'start' | replace: 'right', 'end' }};")
   })
 
-  it('shows the second image or zooms the image on hover, only on devices that hover', () => {
+  it('shows the second image or zooms the image on hover, only on devices that hover, the second image by default', () => {
     expect(values('card_hover')).toEqual(['none', 'second_image', 'zoom'])
-    expect(setting('card_hover').default).toBe('none')
-    expect(variables).toMatch(/--card-hover-scale: {% if settings\.card_hover == 'zoom' %}1\.05{% else %}1{% endif %};/)
+    expect(setting('card_hover').default).toBe('second_image')
+    expect(variables).toMatch(/--card-hover-scale: {% if settings\.card_hover == 'none' %}1{% else %}1\.03{% endif %};/)
     expect(critical).toMatch(/@media \(hover: hover\) {[^@]*\.product-card:hover \.product-card__image img {[^}]*transform: scale\(var\(--card-hover-scale\)\)/)
     expect(critical).toMatch(/@media \(hover: hover\) {[^@]*\.product-card:hover \.product-card__image-secondary {[^}]*opacity: 1/)
   })
@@ -2652,6 +2652,10 @@ describe('Card and media settings', () => {
     expect(card).toMatch(/{% if settings\.card_hover == 'second_image' and product\.media\.size > 1 %}\s*{{\s*product\.media\[1\]\.preview_image\s*\| image_url: width: 1200\s*\| image_tag:[^}]*class: 'product-card__image-secondary'[^}]*alt: ''/)
     expect(critical).toMatch(/\.product-card__image {[^}]*position: relative/)
     expect(critical).toMatch(/\.product-card__image \.product-card__image-secondary {[^}]*position: absolute;[^}]*inset: 0;[^}]*opacity: 0/)
+  })
+
+  it('zooms the image of a card set to the second image only when its product has no second image', () => {
+    expect(critical).toMatch(/\.product-card__image:has\(\.product-card__image-secondary\) {[^}]*--card-hover-scale: 1;/)
   })
 
   it('fills each media box edge to edge or frames the whole photo in it, full-bleed by default', () => {

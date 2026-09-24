@@ -325,11 +325,16 @@ input:not([type='checkbox'], [type='radio']) {
   border-radius: 0;
 }
 
-/* The second image lies over the first, in the same box, and shows on hover. */
+/* The second image lies over the first, in the same box, and shows on hover. A card whose product has only one
+   image has no second image, so it zooms instead. */
 .product-card__image .product-card__image-secondary {
   position: absolute;
   inset: 0;
   opacity: 0;
+}
+
+.product-card__image:has(.product-card__image-secondary) {
+  --card-hover-scale: 1;
 }
 
 @media (hover: hover) {
