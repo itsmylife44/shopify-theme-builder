@@ -405,7 +405,24 @@ export const wireframes = {
       description: 'Big figures in bordered boxes',
     },
   },
-  testimonials: { 't:general.testimonials': { wireframe: 'center heading / 3* panel text line x3' } },
+  testimonials: {
+    't:general.testimonials': {
+      wireframe: 'center heading / 3* panel text line x3',
+      description: 'Quotes side by side on cards',
+    },
+    't:general.testimonials_large_quote': {
+      wireframe: 'center heading / 2* center heading heading line / 2* panel text line x2',
+      description: 'One quote large and centered, the others below',
+    },
+    't:general.testimonials_carousel': {
+      wireframe: 'center heading / 3* panel text line x2 / center dots',
+      description: 'Quotes a few at a time, with arrows to step through',
+    },
+    't:general.testimonials_portraits': {
+      wireframe: 'center heading / 3* panel text icon line x3',
+      description: "Quotes on cards with the author's portrait",
+    },
+  },
   timeline: { 't:general.timeline': { wireframe: 'heading / rule / 3* icon line title text x3' } },
   'type-banner': { 't:general.type_banner': { wireframe: 'display display line' } },
   video: { 't:general.video': { wireframe: 'center heading / 4* image@mc icon' } },

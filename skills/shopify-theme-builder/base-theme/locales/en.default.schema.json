@@ -132,7 +132,10 @@
     "press_quotes_wall": "Press quotes: wall",
     "multicolumn_images": "Multicolumn: images on top",
     "multicolumn_numbered": "Multicolumn: numbered",
-    "multicolumn_cards": "Multicolumn: cards"
+    "multicolumn_cards": "Multicolumn: cards",
+    "testimonials_large_quote": "Testimonials: large quote",
+    "testimonials_carousel": "Testimonials: carousel",
+    "testimonials_portraits": "Testimonials: with portraits"
   },
   "labels": {
     "accent": "Accent",
@@ -270,6 +273,7 @@
     "main_collection_enable_filtering": "Set up filters in the Shopify admin with the Search & Discovery app.",
     "main_collection_products_per_page": "Also how many each Load more adds on mobile. 15 to 30 works best.",
     "testimonials_author_detail": "For example a city or \"Verified buyer\".",
+    "testimonials_image": "A portrait of the author, shown beside their name in the With portraits layout.",
     "header_show_localization": "Shown only when the shop sells in more than one country or language. The footer always shows them.",
     "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app.",
     "custom_liquid_setting": "Add app snippets, tracking code or embeds. Liquid and HTML both work.",
@@ -343,7 +347,11 @@
       "icons": "Icons",
       "images": "Images on top",
       "numbered": "Numbered",
-      "cards": "Cards"
+      "cards": "Cards",
+      "grid": "Grid",
+      "large_quote": "Large quote",
+      "carousel": "Carousel",
+      "portraits": "With portraits"
     },
     "cart_type": {
       "drawer": "Drawer",

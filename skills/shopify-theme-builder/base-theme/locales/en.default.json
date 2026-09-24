@@ -183,6 +183,10 @@
     "pause": "Pause slideshow",
     "play": "Play slideshow"
   },
+  "testimonials": {
+    "previous": "Previous testimonial",
+    "next": "Next testimonial"
+  },
   "marquee": {
     "pause": "Pause scrolling text"
   },
