@@ -2575,8 +2575,8 @@ describe('Studio API: undo and redo', () => {
     expect((await studio.send('POST', 'api/undo')).status).toBe(409)
     // The first write's step fell off: the Theme keeps its body font.
     expect(readSettingsData(theme).current.type_body_font).toBe('work_sans_n4')
-    // Each write and undo runs Theme Check.
-  }, 60_000)
+    // Each write and undo runs Theme Check: 101 runs, over 60 seconds on a slow CI runner.
+  }, 120_000)
 
   it('never undoes an edit made outside the Studio: it refuses, names the file and drops the step', async () => {
     const theme = fixtureTheme()
