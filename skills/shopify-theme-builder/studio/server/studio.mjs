@@ -1634,14 +1634,15 @@ function listCustomSections(theme, catalog, template) {
 // Needs read_products for collections and products, read_online_store_navigation for menus.
 const storeScopes = 'read_products,read_online_store_navigation'
 const storeQuery = `{
-  collections(first: 250, sortKey: TITLE) { nodes { handle title } }
+  collections(first: 250, sortKey: TITLE) { nodes { handle title productsCount { count } } }
   products(first: 250, sortKey: TITLE) { nodes { handle title } }
   menus(first: 250) { nodes { handle title } }
 }`
 
 /**
  * @typedef {{ handle: string, title: string }} StoreResource
- * @typedef {{ collections: StoreResource[], products: StoreResource[], menus: StoreResource[] }} StoreResources
+ * @typedef {StoreResource & { products: number }} StoreCollection A collection with its product count.
+ * @typedef {{ collections: StoreCollection[], products: StoreResource[], menus: StoreResource[] }} StoreResources
  */
 
 /**
@@ -1689,7 +1690,17 @@ async function readStore(cli, store) {
   const data = JSON.parse(output.slice(output.indexOf('{')))
   /** @param {{ nodes?: StoreResource[] } | undefined} connection */
   const list = (connection) => (connection?.nodes ?? []).map(({ handle, title }) => ({ handle, title }))
-  return { collections: list(data.collections), products: list(data.products), menus: list(data.menus) }
+  /** @type {{ nodes?: (StoreResource & { productsCount?: { count: number } })[] } | undefined} */
+  const collections = data.collections
+  return {
+    collections: (collections?.nodes ?? []).map(({ handle, title, productsCount }) => ({
+      handle,
+      title,
+      products: productsCount?.count ?? 0,
+    })),
+    products: list(data.products),
+    menus: list(data.menus),
+  }
 }
 
 /**

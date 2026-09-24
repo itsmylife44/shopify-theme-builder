@@ -129,6 +129,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - The Studio reads and edits the settings of theme blocks, like the main product's collapsible content, shipping note and custom Liquid. It looked for a block's schema only in its section, where a theme block is listed by its type alone, so `GET /api/<page>/sections/<id>` showed these blocks without settings and `PATCH` refused them. It now falls back to the block's schema in the Theme's `blocks/<type>.liquid`.
 
+- The home page's featured collection no longer lands on an empty collection and shows example product cards. `GET /api/store` listed collections without their products, so the agent picked Shopify's `frontpage` ("Home page") collection, which is often empty. Each collection now has `products`, its number of products, and `SKILL.md` tells the agent to give every `collection` setting one with products.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.
