@@ -1623,6 +1623,62 @@ describe('Press quotes', () => {
   })
 })
 
+describe('Testimonials', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/testimonials.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const blockSettings = Object.fromEntries(schema.blocks[0].settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('lays the quotes out as a grid by default, a large quote, a carousel or with portraits', () => {
+    expect(source).toContain('class="testimonials full-width testimonials--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'grid' })
+    expect(values(settings.layout)).toEqual(['grid', 'large_quote', 'carousel', 'portraits'])
+    // A Theme made before the layouts keeps its grid: the first preset sets no layout.
+    expect(schema.presets[0].settings?.layout).toBeUndefined()
+  })
+
+  it('offers each other layout as a named preset with the same testimonials', () => {
+    expect(schema.presets.slice(1)).toEqual(
+      ['large_quote', 'carousel', 'portraits'].map((layout) => ({
+        name: `t:general.testimonials_${layout}`,
+        settings: { layout },
+        blocks: schema.presets[0].blocks,
+      })),
+    )
+  })
+
+  it('sets the first quote large and centered in the heading style in the large quote layout, the others in a row below', () => {
+    expect(source).toMatch(/if section\.settings\.layout == 'large_quote' and forloop\.first/)
+    expect(source).toContain('text-h3')
+    expect(css).toMatch(/\.testimonials--large_quote \.testimonials__item:first-child {[^}]*grid-column: 1 \/ -1;/)
+    expect(css).toMatch(/\.testimonials--large_quote \.testimonials__item:first-child \.testimonials__quote {[^}]*font-family: var\(--font-heading--family\);/)
+  })
+
+  it('scrolls the quotes in the carousel layout, with previous and next buttons, never on its own, mirrored right to left', () => {
+    expect(source).toMatch(/<testimonials-carousel/)
+    expect(css).toMatch(/\.testimonials--carousel \.testimonials__list {[^}]*scroll-snap-type: x mandatory;/)
+    expect(source).toContain('tabindex="0"')
+    expect(source).toContain(`aria-label="{{ 'testimonials.previous' | t }}"`)
+    expect(source).toContain(`aria-label="{{ 'testimonials.next' | t }}"`)
+    expect(css).toMatch(/\.testimonials__control svg:dir\(rtl\) {\s*scale: -1 1;/)
+    expect(source).toContain("getComputedStyle(this).direction === 'rtl'")
+    expect(source).not.toMatch(/setInterval|autoplay/)
+    // Smooth scrolling is motion: only when the customer has not asked for less.
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) {\s*\.testimonials--carousel \.testimonials__list {\s*scroll-behavior: smooth;/)
+    expect(css).toMatch(/@media \(min-width: 750px\) {[^@]*\.testimonials--carousel \.testimonials__list {/)
+    const locale = JSON.parse(readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.testimonials).toMatchObject({ previous: expect.any(String), next: expect.any(String) })
+  })
+
+  it('shows a small portrait beside each author in the portraits layout, only when the testimonial has one', () => {
+    expect(blockSettings.image).toEqual({ type: 'image_picker', id: 'image', label: 't:labels.image', info: 't:info.testimonials_image' })
+    expect(source).toMatch(/if section\.settings\.layout == 'portraits' and block\.settings\.image != blank/)
+    expect(source).toMatch(/block\.settings\.image\s*\| image_url: width: \d+, height: \d+, crop: 'center'/)
+    expect(css).toMatch(/\.testimonials__portrait {[^}]*border-radius: var\(--style-border-radius-badges\);/)
+  })
+})
+
 describe('Product recommendations', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/related-products.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

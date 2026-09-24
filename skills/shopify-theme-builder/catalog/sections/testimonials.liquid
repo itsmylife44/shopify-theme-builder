@@ -1,27 +1,77 @@
-{% comment %}Customer quotes in a grid.{% endcomment %}
-<div class="testimonials full-width color-{{ section.settings.color_scheme }}">
+{% comment %}Customer quotes in a grid, one large quote above the others, a carousel or with the authors' portraits.{% endcomment %}
+{% liquid
+  assign carousel = false
+  if section.settings.layout == 'carousel' and section.blocks.size > 1
+    assign carousel = true
+  endif
+%}
+<div class="testimonials full-width testimonials--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}">
   <div class="testimonials__inner">
     {% if section.settings.heading != blank %}
       <h2 class="testimonials__heading">{{ section.settings.heading }}</h2>
     {% endif %}
 
-    <ul class="testimonials__list" role="list">
+    {% if carousel %}<testimonials-carousel class="testimonials__carousel">{% endif %}
+    <ul
+      id="TestimonialsList-{{ section.id }}"
+      class="testimonials__list"
+      role="list"
+      {% if carousel %}tabindex="0"{% endif %}
+    >
       {% for block in section.blocks %}
         <li class="testimonials__item" {{ block.shopify_attributes }}>
           <figure class="testimonials__figure">
-            <blockquote class="testimonials__quote">{{ block.settings.quote }}</blockquote>
+            <blockquote class="testimonials__quote{% if section.settings.layout == 'large_quote' and forloop.first %} text-h3{% endif %}">
+              {{- block.settings.quote -}}
+            </blockquote>
             {% if block.settings.author != blank %}
               <figcaption class="testimonials__author">
-                {{ block.settings.author | escape }}
-                {% if block.settings.author_detail != blank %}
-                  <span class="testimonials__detail">{{ block.settings.author_detail | escape }}</span>
+                {% if section.settings.layout == 'portraits' and block.settings.image != blank %}
+                  {{
+                    block.settings.image
+                    | image_url: width: 112, height: 112, crop: 'center'
+                    | image_tag: alt: '', class: 'testimonials__portrait', width: 56, height: 56, sizes: '3.5rem', loading: 'lazy'
+                  }}
                 {% endif %}
+                <span class="testimonials__name">
+                  {{ block.settings.author | escape }}
+                  {% if block.settings.author_detail != blank %}
+                    <span class="testimonials__detail">{{ block.settings.author_detail | escape }}</span>
+                  {% endif %}
+                </span>
               </figcaption>
             {% endif %}
           </figure>
         </li>
       {% endfor %}
     </ul>
+    {% if carousel %}
+      <div class="testimonials__controls">
+        <button
+          type="button"
+          class="testimonials__control"
+          data-step="-1"
+          aria-controls="TestimonialsList-{{ section.id }}"
+          aria-label="{{ 'testimonials.previous' | t }}"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="testimonials__control"
+          data-step="1"
+          aria-controls="TestimonialsList-{{ section.id }}"
+          aria-label="{{ 'testimonials.next' | t }}"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
+      </div>
+      </testimonials-carousel>
+    {% endif %}
   </div>
 </div>
 
@@ -71,16 +121,137 @@
 
   .testimonials__author {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
     margin-top: auto;
     font-weight: 600;
+  }
+
+  .testimonials__name {
+    display: flex;
+    flex-direction: column;
   }
 
   .testimonials__detail {
     font-weight: normal;
     opacity: var(--opacity-muted);
   }
+
+  .testimonials__portrait {
+    flex: none;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--style-border-radius-badges);
+  }
+
+  /* Large quote: the first testimonial across the row, centered in the heading style, unboxed. */
+  .testimonials--large_quote .testimonials__item:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .testimonials--large_quote .testimonials__item:first-child .testimonials__figure {
+    align-items: center;
+    max-width: var(--width-prose);
+    margin-inline: auto;
+    border: 0;
+    text-align: center;
+  }
+
+  .testimonials--large_quote .testimonials__item:first-child .testimonials__quote {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+    text-transform: var(--font-heading--case);
+  }
+
+  /* Carousel: one quote at a time on mobile, two on larger screens, snapped as customers scroll or step. */
+  .testimonials__carousel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+
+  .testimonials--carousel .testimonials__list {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .testimonials--carousel .testimonials__list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .testimonials--carousel .testimonials__item {
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 750px) {
+    .testimonials--carousel .testimonials__list {
+      grid-auto-columns: calc((100% - var(--grid-gap)) / 2);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .testimonials--carousel .testimonials__list {
+      scroll-behavior: smooth;
+    }
+  }
+
+  .testimonials__controls {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xs);
+  }
+
+  .testimonials__control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: var(--space-xs);
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .testimonials__control svg {
+    width: 1.5rem;
+  }
+
+  .testimonials__control svg:dir(rtl) {
+    scale: -1 1;
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  class TestimonialsCarousel extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('.testimonials__list');
+      this.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-step]');
+        if (!button) return;
+        // One quote's width and its gap; right to left, forward scrolls toward negative scrollLeft.
+        const [first, second] = this.list.children;
+        const distance = Math.abs(second.offsetLeft - first.offsetLeft);
+        const direction = getComputedStyle(this).direction === 'rtl' ? -1 : 1;
+        this.list.scrollBy(Number(button.dataset.step) * distance * direction, 0);
+      });
+      this.addEventListener('shopify:block:select', (event) =>
+        event.target.scrollIntoView({ block: 'nearest', inline: 'start' })
+      );
+    }
+  }
+
+  if (!customElements.get('testimonials-carousel')) customElements.define('testimonials-carousel', TestimonialsCarousel);
+{% endjavascript %}
 
 {% schema %}
 {
@@ -99,6 +270,18 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "What our customers say"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "grid", "label": "t:options.layout.grid" },
+        { "value": "large_quote", "label": "t:options.layout.large_quote" },
+        { "value": "carousel", "label": "t:options.layout.carousel" },
+        { "value": "portraits", "label": "t:options.layout.portraits" }
+      ],
+      "default": "grid"
     }
   ],
   "blocks": [
@@ -123,6 +306,12 @@
           "id": "author_detail",
           "label": "t:labels.author_detail",
           "info": "t:info.testimonials_author_detail"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:labels.image",
+          "info": "t:info.testimonials_image"
         }
       ]
     }
@@ -130,6 +319,33 @@
   "presets": [
     {
       "name": "t:general.testimonials",
+      "blocks": [
+        { "type": "testimonial" },
+        { "type": "testimonial" },
+        { "type": "testimonial" }
+      ]
+    },
+    {
+      "name": "t:general.testimonials_large_quote",
+      "settings": { "layout": "large_quote" },
+      "blocks": [
+        { "type": "testimonial" },
+        { "type": "testimonial" },
+        { "type": "testimonial" }
+      ]
+    },
+    {
+      "name": "t:general.testimonials_carousel",
+      "settings": { "layout": "carousel" },
+      "blocks": [
+        { "type": "testimonial" },
+        { "type": "testimonial" },
+        { "type": "testimonial" }
+      ]
+    },
+    {
+      "name": "t:general.testimonials_portraits",
+      "settings": { "layout": "portraits" },
       "blocks": [
         { "type": "testimonial" },
         { "type": "testimonial" },

@@ -896,7 +896,21 @@ describe('Studio API: section settings', () => {
     const { status, body } = await studio.send('GET', `api/home/sections/${id}`)
     expect(status).toBe(200)
     expect(body).toMatchObject({ id, type: 'testimonials', name: 'Testimonials', colorScheme: 'scheme-1' })
-    expect(body.settings).toEqual([{ id: 'heading', type: 'inline_richtext', label: 'Heading', value: 'What our customers say' }])
+    expect(body.settings).toEqual([
+      { id: 'heading', type: 'inline_richtext', label: 'Heading', value: 'What our customers say' },
+      {
+        id: 'layout',
+        type: 'select',
+        label: 'Layout',
+        value: 'grid',
+        options: [
+          { value: 'grid', label: 'Grid' },
+          { value: 'large_quote', label: 'Large quote' },
+          { value: 'carousel', label: 'Carousel' },
+          { value: 'portraits', label: 'With portraits' },
+        ],
+      },
+    ])
     expect(body.blocks).toHaveLength(3)
     expect(body.blocks[0]).toEqual({
       id: expect.stringMatching(/^testimonial_/),
@@ -907,7 +921,7 @@ describe('Studio API: section settings', () => {
         { id: 'author', type: 'text', label: 'Author', value: 'Customer name' },
         { id: 'author_detail', type: 'text', label: 'Author detail', value: '' },
       ],
-      media: [],
+      media: [{ id: 'image', type: 'image_picker', label: 'Image', set: false }],
     })
   })
 
