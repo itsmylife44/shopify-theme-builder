@@ -3159,6 +3159,46 @@ describe('Price savings', () => {
   })
 })
 
+describe('Tax note', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const note = read('base-theme/snippets/tax-note.liquid')
+  const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+
+  it('says what the price includes from cart.taxes_included and cart.duties_included', () => {
+    expect(note).toMatch(
+      /if cart\.duties_included and cart\.taxes_included\s*echo 'taxes\.duties_and_taxes_included' \| t\s*elsif cart\.taxes_included\s*echo 'taxes\.included' \| t\s*elsif cart\.duties_included\s*echo 'taxes\.duties_included' \| t\s*endif/,
+    )
+    expect(locale.taxes.duties_and_taxes_included).toBe('Duties and taxes included.')
+    expect(locale.taxes.included).toBe('Taxes included.')
+    expect(locale.taxes.duties_included).toBe('Duties included.')
+  })
+
+  it('says what checkout adds, linking shipping to the shipping policy when the shop has one', () => {
+    expect(note).toMatch(
+      /if cart\.taxes_included\s*if shop\.shipping_policy\s*echo 'taxes\.shipping_at_checkout_html' \| t: link: shop\.shipping_policy\.url\s*else\s*echo 'taxes\.shipping_at_checkout' \| t\s*endif\s*elsif shop\.shipping_policy\s*echo 'taxes\.taxes_and_shipping_at_checkout_html' \| t: link: shop\.shipping_policy\.url\s*else\s*echo 'taxes\.taxes_and_shipping_at_checkout' \| t\s*endif/,
+    )
+    expect(locale.taxes.shipping_at_checkout).toBe('Shipping calculated at checkout.')
+    expect(locale.taxes.shipping_at_checkout_html).toBe('<a href="{{ link }}">Shipping</a> calculated at checkout.')
+    expect(locale.taxes.taxes_and_shipping_at_checkout).toBe('Taxes and shipping calculated at checkout.')
+    expect(locale.taxes.taxes_and_shipping_at_checkout_html).toBe('Taxes and <a href="{{ link }}">shipping</a> calculated at checkout.')
+    expect(locale.cart.taxes_and_shipping).toBeUndefined()
+  })
+
+  it.each(['catalog/sections/main-cart.liquid', 'base-theme/sections/cart.liquid'])(
+    'shows under the subtotal of %s, which the cart drawer shows too',
+    (file) => {
+      expect(read(file)).toContain(`<p class="rte">{%- render 'tax-note' -%}</p>`)
+    },
+  )
+
+  it('shows under the product price, from the cart too, since shop.taxes_included is deprecated', () => {
+    expect(read('base-theme/blocks/_product-price.liquid')).toMatch(
+      /<p class="product-price__note text-small rte">{%- render 'tax-note' -%}<\/p>\s*<\/div>/,
+    )
+  })
+})
+
 describe('Catalog updates', () => {
   const skill = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/SKILL.md'), 'utf8')
   const step = skill.match(/^## 7\. Update the catalog sections\n([\s\S]*?)^## /m)?.[1] ?? ''
