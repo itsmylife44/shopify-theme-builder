@@ -34,7 +34,6 @@
     "remove": "Remove",
     "remove_item": "Remove {{ product }}",
     "subtotal": "Subtotal",
-    "taxes_and_shipping": "Taxes and shipping calculated at checkout.",
     "title": "Cart",
     "total": "Total",
     "unit_price": "Unit price",
@@ -172,6 +171,15 @@
     "products": "Products",
     "pages": "Pages",
     "search_for_html": "Search for “{{ terms }}”"
+  },
+  "taxes": {
+    "duties_and_taxes_included": "Duties and taxes included.",
+    "duties_included": "Duties included.",
+    "included": "Taxes included.",
+    "shipping_at_checkout": "Shipping calculated at checkout.",
+    "shipping_at_checkout_html": "<a href=\"{{ link }}\">Shipping</a> calculated at checkout.",
+    "taxes_and_shipping_at_checkout": "Taxes and shipping calculated at checkout.",
+    "taxes_and_shipping_at_checkout_html": "Taxes and <a href=\"{{ link }}\">shipping</a> calculated at checkout."
   },
   "announcement_bar": {
     "label": "Announcements",

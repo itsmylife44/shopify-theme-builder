@@ -1,7 +1,8 @@
 {% doc %}
   Renders the price of the selected variant, or of its selected selling plan,
   with the price it replaces and the saving when on sale, the per delivery price,
-  the plan's description and the unit price.
+  the plan's description, the unit price, and what the price includes and checkout adds
+  (taxes, duties, shipping).
 
   @example
   {% content_for 'block', type: '_product-price', id: 'product-price' %}
@@ -51,6 +52,7 @@
       {{ current_variant.unit_price | unit_price_with_measurement: current_variant.unit_price_measurement }}
     </p>
   {% endif %}
+  <p class="product-price__note text-small rte">{%- render 'tax-note' -%}</p>
 </div>
 
 {% stylesheet %}

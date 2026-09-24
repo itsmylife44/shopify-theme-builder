@@ -118,7 +118,7 @@
             {{ 'cart.subtotal' | t }}
             {{ cart.total_price | money_with_currency }}
           </p>
-          <p>{{ 'cart.taxes_and_shipping' | t }}</p>
+          <p class="rte">{%- render 'tax-note' -%}</p>
           <div class="main-cart__actions">
             <button type="submit" name="update" class="button--secondary">{{ 'cart.update' | t }}</button>
             <button type="submit" name="checkout" class="button">{{ 'cart.checkout' | t }}</button>

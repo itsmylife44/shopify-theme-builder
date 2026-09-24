@@ -22,6 +22,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Product cards show the full title and the price, and cards in one row line up.
 - Filters and sorting are there on the collection page, and applied filters show as chips that clear.
 - The cart shows the full cost before checkout.
+- The cart and the product price say whether taxes (and duties) are included and what checkout adds, with shipping linked to the shipping policy (the Base Theme's `tax-note` snippet).
 
 ## Accessibility
 

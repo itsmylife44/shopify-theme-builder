@@ -1,0 +1,31 @@
+{% doc %}
+  Renders, as text, what prices include (taxes, duties) and what checkout adds, like "Taxes included.
+  Shipping calculated at checkout.", with "shipping" linked to the shop's shipping policy when it has one.
+  Taxes follow `cart.taxes_included` everywhere, the product page too: `shop.taxes_included` is deprecated,
+  since whether prices include taxes depends on the customer's country. The cart shows it under the
+  subtotal, the product page under the price.
+
+  @example
+  <p class="rte">{%- render 'tax-note' -%}</p>
+{% enddoc %}
+{%- liquid
+  if cart.duties_included and cart.taxes_included
+    echo 'taxes.duties_and_taxes_included' | t
+  elsif cart.taxes_included
+    echo 'taxes.included' | t
+  elsif cart.duties_included
+    echo 'taxes.duties_included' | t
+  endif
+%} {% liquid
+  if cart.taxes_included
+    if shop.shipping_policy
+      echo 'taxes.shipping_at_checkout_html' | t: link: shop.shipping_policy.url
+    else
+      echo 'taxes.shipping_at_checkout' | t
+    endif
+  elsif shop.shipping_policy
+    echo 'taxes.taxes_and_shipping_at_checkout_html' | t: link: shop.shipping_policy.url
+  else
+    echo 'taxes.taxes_and_shipping_at_checkout' | t
+  endif
+-%}

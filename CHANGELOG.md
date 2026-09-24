@@ -150,6 +150,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- The cart page, the cart drawer and the product price say what prices include and what checkout adds, from the customer's `cart.taxes_included` and `cart.duties_included`: "Taxes included. Shipping calculated at checkout." in a shop whose prices include tax, "Taxes and shipping calculated at checkout." otherwise, and duties when included, with "shipping" linked to the shipping policy when the shop has one. The cart always said taxes came at checkout, and the product price had no tax line, which the Theme Store requires. The Base Theme's new `tax-note` snippet renders it; the `cart.taxes_and_shipping` locale key gives way to a `taxes` group.
+
 - Once a Direction is chosen, and while the preview shows it, tuned or not, every home edit in the Studio (adding, removing, moving or editing a section or its blocks) also writes the chosen Direction's `listings/<name>/templates/index.json`, in the same undo step, so the home the Theme Store preset installs, and `check-direction` reads, stays the Theme's. Choosing the Direction the preview shows keeps the home edits made before.
 
 - The agent reads the brief back to the Creator and has them confirm it every time, even when their first message gave all six items: the read-back checks how it read the brief (the brand's world, the category default and its opposite, what each reference lends), in one question with the brief in a preview. Only a Creator who says to just build it skips it.
