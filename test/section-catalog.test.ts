@@ -2369,6 +2369,26 @@ describe('Style system', () => {
     expect(variables).toMatch(/--color-border-subtle: rgb\(from {{ scheme\.settings\.border }} r g b \/ [\d.]+\);/)
   })
 
+  it('derives muted text per scheme: the text mixed toward the background only as far as 4.5:1 allows', () => {
+    const variables = read('base-theme/snippets/css-variables.liquid')
+    const schemes = variables.slice(variables.indexOf('{% for scheme in settings.color_schemes %}'))
+    // 70% text first, as the old opacity looked; then more text until it reads, with a margin for the rounding of
+    // color_contrast; the text itself when no mix does. check-direction.mjs derives it the same way.
+    expect(schemes).toMatch(/assign muted_text = scheme\.settings\.text\s+for step in \(14\.\.19\)\s+assign share = step \| times: 5/)
+    expect(schemes).toMatch(/assign mix = scheme\.settings\.text \| color_mix: scheme\.settings\.background, share/)
+    expect(schemes).toMatch(/assign mix_contrast = mix \| color_contrast: scheme\.settings\.background\s+if mix_contrast >= 4\.6\s+assign muted_text = mix\s+break/)
+    expect(schemes).toContain('--color-foreground-muted: {{ muted_text }};')
+  })
+
+  it('mutes text with the muted color, and keeps the muted opacity for unavailable options and thumbnails', () => {
+    const critical = read('base-theme/assets/critical.css')
+    const faded = [...stylesheets, { file: 'critical.css', css: critical }].flatMap(({ css }) =>
+      [...css.matchAll(/([^{}]+){[^{}]*opacity: var\(--opacity-muted\)/g)].map(([, selector]) => selector.trim()),
+    )
+    expect(faded.sort()).toEqual(['.main-product__thumbnail', '.quick-add__option-label--unavailable', '.variant-picker__option-label--unavailable'])
+    expect(critical).toMatch(/\.product-card__vendor,\s*\.product-card__rating,\s*\.product-card__compare-at {\s*color: var\(--color-foreground-muted\);/)
+  })
+
   it('borders every input and select with the border color, not the text color', () => {
     const critical = read('base-theme/assets/critical.css')
     for (const { file, css } of [...stylesheets, { file: 'critical.css', css: critical }]) {
@@ -2857,7 +2877,7 @@ describe('Card and media settings', () => {
     expect(caps).toContain('text-transform: uppercase;')
     expect(caps).toContain('letter-spacing: 0.12em;')
     expect(rule('.product-card--text-bold .product-card__title')).toContain('font-weight: 700;')
-    expect(rule('.product-card--text-bold .price:not(:has(.price__sale))')).toContain('opacity: var(--opacity-muted);')
+    expect(rule('.product-card--text-bold .price:not(:has(.price__sale))')).toContain('color: var(--color-foreground-muted);')
   })
 
   it('aligns the card text to the start, center or end', () => {

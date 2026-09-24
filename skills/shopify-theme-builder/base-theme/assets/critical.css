@@ -423,7 +423,7 @@ input:not([type='checkbox'], [type='radio']) {
 }
 
 .product-card--text-bold .price:not(:has(.price__sale)) {
-  opacity: var(--opacity-muted);
+  color: var(--color-foreground-muted);
 }
 
 a.product-card__title:hover {
@@ -432,7 +432,7 @@ a.product-card__title:hover {
 }
 
 .product-card__unit-price {
-  opacity: var(--opacity-muted);
+  color: var(--color-foreground-muted);
 }
 
 .product-card__quick-add {
@@ -460,7 +460,7 @@ a.product-card__title:hover {
 .product-card__vendor,
 .product-card__rating,
 .product-card__compare-at {
-  opacity: var(--opacity-muted);
+  color: var(--color-foreground-muted);
 }
 
 .product-card__swatches {

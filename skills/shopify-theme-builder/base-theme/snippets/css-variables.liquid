@@ -173,6 +173,7 @@
     --style-border-radius-badges: {{ radius_badges }};
     --focus-ring-width: 2px;
     --focus-ring-offset: 2px;
+    {% # Faded controls: thumbnails not shown, options not available. Muted text takes --color-foreground-muted. %}
     --opacity-muted: 0.7;
     --opacity-disabled: 0.5;
     {% # Touch targets: primary controls (buttons, fields, menu, close, variant options) are at least --target-size, every other control --target-size-min. %}
@@ -255,11 +256,26 @@
           endif
         endif
       endif
+
+      # Muted text (vendors, compare-at prices, labels): the text mixed toward the background, 70% text first, then
+      # more until it reads at 4.6:1 (a margin over 4.5:1, since color_contrast rounds), else the text itself.
+      # check-direction.mjs derives it the same way.
+      assign muted_text = scheme.settings.text
+      for step in (14..19)
+        assign share = step | times: 5
+        assign mix = scheme.settings.text | color_mix: scheme.settings.background, share
+        assign mix_contrast = mix | color_contrast: scheme.settings.background
+        if mix_contrast >= 4.6
+          assign muted_text = mix
+          break
+        endif
+      endfor
     %}
     {% if forloop.first %}:root,{% endif %}
     .color-{{ scheme.id }} {
       --color-background: {{ scheme.settings.background }};
       --color-foreground: {{ scheme.settings.text }};
+      --color-foreground-muted: {{ muted_text }};
       --color-button: {{ scheme.settings.button }};
       --color-button-label: {{ scheme.settings.button_label }};
       --color-button-border: {{ scheme.settings.button }};

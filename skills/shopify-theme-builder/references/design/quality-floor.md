@@ -27,7 +27,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 
 ## Accessibility
 
-- Text reaches 4.5:1 contrast on its background, and borders of inputs 3:1, in every color scheme (`check-direction.mjs` checks the schemes; check text on images in the screenshots).
+- Text reaches 4.5:1 contrast on its background (every stop of a background gradient too), and borders of inputs and buttons against the page 3:1, in every color scheme (`check-direction.mjs` checks the schemes; check text on images in the screenshots). Muted text takes `--color-foreground-muted`, which the Theme keeps at 4.5:1, never an opacity.
 - Buttons, menu and close icons, and variant options are at least 44px square on mobile; any other control at least 24px.
 - Running text stays under about 70 characters a line.
 - Headings go in order (one `h1` per page, no skipped levels), and every image the Creator placed has alt text.
