@@ -131,6 +131,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - The home page's featured collection no longer lands on an empty collection and shows example product cards. `GET /api/store` listed collections without their products, so the agent picked Shopify's `frontpage` ("Home page") collection, which is often empty. Each collection now has `products`, its number of products, and `SKILL.md` tells the agent to give every `collection` setting one with products.
 
+- The dynamic checkout "Buy it now" button no longer shows in Shopify's default blue. The unbranded one takes the theme's primary button style (filled or outline, with its radius, case and weight, and no color change on hover), and "Add to cart" becomes the secondary button above it on the product page and in the featured product. Branded buttons, like Shop Pay and PayPal, keep their brand colors.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.

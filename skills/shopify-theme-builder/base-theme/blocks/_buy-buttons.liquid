@@ -122,7 +122,7 @@
     {% endif %}
     <button
       type="submit"
-      class="button buy-buttons__add"
+      class="{% if block.settings.show_dynamic_checkout %}button--secondary{% else %}button{% endif %} buy-buttons__add"
       {% unless current_variant.available %}
         disabled
       {% endunless %}
