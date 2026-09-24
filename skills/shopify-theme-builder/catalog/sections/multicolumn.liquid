@@ -110,7 +110,6 @@
     width: 100%;
     overflow: hidden;
     border-radius: var(--style-border-radius-media);
-    background-color: var(--media-background);
   }
 
   .multicolumn__media--small {
@@ -122,14 +121,12 @@
     display: block;
     width: 100%;
     height: auto;
-    padding: var(--media-inset);
-    mix-blend-mode: var(--media-blend);
   }
 
   .multicolumn__media--large img,
   .multicolumn__media--large .multicolumn__placeholder {
     aspect-ratio: 3 / 2;
-    object-fit: var(--media-fit);
+    object-fit: cover;
   }
 
   .multicolumn__media--small img,

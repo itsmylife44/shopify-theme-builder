@@ -191,9 +191,10 @@
     --card-padding: {% if settings.card_style == 'plain' %}0{% else %}var(--space-sm){% endif %};
     --card-hover-scale: {% if settings.card_hover == 'zoom' %}1.05{% else %}1{% endif %};
     {% comment %}
-      Media: every contained image and video sits in a box with the tint behind it. Full-bleed crops the image to
-      fill the box; framed shows all of it, inset. An image over the tint multiplies with it, so the white of a
-      cut-out product photo takes the tint.
+      Media, for product images only (product cards, the product page, featured product, quick add, predictive
+      search and collection images): each sits in a box with the tint behind it. Full-bleed crops the image to fill
+      the box; framed shows all of it, inset. An image over the tint multiplies with it, so the white of a cut-out
+      product photo takes the tint. Every other image always covers its box and uses none of these.
     {% endcomment %}
     --media-fit: {% if framed %}contain{% else %}cover{% endif %};
     --media-inset: {% if framed %}5%{% else %}0{% endif %};

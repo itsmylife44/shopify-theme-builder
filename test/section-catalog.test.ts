@@ -1671,8 +1671,8 @@ describe('Lookbook', () => {
     expect(blockSettings.product.type).toBe('product')
     for (const id of ['x', 'y']) expect(blockSettings[id]).toEqual(expect.objectContaining({ type: 'range', min: 0, max: 100, unit: '%' }))
     expect(source).toContain('style="--hotspot-x: {{ block.settings.x }}%; --hotspot-y: {{ block.settings.y }}%;')
-    // The image keeps its own ratio inside the media inset, so the hotspots stay where the Merchant put them.
-    expect(css).toMatch(/\.lookbook__media {[^}]*padding: var\(--media-inset\);[^}]*background-color: var\(--media-background\);/)
+    // The image keeps its own ratio, with no inset, so the hotspots stay where the Merchant put them.
+    expect(css).toMatch(/\.lookbook__stage > img,\s*\.lookbook__placeholder {[^}]*height: auto;/)
     expect(css).toMatch(/\.lookbook__stage {\s*position: relative;/)
   })
 
@@ -1741,9 +1741,9 @@ describe('Timeline', () => {
     expect(css).toMatch(/\.timeline__item::before {[^}]*border-radius: var\(--style-border-radius-badges\);/)
   })
 
-  it('shows each image in the media treatment of the style system', () => {
-    expect(css).toMatch(/\.timeline__media {[^}]*border-radius: var\(--style-border-radius-media\);[^}]*background-color: var\(--media-background\);/)
-    expect(css).toMatch(/\.timeline__media img {[^}]*padding: var\(--media-inset\);[^}]*object-fit: var\(--media-fit\);[^}]*mix-blend-mode: var\(--media-blend\);/)
+  it('shows each image filling its box, with the media radius of the style system', () => {
+    expect(css).toMatch(/\.timeline__media {[^}]*border-radius: var\(--style-border-radius-media\);/)
+    expect(css).toMatch(/\.timeline__media img {[^}]*object-fit: cover;/)
   })
 })
 
@@ -1776,10 +1776,10 @@ describe('Process steps', () => {
     expect(source).toContain('<div class="process-steps__text rte">')
   })
 
-  it('shows each image, or a placeholder, in the media treatment of the style system', () => {
+  it('shows each image, or a placeholder, filling its box, with the media radius of the style system', () => {
     expect(source).toMatch(/{% else %}\s*{{ 'image' \| placeholder_svg_tag: 'placeholder' }}/)
-    expect(css).toMatch(/\.process-steps__media {[^}]*aspect-ratio: [^;]+;[^}]*border-radius: var\(--style-border-radius-media\);[^}]*background-color: var\(--media-background\);/)
-    expect(css).toMatch(/\.process-steps__media > \* {[^}]*padding: var\(--media-inset\);[^}]*object-fit: var\(--media-fit\);[^}]*mix-blend-mode: var\(--media-blend\);/)
+    expect(css).toMatch(/\.process-steps__media {[^}]*aspect-ratio: [^;]+;[^}]*border-radius: var\(--style-border-radius-media\);/)
+    expect(css).toMatch(/\.process-steps__media > \* {[^}]*object-fit: cover;/)
   })
 
   it('stacks the steps on mobile and puts up to four in a row on desktop, spaced by the grid gap', () => {
@@ -2641,31 +2641,55 @@ describe('Card and media settings', () => {
     expect(critical).toMatch(/\.product-card__image img,\s*\.product-card__placeholder {[^}]*padding: var\(--media-inset\);[^}]*object-fit: var\(--media-fit\);[^}]*mix-blend-mode: var\(--media-blend\)/)
   })
 
-  // Every contained image and video: a box with the tint behind the media, which fits and insets it.
-  it.each([
+  // Framing, the tint and its blend are for product images: the product card, the product page, featured product,
+  // quick add (styled in the header), product results in predictive search, and collection images, which show a
+  // product's when the collection has none. The Base Theme's image snippet shows cart, product and collection images.
+  const productMedia = [
     'base-theme/snippets/image.liquid',
+    ...['collection-list', 'featured-product', 'header', 'main-list-collections', 'main-product', 'predictive-search'].map(
+      (name) => `catalog/sections/${name}.liquid`,
+    ),
+  ]
+  // Every other image always covers its box: no inset, no tint behind it, no blend.
+  const editorialMedia = [
     'base-theme/sections/blog.liquid',
     ...[
       'blog-posts',
-      'collection-list',
-      'featured-product',
-      'header',
+      'contact-form',
+      'editorial-split',
       'image-gallery',
       'image-with-text',
       'main-blog',
-      'main-list-collections',
-      'main-product',
       'main-search',
       'multicolumn',
-      'predictive-search',
+      'newsletter',
+      'process-steps',
+      'timeline',
       'video',
     ].map((name) => `catalog/sections/${name}.liquid`),
-  ])('takes the media settings in %s', (file) => {
+  ]
+
+  it('uses the --media-* framing variables only for product images', () => {
+    const users = ['base-theme', 'catalog']
+      .flatMap((dir) =>
+        readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+          .filter((file) => /\.(liquid|css)$/.test(file))
+          .map((file) => path.join(dir, file)),
+      )
+      .filter((file) => file !== 'base-theme/snippets/css-variables.liquid' && read(file).includes('var(--media-'))
+    expect(users.sort()).toEqual(['base-theme/assets/critical.css', ...productMedia].sort())
+  })
+
+  it.each(productMedia)('frames and tints the product images in %s', (file) => {
     const source = read(file)
     expect(source).toContain('background-color: var(--media-background);')
     expect(source).not.toContain('object-fit: cover')
-    // Thumbnails and video posters take the tint and the fit, not the inset.
-    if (!/predictive-search|video/.test(file)) expect(source).toContain('padding: var(--media-inset);')
+    // Thumbnails take the tint and the fit, not the inset.
+    if (!/predictive-search/.test(file)) expect(source).toContain('padding: var(--media-inset);')
+  })
+
+  it.each(editorialMedia)('covers the box with each image in %s', (file) => {
+    expect(read(file)).toMatch(/object-fit: cover;/)
   })
 
   it('labels the card and media settings with translation keys the schema locale has', () => {
@@ -3011,8 +3035,8 @@ describe('Image loading', () => {
     (name) => {
       const css = stylesheet(read(`catalog/sections/${name}.liquid`))
       expect(css).toMatch(/aspect-ratio:/)
-      // Cropped to fill or framed whole, as the media treatment says: either way the box keeps its ratio.
-      expect(css).toMatch(/object-fit: var\(--media-fit\)/)
+      // Cropped to fill, or for product images framed whole as the media treatment says: either way the box keeps its ratio.
+      expect(css).toMatch(/object-fit: (var\(--media-fit\)|cover)/)
     },
   )
 })

@@ -124,6 +124,10 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - `check-direction.mjs` checks the home page and each Direction's home (`listings/<name>/templates/index.json`) for movement and rhythm: `movement` when no section moves or responds (a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover), `section-count` below 6 sections, and `type-only` for rich text, type banner, newsletter or spec tiles sections with no image next to each other.
 
+### Changed
+
+- The media treatment and tint are for product images only: the product card, the product page gallery, featured product, product results in search and predictive search, quick add, and collection images. Every other image (image with text, editorial split, lookbook, multicolumn, image gallery, blog posts and the blog page, article results in search, video poster, newsletter, contact form, process steps, timeline) always fills its box, with no inset, no tint behind it and no multiply blend, so a lifestyle photo never shrinks into a grey frame.
+
 ### Fixed
 
 - The first image a customer sees loads first: the hero and the first slide of a slideshow at the top of the page, and the product page's main image, carry `fetchpriority="high"` and are never lazy-loaded. Every image in the Section Catalog gives the browser its `sizes` (the Base Theme's `image` snippet takes a new `sizes` parameter, `100vw` by default), and the multicolumn grid fits its images into a fixed ratio box like the other grids, so images of mixed ratios keep the rows even.
