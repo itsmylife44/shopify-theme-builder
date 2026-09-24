@@ -32,13 +32,14 @@ Fix each finding. A finding stays only when `DIRECTION.md` gives it a reason (th
 
 Screenshot three pages of the preview (`url` in `GET /api/preview`), each at 1440 and at 390 pixels wide, full page, six in all: the home page `<url>/`, a product `<url>/products/<handle>` and a collection `<url>/collections/<handle>`, with a product and a collection from `GET /api/store`. Save them outside the Theme folder.
 
-Use whatever browser tool you have (a browser automation tool, Playwright, Puppeteer). Without one, Google Chrome takes them from the command line, one per page and width (a tall window gives a full page):
+Take them with the screenshot script, one per page and width:
 
 ```sh
-"<chrome>" --headless=new --hide-scrollbars --window-size=1440,6000 --screenshot=<file>.png <page>
+node <skill-dir>/scripts/screenshot.mjs <page> <file>-1440.png
+node <skill-dir>/scripts/screenshot.mjs <page> <file>-390.png --mobile
 ```
 
-`<chrome>` is Google Chrome's executable, like `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` on macOS or `google-chrome` on Linux. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When no tool can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
+It drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
 
 ## 3. Review them
 
