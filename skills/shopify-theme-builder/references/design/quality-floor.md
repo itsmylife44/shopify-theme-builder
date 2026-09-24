@@ -41,6 +41,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - No invented proof: no reviews, customer counts, press quotes, prices or stock counts the shop didn't give. Leave the section out instead.
 - One label per action: the same link has the same button label everywhere on a page.
 - Images are the store's photos or Shopify's placeholders, never stock people or AI illustration.
+- The footer shows Shop's Follow on Shop button (`show_follow_on_shop`, on by default; it appears once the store has Shop Pay), in Shop's own colors: a Direction never restyles it.
 
 ## Craft
 

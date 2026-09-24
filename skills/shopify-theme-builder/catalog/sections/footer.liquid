@@ -1,4 +1,4 @@
-{% comment %}The shop's footer: the brand's text, menus, social links, an email signup, the country and language selectors and the payment icons.{% endcomment %}
+{% comment %}The shop's footer: the brand's text, menus, social links, an email signup, the country and language selectors, Shop's Follow on Shop button and the payment icons.{% endcomment %}
 <footer class="footer full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   <div class="footer__inner">
     <div class="footer__columns">
@@ -178,6 +178,12 @@
         &copy; {{ 'now' | date: '%Y' }}
         {{ shop.name | link_to: routes.root_url }}, {{ powered_by_link }}
       </p>
+
+      {% if section.settings.show_follow_on_shop %}
+        <div class="footer__follow">
+          {{ shop | login_button: action: 'follow' }}
+        </div>
+      {% endif %}
 
       {% if section.settings.show_payment_icons %}
         <ul class="footer__payment footer__list" role="list">
@@ -368,6 +374,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-md);
   }
 
   .footer__payment {
@@ -437,6 +444,13 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_follow_on_shop",
+      "label": "t:labels.show_follow_on_shop",
+      "info": "t:info.footer_show_follow_on_shop",
+      "default": true
     },
     {
       "type": "header",
