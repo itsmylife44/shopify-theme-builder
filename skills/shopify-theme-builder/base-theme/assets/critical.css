@@ -355,6 +355,31 @@ input:not([type='checkbox'], [type='radio']) {
   text-decoration: none;
 }
 
+/* The card text style of a minimal or detailed card: quiet sets the title and price below the body size, caps
+   sets both small, in capitals, and bold sets the title in bold at the body size, with the price muted. A sale
+   price stays unmuted, so it keeps its accent color and the crossed-out price is not muted twice. */
+.product-card--text-quiet .product-card__title {
+  font-size: var(--font-size-small);
+}
+
+.product-card--text-quiet .price {
+  font-size: var(--font-size-label);
+}
+
+.product-card--text-caps :is(.product-card__title, .price) {
+  font-size: var(--font-size-label);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.product-card--text-bold .product-card__title {
+  font-weight: 700;
+}
+
+.product-card--text-bold .price:not(:has(.price__sale)) {
+  opacity: var(--opacity-muted);
+}
+
 a.product-card__title:hover {
   text-decoration: underline;
   text-underline-offset: 0.3em;

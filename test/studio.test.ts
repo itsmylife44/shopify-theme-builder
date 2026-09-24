@@ -460,6 +460,7 @@ describe('Studio API: style settings', () => {
       'card_image_ratio',
       'card_style',
       'card_text_alignment',
+      'card_text_style',
       'card_hover',
       'media_treatment',
       'media_tint',

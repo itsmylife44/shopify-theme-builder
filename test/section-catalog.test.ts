@@ -2611,13 +2611,28 @@ describe('Card and media settings', () => {
   })
 
   it('fills the top and sides of a bordered or surface card with its image, and pads only the text', () => {
-    expect(card).toContain('<div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}">')
+    expect(card).toContain('<div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}')
     expect(critical).toMatch(/\.product-card--bordered,\s*\.product-card--surface {[^}]*overflow: clip/)
     expect(critical).toMatch(
       /\.product-card--bordered \.product-card__image,\s*\.product-card--surface \.product-card__image {[^}]*margin: calc\(-1 \* var\(--card-padding\)\) calc\(-1 \* var\(--card-padding\)\) calc\(var\(--card-padding\) - var\(--space-xs\)\);[^}]*border-radius: 0/,
     )
     // A plain card keeps its image's own corners.
     expect(critical).toMatch(/\.product-card__image {[^}]*border-radius: var\(--style-border-radius-media\)/)
+  })
+
+  it('sets the text of minimal and detailed cards quiet, in caps or bold, quiet by default; editorial keeps its large title', () => {
+    expect(values('card_text_style')).toEqual(['quiet', 'caps', 'bold'])
+    expect(setting('card_text_style').default).toBe('quiet')
+    expect(card).toContain("{% unless anatomy == 'editorial' %} product-card--text-{{ settings.card_text_style }}{% endunless %}")
+    const rule = (selector: string) => critical.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} {([^}]*)}`))?.[1] ?? ''
+    expect(rule('.product-card--text-quiet .product-card__title')).toContain('font-size: var(--font-size-small);')
+    expect(rule('.product-card--text-quiet .price')).toContain('font-size: var(--font-size-label);')
+    const caps = rule('.product-card--text-caps :is(.product-card__title, .price)')
+    expect(caps).toContain('font-size: var(--font-size-label);')
+    expect(caps).toContain('text-transform: uppercase;')
+    expect(caps).toContain('letter-spacing: 0.12em;')
+    expect(rule('.product-card--text-bold .product-card__title')).toContain('font-weight: 700;')
+    expect(rule('.product-card--text-bold .price:not(:has(.price__sale))')).toContain('opacity: var(--opacity-muted);')
   })
 
   it('aligns the card text to the start, center or end', () => {
@@ -2711,7 +2726,7 @@ describe('Card and media settings', () => {
 
   it('labels the card and media settings with translation keys the schema locale has', () => {
     const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
-    const ids = ['card_image_ratio', 'card_style', 'card_text_alignment', 'card_hover', 'media_treatment', 'media_tint']
+    const ids = ['card_image_ratio', 'card_style', 'card_text_alignment', 'card_text_style', 'card_hover', 'media_treatment', 'media_tint']
     const keys = ids.flatMap((id) => [setting(id).label, ...(setting(id).info ? [setting(id).info] : []), ...(setting(id).options ?? []).map((o: { label: string }) => o.label)])
     for (const key of keys) {
       expect(key).toMatch(/^t:/)
