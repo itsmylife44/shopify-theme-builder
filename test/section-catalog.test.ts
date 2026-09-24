@@ -178,7 +178,7 @@ describe('Cart drawer', () => {
   it.each(['main-product', 'featured-product'])('adds from %s through /cart/add.js and opens the drawer, or posts to /cart without one', (name) => {
     const header = read('catalog/sections/header.liquid')
     const source = read(`catalog/sections/${name}.liquid`)
-    expect(source).toContain("{% form 'product', product")
+    expect(name === 'main-product' ? read('base-theme/blocks/_buy-buttons.liquid') : source).toContain("{% form 'product', product")
     expect(source).toMatch(/const drawer = document\.querySelector\('cart-drawer'\);\s*if \(!drawer\?\.add\) return;\s*event\.preventDefault\(\);\s*drawer\.add\(event\.target, event\.submitter\)/)
     expect(header).toContain('data-add-url="{{ routes.cart_add_url }}.js"')
     expect(header).toContain("body.append('sections', this.dataset.sections)")
@@ -407,12 +407,8 @@ describe('Collections list page', () => {
 })
 
 describe('Unit prices', () => {
-  const sections = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
-  const read = (name: string) => readFileSync(path.join(sections, `${name}.liquid`), 'utf8')
-
   it('shows the variant unit price inside the product info, so it updates with the variant', () => {
-    const source = read('main-product')
-    const info = source.slice(source.indexOf('<product-info'), source.indexOf('</product-info>'))
+    const info = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/blocks/_product-price.liquid'), 'utf8')
     expect(info).toContain('{% if current_variant.unit_price_measurement %}')
     expect(info).toContain('current_variant.unit_price | unit_price_with_measurement: current_variant.unit_price_measurement')
     expect(info).toContain("'product.unit_price' | t")
@@ -432,17 +428,37 @@ describe('Product page shipping note and collapsible content', () => {
   const parse = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
   const mainProduct = read('catalog/sections/main-product.liquid')
 
-  it('lets the Merchant place a shipping note and collapsible content in any order in the main product, as theme blocks', () => {
+  it('lets the Merchant place the title, price, variant picker, buy buttons, shipping note and collapsible content in any order, as theme blocks', () => {
     const schema = parse(mainProduct)
-    expect(schema.blocks).toEqual(expect.arrayContaining([{ type: 'shipping-note' }, { type: 'collapsible-content' }]))
+    // Private blocks: only the main product offers them, since they need the product page's product.
+    const info = ['_product-title', '_product-price', '_variant-picker', '_buy-buttons', 'shipping-note', 'collapsible-content']
+    expect(schema.blocks).toEqual(expect.arrayContaining(info.map((type) => ({ type }))))
     expect(schema.presets[0].blocks.map((block: { type: string }) => block.type)).toEqual([
-      'shipping-note',
-      'collapsible-content',
+      ...info,
       'collapsible-content',
       'collapsible-content',
       'collapsible-content',
     ])
-    expect(schema.presets[0].blocks[1].settings).toMatchObject({ source: 'description' })
+    expect(schema.presets[0].blocks[5].settings).toMatchObject({ source: 'description' })
+    for (const type of info.slice(0, 4)) {
+      const block = read(`base-theme/blocks/${type}.liquid`)
+      expect(block, type).toContain('{{ block.shopify_attributes }}')
+      expect(parse(block).presets, type).toHaveLength(1)
+    }
+    // The info renders only through the blocks, in the Merchant's order.
+    const details = mainProduct.slice(mainProduct.indexOf('class="main-product__details"'), mainProduct.indexOf('</product-info>'))
+    expect(details.replace(/\s+/g, ' ')).toMatch(/^class="main-product__details"> {% content_for 'blocks' %} <\/div>/)
+  })
+
+  it('moves the vendor and dynamic checkout settings to the title and buy buttons blocks', () => {
+    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'gallery_layout'])
+    expect(parse(read('base-theme/blocks/_product-title.liquid')).settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
+    expect(parse(read('base-theme/blocks/_buy-buttons.liquid')).settings).toContainEqual({
+      type: 'checkbox',
+      id: 'show_dynamic_checkout',
+      label: 't:labels.show_dynamic_checkout_buttons',
+      default: true,
+    })
   })
 
   it('shows the description only through a collapsible block, never as one fixed block of text', () => {
@@ -478,21 +494,61 @@ describe('Product page shipping note and collapsible content', () => {
   })
 })
 
-describe('Product page requirements', () => {
-  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/main-product.liquid'), 'utf8')
+describe('Product page layouts', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-product.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
-  const info = source.slice(source.indexOf('<product-info'), source.indexOf('</product-info>'))
-  const form = source.slice(source.indexOf("{% form 'product'"), source.indexOf('{% endform %}'))
+  const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.schema.json'), 'utf8'))
+  const layouts = ['grid', 'stacked', 'thumbnails', 'carousel']
+
+  it('lays out the gallery as a grid, stacked full bleed, a main image with thumbnails or a carousel', () => {
+    const setting = schema.settings.find((s: { id: string }) => s.id === 'gallery_layout')
+    expect(setting).toMatchObject({ type: 'select', label: 't:labels.gallery_layout', default: 'grid' })
+    expect(setting.options.map((option: { value: string }) => option.value)).toEqual(layouts)
+    for (const { label } of setting.options) expect(locale.options.gallery_layout[label.split('.').pop()]).toBeTruthy()
+    expect(source).toContain('class="main-product main-product--{{ section.settings.gallery_layout }} full-width')
+  })
+
+  it('shows thumbnails on desktop only for the thumbnails layout, and arrows only for the carousel', () => {
+    expect(source).toMatch(/@media \(min-width: 750px\) {[^@]*\.main-product:not\(\.main-product--thumbnails\) \.main-product__thumbnails {\s*display: none;/)
+    const arrows = source.slice(source.indexOf("{% if section.settings.gallery_layout == 'carousel' and ordered_media.size > 1 %}"))
+    expect(arrows).toMatch(/data-step="-1" aria-label="{{ 'product\.previous_media' \| t }}"/)
+    expect(arrows).toMatch(/data-step="1" aria-label="{{ 'product\.next_media' \| t }}"/)
+    expect(source).toMatch(/\.main-product__arrow svg:dir\(rtl\) {\s*scale: -1 1;/)
+    expect(source).toContain('this.show(this.index + Number(arrow.dataset.step))')
+  })
+
+  it('keeps the stacked gallery full bleed: to the edge of the page, square', () => {
+    expect(source).toMatch(/\.main-product--stacked \.main-product__inner {\s*grid-column: 1 \/ -1;/)
+    expect(source).toMatch(/\.main-product:not\(\.main-product--stacked\) \.main-product__media-item {\s*border-radius: var\(--style-border-radius-media\);/)
+  })
+
+  it('offers each layout as a named preset with the same info blocks', () => {
+    expect(schema.presets.map((preset: { settings?: { gallery_layout?: string } }) => preset.settings?.gallery_layout ?? 'grid')).toEqual(layouts)
+    expect(schema.presets[0].name).toBe('t:general.main_product')
+    for (const preset of schema.presets.slice(1)) {
+      expect(locale.general[preset.name.replace('t:general.', '')]).toMatch(/^Product: /)
+      expect(preset.blocks).toEqual(schema.presets[0].blocks)
+    }
+  })
+})
+
+describe('Product page requirements', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const block = (name: string) => readFileSync(path.join(skillDir, `base-theme/blocks/${name}.liquid`), 'utf8')
+  const source = readFileSync(path.join(skillDir, 'catalog/sections/main-product.liquid'), 'utf8')
+  const buyButtons = block('_buy-buttons')
+  const info = ['_product-title', '_product-price', '_variant-picker'].map(block).join('\n') + buyButtons
+  const form = buyButtons.slice(buyButtons.indexOf("{% form 'product'"), buyButtons.indexOf('{% endform %}'))
 
   it('shows the vendor, with a setting to hide it', () => {
-    expect(schema.settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
-    expect(info).toContain('{% if section.settings.show_vendor and product.vendor != blank %}')
+    expect(info).toContain('{% if block.settings.show_vendor and product.vendor != blank %}')
     expect(info).toContain('product.vendor | escape')
   })
 
   it('shows pickup availability of the current variant inside the product info, so it updates with the variant', () => {
-    expect(info).toContain("current_variant.store_availabilities | where: 'pick_up_enabled', true")
-    expect(info).toContain('.pick_up_time')
+    expect(buyButtons).toContain("current_variant.store_availabilities | where: 'pick_up_enabled', true")
+    expect(buyButtons).toContain('.pick_up_time')
   })
 
   it('shows Shop Pay Installments inside the product form', () => {
@@ -509,7 +565,7 @@ describe('Product page requirements', () => {
   })
 
   it('prices the product with the selected plan and re-renders the product info when the plan changes', () => {
-    expect(source).toContain('assign selling_plan_allocation = current_variant.selected_selling_plan_allocation')
+    expect(info).toContain('assign selling_plan_allocation = current_variant.selected_selling_plan_allocation')
     expect(info).toContain('selling_plan_allocation.per_delivery_price')
     expect(info).toContain('selling_plan_allocation.selling_plan.description')
     expect(source).toContain("event.target.name !== 'selling_plan'")
@@ -519,7 +575,7 @@ describe('Product page requirements', () => {
   it('lets the customer send a gift card to a recipient, with labelled and validated fields', () => {
     const recipient = form.slice(form.indexOf('{% if product.gift_card? %}'))
     const fields = recipient.slice(recipient.indexOf('<fieldset'), recipient.indexOf('</fieldset>'))
-    expect(recipient).toMatch(/<fieldset[^>]*class="main-product__recipient-fields"[^>]*hidden\s+disabled/)
+    expect(recipient).toMatch(/<fieldset[^>]*class="buy-buttons__recipient-fields"[^>]*hidden\s+disabled/)
     expect(fields).toMatch(/type="hidden"\s+name="properties\[__shopify_send_gift_card_to_recipient\]"\s+value="true"/)
     expect(fields).toMatch(/type="email"\s+name="properties\[Recipient email\]"\s+required/)
     expect(recipient).toMatch(/name="properties\[Recipient name\]"\s+maxlength="255"/)
@@ -529,16 +585,16 @@ describe('Product page requirements', () => {
     for (const key of ['send_to_recipient', 'email', 'name', 'message', 'message_info', 'send_on', 'send_on_info']) {
       expect(recipient).toContain(`'product.recipient.${key}' | t`)
     }
-    expect(source).toContain('fields.hidden = fields.disabled = !checkbox.checked')
-    expect(source).toContain('new Date().getTimezoneOffset()')
+    expect(buyButtons).toContain('fields.hidden = fields.disabled = !checkbox.checked')
+    expect(buyButtons).toContain('new Date().getTimezoneOffset()')
   })
 
   it('keeps what the customer typed for the recipient when the variant changes', () => {
-    expect(source).toMatch(/this\.querySelector\('\.main-product__recipient'\)\?\.replaceWith\(recipient\)/)
+    expect(source).toMatch(/this\.querySelector\('\.buy-buttons__recipient'\)\?\.replaceWith\(recipient\)/)
   })
 
   it('shows color and image swatches in the variant picker, falling back to the text pill', () => {
-    const picker = source.slice(source.indexOf('class="main-product__options"'), source.indexOf('</fieldset>'))
+    const picker = block('_variant-picker')
     expect(picker).toContain('{% if option_value.swatch.image %}')
     expect(picker).toContain('option_value.swatch.image | image_url')
     expect(picker).toContain('{% elsif option_value.swatch.color %}')
@@ -548,7 +604,7 @@ describe('Product page requirements', () => {
   })
 
   it('links option values of combined listings to their sibling product, swatches included', () => {
-    const picker = source.slice(source.indexOf('class="main-product__options"'), source.indexOf('</fieldset>'))
+    const picker = block('_variant-picker')
     expect(picker).toContain('data-product-url="{{ option_value.product_url }}"')
     expect(source).toContain('const { productUrl } = event.target.dataset')
     expect(source).toMatch(/if \(productUrl && productUrl !== this\.dataset\.url\) {\s*location\.assign\(`\${productUrl}\?option_values=\${optionValues}`\)/)
@@ -565,7 +621,7 @@ describe('Product page requirements', () => {
   })
 
   it('shows scrollable thumbnails under the swipeable media on mobile, the current one marked, a partial last one when more exist', () => {
-    const gallery = info.slice(info.indexOf('<media-gallery'), info.indexOf('</media-gallery>'))
+    const gallery = source.slice(source.indexOf('<media-gallery'), source.indexOf('</media-gallery>'))
     expect(gallery).toMatch(/<ul class="main-product__media" role="list" tabindex="0"/)
     const thumbnails = gallery.slice(gallery.indexOf('{% if ordered_media.size > 1 %}'))
     expect(thumbnails).toMatch(/<ul class="main-product__thumbnails" role="list" aria-label="{{ 'product\.media_thumbnails' \| t }}">\s*{% for media in ordered_media %}/)
@@ -574,7 +630,6 @@ describe('Product page requirements', () => {
     expect(thumbnails).toContain("media.preview_image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: ''")
     // Four and a half thumbnails fill the strip, so a cut-off fifth signals more.
     expect(source).toMatch(/\.main-product__thumbnails {[^}]*grid-auto-columns: calc\(\(100% - 4 \* var\(--space-xs\)\) \/ 4\.5\);[^}]*overflow-x: auto;/)
-    expect(source).toMatch(/@media \(min-width: 750px\) {[^@]*\.main-product__thumbnails {\s*display: none;/)
     expect(source).toMatch(/\.main-product__thumbnail\[aria-current='true'\] {/)
     expect(source).toContain("customElements.define('media-gallery'")
     expect(source).toContain('.scrollIntoView(')
@@ -1831,7 +1886,7 @@ describe('Style system', () => {
     expect(critical).toMatch(/\.price__sale {[^}]*color: var\(--color-accent\)/)
     expect(critical).toMatch(/\.rte a[^{]*{[^}]*color: var\(--color-accent\)/)
     expect(read('catalog/sections/header.liquid')).toMatch(/\.header__cart-count {[^}]*background-color: var\(--color-accent\)/)
-    for (const file of ['catalog/sections/main-product.liquid', 'catalog/sections/featured-product.liquid', 'catalog/sections/quick-add.liquid']) {
+    for (const file of ['base-theme/blocks/_product-price.liquid', 'catalog/sections/featured-product.liquid', 'catalog/sections/quick-add.liquid']) {
       const sale = read(file).match(/compare_at_price > [\s\S]*?{% else %}/)![0]
       expect(sale, file).toMatch(/<span class="price__sale">{{ [\w.]*price \| money }}<\/span>/)
     }
@@ -1920,7 +1975,7 @@ describe('Touch targets and text measure', () => {
   })
 
   it('makes the menu and close buttons and the variant options 44px square', () => {
-    for (const selector of ['.header__menu-button', '.header__drawer-close', '.quick-add__close', '.main-product__option-label', '.quick-add__option-label']) {
+    for (const selector of ['.header__menu-button', '.header__drawer-close', '.quick-add__close', '.variant-picker__option-label', '.quick-add__option-label']) {
       expect(target(selector, 'block'), selector).toBe(44)
       expect(target(selector, 'inline'), selector).toBe(44)
     }
@@ -2004,7 +2059,7 @@ describe('Type settings', () => {
   it.each([
     'base-theme/snippets/product-card.liquid',
     'catalog/sections/featured-product.liquid',
-    'catalog/sections/main-product.liquid',
+    'base-theme/blocks/_product-price.liquid',
     'catalog/sections/quick-add.liquid',
     'catalog/sections/predictive-search.liquid',
     'catalog/sections/main-cart.liquid',
@@ -2259,8 +2314,7 @@ describe('Card and media settings', () => {
   ])('takes the media settings in %s', (file) => {
     const source = read(file)
     expect(source).toContain('background-color: var(--media-background);')
-    // Only the product page's swatches still crop to fill: they aren't media.
-    expect(source.match(/object-fit: cover/g) ?? []).toHaveLength(file.endsWith('main-product.liquid') ? 1 : 0)
+    expect(source).not.toContain('object-fit: cover')
     // Thumbnails and video posters take the tint and the fit, not the inset.
     if (!/predictive-search|video/.test(file)) expect(source).toContain('padding: var(--media-inset);')
   })

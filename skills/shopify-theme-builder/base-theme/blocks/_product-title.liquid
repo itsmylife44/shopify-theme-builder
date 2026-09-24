@@ -1,0 +1,46 @@
+{% doc %}
+  Renders the product's title, with its vendor above it.
+
+  @example
+  {% content_for 'block', type: '_product-title', id: 'product-title' %}
+{% enddoc %}
+
+<div class="product-title" {{ block.shopify_attributes }}>
+  {% if block.settings.show_vendor and product.vendor != blank %}
+    <p class="product-title__vendor text-small">{{ product.vendor | escape }}</p>
+  {% endif %}
+  <h1>{{ product.title }}</h1>
+</div>
+
+{% stylesheet %}
+  .product-title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .product-title > * {
+    margin: 0;
+  }
+
+  .product-title__vendor {
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: var(--opacity-muted);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.product_title",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "t:labels.show_vendor",
+      "default": true
+    }
+  ],
+  "presets": [{ "name": "t:general.product_title" }]
+}
+{% endschema %}

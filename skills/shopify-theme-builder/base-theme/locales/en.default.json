@@ -142,6 +142,8 @@
     "sold_out": "Sold out",
     "unavailable": "Unavailable",
     "unit_price": "Unit price",
+    "previous_media": "Previous media",
+    "next_media": "Next media",
     "recipient": {
       "send_to_recipient": "Send as a gift to a recipient",
       "email": "Recipient email",

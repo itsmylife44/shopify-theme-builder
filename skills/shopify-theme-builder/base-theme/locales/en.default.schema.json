@@ -107,7 +107,14 @@
     "header_sticky": "Header: sticky",
     "featured_collection_minimal": "Featured collection: minimal cards",
     "featured_collection_detailed": "Featured collection: detailed cards",
-    "featured_collection_editorial": "Featured collection: editorial cards"
+    "featured_collection_editorial": "Featured collection: editorial cards",
+    "product_title": "Title",
+    "price": "Price",
+    "variant_picker": "Variant picker",
+    "buy_buttons": "Buy buttons",
+    "main_product_stacked": "Product: stacked gallery",
+    "main_product_thumbnails": "Product: thumbnails",
+    "main_product_carousel": "Product: carousel"
   },
   "labels": {
     "accent": "Accent",
@@ -229,7 +236,8 @@
     "content_style": "Content style",
     "overlay_opacity": "Overlay opacity",
     "sticky_header": "Sticky header",
-    "logo_height": "Logo height"
+    "logo_height": "Logo height",
+    "gallery_layout": "Gallery layout"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -270,7 +278,8 @@
     "press_quotes_logo": "Shown in place of the publication name. The name stays its text alternative.",
     "hero_overlay_opacity": "A layer of the color scheme's background over the media, so the text stays readable.",
     "header_sticky": "Stays at the top of the page: hides as customers scroll down and comes back as they scroll up.",
-    "header_logo_height": "For a logo image. Without one, the shop name shows at a heading size."
+    "header_logo_height": "For a logo image. Without one, the shop name shows at a heading size.",
+    "main_product_gallery_layout": "On mobile, the media always swipes, with thumbnails below."
   },
   "options": {
     "alignment": {
@@ -426,6 +435,12 @@
       "bare": "Text on the media",
       "boxed": "Boxed",
       "split": "Beside the media"
+    },
+    "gallery_layout": {
+      "grid": "Grid",
+      "stacked": "Stacked, full bleed",
+      "thumbnails": "Main image with thumbnails",
+      "carousel": "Carousel"
     }
   }
 }

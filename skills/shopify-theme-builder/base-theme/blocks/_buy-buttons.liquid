@@ -1,0 +1,310 @@
+{% doc %}
+  Renders the product form: selling plans, Shop Pay Installments, the quantity,
+  a gift card's recipient, the add to cart button and dynamic checkout
+  buttons, then the pickup availability of the selected variant.
+
+  @example
+  {% content_for 'block', type: '_buy-buttons', id: 'buy-buttons' %}
+{% enddoc %}
+
+{% liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign selling_plan_allocation = current_variant.selected_selling_plan_allocation
+  if product.requires_selling_plan and selling_plan_allocation == nil
+    assign selling_plan_allocation = current_variant.selling_plan_allocations.first
+  endif
+%}
+
+<div class="buy-buttons" {{ block.shopify_attributes }}>
+  {% form 'product', product, class: 'buy-buttons__form' %}
+    <input type="hidden" name="id" value="{{ current_variant.id }}">
+    {% if product.selling_plan_groups != empty %}
+      <fieldset class="buy-buttons__selling-plans">
+        <legend>{{ 'product.purchase_options' | t }}</legend>
+        {% unless product.requires_selling_plan %}
+          <label class="buy-buttons__selling-plan">
+            <input
+              id="{{ section.id }}-selling-plan"
+              type="radio"
+              name="selling_plan"
+              value=""
+              {% if selling_plan_allocation == nil %}
+                checked
+              {% endif %}
+            >
+            {{ 'product.one_time_purchase' | t }}
+            <span>{{ current_variant.price | money }}</span>
+          </label>
+        {% endunless %}
+        {% for group in product.selling_plan_groups %}
+          {% assign group_allocations = current_variant.selling_plan_allocations | where: 'selling_plan_group_id', group.id %}
+          {% if group_allocations != empty %}
+            <fieldset class="buy-buttons__selling-plans">
+              <legend class="text-small">{{ group.name | escape }}</legend>
+              {% for allocation in group_allocations %}
+                <label class="buy-buttons__selling-plan">
+                  <input
+                    id="{{ section.id }}-selling-plan-{{ allocation.selling_plan.id }}"
+                    type="radio"
+                    name="selling_plan"
+                    value="{{ allocation.selling_plan.id }}"
+                    {% if allocation.selling_plan.id == selling_plan_allocation.selling_plan.id %}
+                      checked
+                    {% endif %}
+                  >
+                  {{ allocation.selling_plan.name | escape }}
+                  <span>{{ allocation.per_delivery_price | money }}</span>
+                </label>
+              {% endfor %}
+            </fieldset>
+          {% endif %}
+        {% endfor %}
+      </fieldset>
+    {% endif %}
+    {{ form | payment_terms }}
+    <label class="buy-buttons__quantity">
+      {{ 'product.quantity' | t }}
+      <input type="number" name="quantity" min="1" value="1">
+    </label>
+    {% if product.gift_card? %}
+      {% liquid
+        assign today = 'now' | date: '%Y-%m-%d'
+        assign latest_send_date = 'now' | date: '%s' | plus: 7776000 | date: '%Y-%m-%d'
+      %}
+      <gift-card-recipient class="buy-buttons__recipient">
+        <label class="buy-buttons__recipient-toggle">
+          <input type="checkbox" aria-controls="{{ section.id }}-recipient">
+          {{ 'product.recipient.send_to_recipient' | t }}
+        </label>
+        <fieldset id="{{ section.id }}-recipient" class="buy-buttons__recipient-fields" hidden disabled>
+          <legend class="visually-hidden">{{ 'product.recipient.send_to_recipient' | t }}</legend>
+          <input type="hidden" name="properties[__shopify_send_gift_card_to_recipient]" value="true">
+          <input type="hidden" name="properties[__shopify_offset]" value="">
+          <label>
+            {{ 'product.recipient.email' | t }}
+            <input
+              type="email"
+              name="properties[Recipient email]"
+              required
+              autocomplete="off"
+            >
+          </label>
+          <label>
+            {{ 'product.recipient.name' | t }}
+            <input
+              type="text"
+              name="properties[Recipient name]"
+              maxlength="255"
+              autocomplete="off"
+            >
+          </label>
+          <label>
+            {{ 'product.recipient.message' | t }}
+            <textarea
+              name="properties[Message]"
+              maxlength="200"
+              rows="3"
+            ></textarea>
+            <small>{{ 'product.recipient.message_info' | t }}</small>
+          </label>
+          <label>
+            {{ 'product.recipient.send_on' | t }}
+            <input
+              type="date"
+              name="properties[Send on]"
+              min="{{ today }}"
+              max="{{ latest_send_date }}"
+            >
+            <small>{{ 'product.recipient.send_on_info' | t }}</small>
+          </label>
+        </fieldset>
+      </gift-card-recipient>
+    {% endif %}
+    <button
+      type="submit"
+      class="button buy-buttons__add"
+      {% unless current_variant.available %}
+        disabled
+      {% endunless %}
+    >
+      {% if current_variant.available %}
+        {{ 'product.add_to_cart' | t }}
+      {% else %}
+        {{ 'product.sold_out' | t }}
+      {% endif %}
+    </button>
+    {% if block.settings.show_dynamic_checkout %}
+      {{ form | payment_button }}
+    {% endif %}
+  {% endform %}
+
+  {% assign pickup_availabilities = current_variant.store_availabilities | where: 'pick_up_enabled', true %}
+  {% if pickup_availabilities.size > 0 %}
+    <ul class="buy-buttons__pickup text-small" role="list" aria-label="{{ 'product.pickup_locations' | t }}">
+      {% for availability in pickup_availabilities %}
+        <li>
+          <strong>{{ availability.location.name | escape }}</strong>
+          {% if availability.available %}
+            <span>{{ 'product.pickup_available' | t }}</span>
+            {% if availability.pick_up_time != blank %}
+              <span class="buy-buttons__pickup-time">{{ availability.pick_up_time | escape }}</span>
+            {% endif %}
+          {% else %}
+            <span>{{ 'product.pickup_unavailable' | t }}</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+
+{% javascript %}
+  class GiftCardRecipient extends HTMLElement {
+    connectedCallback() {
+      this.onchange = () => this.toggle();
+      this.toggle();
+    }
+
+    toggle() {
+      const checkbox = this.querySelector('.buy-buttons__recipient-toggle input');
+      const fields = this.querySelector('.buy-buttons__recipient-fields');
+      fields.hidden = fields.disabled = !checkbox.checked;
+      fields.querySelector('[name="properties[__shopify_offset]"]').value = new Date().getTimezoneOffset();
+    }
+  }
+
+  if (!customElements.get('gift-card-recipient')) customElements.define('gift-card-recipient', GiftCardRecipient);
+{% endjavascript %}
+
+{% stylesheet %}
+  .buy-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .buy-buttons__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .buy-buttons__selling-plans {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .buy-buttons__selling-plans legend {
+    margin-block-end: var(--space-xs);
+  }
+
+  .buy-buttons__selling-plans .buy-buttons__selling-plans legend {
+    opacity: var(--opacity-muted);
+  }
+
+  .buy-buttons__selling-plan,
+  .buy-buttons__recipient-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-block-size: var(--target-size-min);
+  }
+
+  .buy-buttons__selling-plan span {
+    margin-inline-start: auto;
+  }
+
+  .buy-buttons__quantity {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .buy-buttons__quantity input {
+    width: 6rem;
+    padding: var(--space-xs);
+    border: var(--border-width) solid var(--color-border);
+    background-color: transparent;
+    color: inherit;
+  }
+
+  .buy-buttons__recipient {
+    display: block;
+  }
+
+  .buy-buttons__recipient-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .buy-buttons__recipient-fields[hidden] {
+    display: none;
+  }
+
+  .buy-buttons__recipient-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .buy-buttons__recipient-fields :is(input, textarea) {
+    padding: var(--space-xs);
+    border: var(--border-width) solid var(--color-border);
+    background-color: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  .buy-buttons__recipient-fields small {
+    opacity: var(--opacity-muted);
+  }
+
+  .buy-buttons__form:has(.buy-buttons__recipient-toggle input:checked) .shopify-payment-button {
+    display: none;
+  }
+
+  .buy-buttons__add {
+    width: 100%;
+  }
+
+  .buy-buttons__pickup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .buy-buttons__pickup li {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .buy-buttons__pickup-time {
+    opacity: var(--opacity-muted);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.buy_buttons",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_dynamic_checkout",
+      "label": "t:labels.show_dynamic_checkout_buttons",
+      "default": true
+    }
+  ],
+  "presets": [{ "name": "t:general.buy_buttons" }]
+}
+{% endschema %}
