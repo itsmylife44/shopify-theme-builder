@@ -1,22 +1,37 @@
-{% comment %}A heading, text and a button, for a message or a story.{% endcomment %}
+{% comment %}A heading, text and buttons, centered or wide to the start, for a message or a story.{% endcomment %}
 <div
-  class="rich-text full-width color-{{ section.settings.color_scheme }}"
+  class="rich-text rich-text--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"
   style="--text-align: {{ section.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }};"
 >
   <div class="rich-text__inner">
+    {% if section.settings.eyebrow != blank %}
+      <p class="rich-text__eyebrow text-label">{{ section.settings.eyebrow | escape }}</p>
+    {% endif %}
     {% if section.settings.heading != blank %}
       <h2 class="rich-text__heading">{{ section.settings.heading }}</h2>
     {% endif %}
     {% if section.settings.text != blank %}
       <div class="rich-text__text rte">{{ section.settings.text }}</div>
     {% endif %}
-    {% if section.settings.button_label != blank %}
-      <a
-        class="button"
-        href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
-      >
-        {{- section.settings.button_label | escape -}}
-      </a>
+    {% if section.settings.button_label != blank or section.settings.button_label_2 != blank %}
+      <div class="rich-text__buttons">
+        {% if section.settings.button_label != blank %}
+          <a
+            class="button"
+            href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
+          >
+            {{- section.settings.button_label | escape -}}
+          </a>
+        {% endif %}
+        {% if section.settings.button_label_2 != blank %}
+          <a
+            class="button--secondary"
+            href="{{ section.settings.button_link_2 | default: routes.collections_url }}"
+          >
+            {{- section.settings.button_label_2 | escape -}}
+          </a>
+        {% endif %}
+      </div>
     {% endif %}
   </div>
 </div>
@@ -39,6 +54,27 @@
   .rich-text__inner > * {
     max-width: var(--width-prose);
   }
+
+  .rich-text--left_wide .rich-text__inner {
+    --text-align: start;
+  }
+
+  .rich-text--left_wide .rich-text__inner > :not(.rich-text__buttons) {
+    inline-size: 100%;
+  }
+
+  .rich-text__buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: var(--text-align);
+    gap: var(--space-sm);
+  }
+
+  @media (min-width: 750px) {
+    .rich-text__buttons {
+      flex-direction: row;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -53,10 +89,26 @@
       "default": "scheme-1"
     },
     {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "centered", "label": "t:options.layout.centered" },
+        { "value": "left_wide", "label": "t:options.layout.left_wide" }
+      ],
+      "default": "centered"
+    },
+    {
       "type": "text_alignment",
       "id": "alignment",
       "label": "t:labels.alignment",
+      "visible_if": "{{ section.settings.layout != 'left_wide' }}",
       "default": "center"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "t:labels.eyebrow"
     },
     {
       "type": "inline_richtext",
@@ -79,11 +131,33 @@
       "type": "url",
       "id": "button_link",
       "label": "t:labels.button_link"
+    },
+    {
+      "type": "text",
+      "id": "button_label_2",
+      "label": "t:labels.button_label_2"
+    },
+    {
+      "type": "url",
+      "id": "button_link_2",
+      "label": "t:labels.button_link_2"
     }
   ],
   "presets": [
     {
       "name": "t:general.rich_text"
+    },
+    {
+      "name": "t:general.rich_text_left_wide",
+      "settings": { "layout": "left_wide" }
+    },
+    {
+      "name": "t:general.rich_text_eyebrow",
+      "settings": {
+        "eyebrow": "New season",
+        "button_label": "Shop all",
+        "button_label_2": "Browse collections"
+      }
     }
   ]
 }

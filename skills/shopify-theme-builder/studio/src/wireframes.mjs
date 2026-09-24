@@ -6,8 +6,8 @@
 //   image      an image; the images of a column share the height its other parts leave
 //   image@bl   an image filling the column, with the column's other parts over it at a position:
 //              t(op), m(iddle) or b(ottom), then l(eft), c(entre) or r(ight)
-//   display (oversized type), heading, title, text (two lines), line, button, input, icon, number (a big step
-//   number), logo, rule, thumbs (a thumbnail strip), dots, _ (a gap)
+//   display (oversized type), heading, title, text (two lines), line, button, buttons (a primary and a secondary
+//   side by side), input, icon, number (a big step number), logo, rule, thumbs (a thumbnail strip), dots, _ (a gap)
 // and modifiers: `center` centres the parts, `panel` puts them on a panel, `x3` repeats the column three times.
 
 /**
@@ -37,6 +37,7 @@ const parts = {
   },
   line: { height: 2.5, lines: [{ width: 0.5, height: 2.5, tone: 'text' }] },
   button: { height: 6, lines: [{ width: 22, height: 6, tone: 'strong' }] },
+  buttons: { height: 6, lines: [] },
   input: { height: 7, lines: [{ width: 1, height: 7, tone: 'outline' }] },
   icon: { height: 6, lines: [{ width: 6, height: 6, tone: 'strong' }] },
   number: { height: 10, lines: [{ width: 7, height: 10, tone: 'strong' }] },
@@ -167,6 +168,10 @@ function layoutStack(stack, x, y, width, height, center, padding) {
     if (token === 'thumbs') {
       const size = Math.min(part.height, (width - 3 * 2) / 4)
       for (let i = 0; i < 4; i++) shapes.push(shape('image', x + i * (size + 2), top, size, size))
+    }
+    if (token === 'buttons') {
+      const left = center ? x + (width - 2 * 22 - stackGap) / 2 : x
+      shapes.push(shape('strong', left, top, 22, part.height), shape('outline', left + 22 + stackGap, top, 22, part.height))
     }
     let lineTop = top
     for (const line of part.lines) {
@@ -376,7 +381,20 @@ export const wireframes = {
       description: 'Three large cards with big names and no button',
     },
   },
-  'rich-text': { 't:general.rich_text': { wireframe: 'center heading text button' } },
+  'rich-text': {
+    't:general.rich_text': {
+      wireframe: 'center heading text button',
+      description: 'A centered heading, text and a button',
+    },
+    't:general.rich_text_left_wide': {
+      wireframe: 'heading text text button',
+      description: 'Wide text aligned to the start',
+    },
+    't:general.rich_text_eyebrow': {
+      wireframe: 'center line heading text buttons',
+      description: 'A small label above the heading and two buttons',
+    },
+  },
   slideshow: {
     't:general.slideshow': {
       wireframe: '6* image@ml panel heading text button / center dots',

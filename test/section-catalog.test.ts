@@ -1139,6 +1139,43 @@ describe('Multicolumn', () => {
   })
 })
 
+describe('Rich text', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/rich-text.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const setting = (id: string) => schema.settings.find((candidate: { id: string }) => candidate.id === id)
+
+  it('lays the text out centered (the default, as before) or aligned to the start and as wide as running text', () => {
+    expect(setting('layout')).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'centered' })
+    expect(setting('layout').options).toEqual([
+      { value: 'centered', label: 't:options.layout.centered' },
+      { value: 'left_wide', label: 't:options.layout.left_wide' },
+    ])
+    expect(source).toContain('rich-text--{{ section.settings.layout }}')
+    expect(setting('alignment').visible_if).toBe("{{ section.settings.layout != 'left_wide' }}")
+  })
+
+  it('shows an eyebrow above the heading and a second button beside the first, in any layout, when filled', () => {
+    expect(setting('eyebrow')).toEqual({ type: 'text', id: 'eyebrow', label: 't:labels.eyebrow' })
+    expect(setting('button_label_2')).toEqual({ type: 'text', id: 'button_label_2', label: 't:labels.button_label_2' })
+    expect(setting('button_link_2')).toEqual({ type: 'url', id: 'button_link_2', label: 't:labels.button_link_2' })
+    expect(source).toContain('{% if section.settings.eyebrow != blank %}')
+    expect(source).toContain('<p class="rich-text__eyebrow text-label">{{ section.settings.eyebrow | escape }}</p>')
+    expect(source).toContain('{% if section.settings.button_label_2 != blank %}')
+    expect(source).toMatch(/class="button--secondary"\s+href="{{ section.settings.button_link_2/)
+  })
+
+  it('offers each other layout as a named preset with the same blocks as the first', () => {
+    expect(schema.presets).toEqual([
+      { name: 't:general.rich_text' },
+      { name: 't:general.rich_text_left_wide', settings: { layout: 'left_wide' } },
+      {
+        name: 't:general.rich_text_eyebrow',
+        settings: { eyebrow: 'New season', button_label: 'Shop all', button_label_2: 'Browse collections' },
+      },
+    ])
+  })
+})
+
 describe('Video', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/video.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

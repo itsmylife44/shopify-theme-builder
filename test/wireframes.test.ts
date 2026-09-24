@@ -65,6 +65,13 @@ describe('Studio section picker wireframes', () => {
     expect(panel.y + panel.height).toBeGreaterThan(80)
   })
 
+  it('draws two buttons side by side, centred with the column', () => {
+    expect(layoutWireframe('center buttons')).toEqual([
+      { tone: 'strong', x: 56.5, y: 47, width: 22, height: 6 },
+      { tone: 'outline', x: 81.5, y: 47, width: 22, height: 6 },
+    ])
+  })
+
   it('names a part it does not know', () => {
     expect(() => layoutWireframe('image | haeding')).toThrow('haeding')
   })
