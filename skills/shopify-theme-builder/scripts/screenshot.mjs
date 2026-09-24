@@ -5,7 +5,7 @@
 // DevTools Protocol, with reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the
 // network (theme dev's hot reload never goes idle), prints the page's scrollWidth, and stops within 60 seconds.
 import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -185,7 +185,8 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// Real paths on both sides: npx skills add installs the skill as a symlink, and import.meta.url is the real path.
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   /** @type {Options} */
   let options
   try {
