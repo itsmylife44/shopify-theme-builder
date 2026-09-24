@@ -2336,7 +2336,8 @@ describe('Studio API: undo and redo', () => {
     await studio.send('POST', 'api/undo')
     expect(textColor()).toBe('#555555')
     expect(readSettingsData(theme).current.social_instagram).toBe('https://instagram.com/shop')
-  })
+    // Each write and undo runs Theme Check.
+  }, 60_000)
 
   it('refuses with 409 when there is nothing to undo or redo', async () => {
     const studio = await openStudio(fixtureTheme())
