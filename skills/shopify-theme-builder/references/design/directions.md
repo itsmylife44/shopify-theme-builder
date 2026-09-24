@@ -87,6 +87,8 @@ A home sketch, for "Harvest Date", a Direction built on the olive harvest's cale
 +----------------------------------------------------------------+
 ```
 
+Choose a product row's `products_to_show` to fit both layouts: on desktop, a multiple of its `columns` (3 in 3 columns, 4 or 8 in 4), so the last row is never short; on mobile, the featured collection and related products swipe as one row, each card three quarters of the screen wide with the next one peeking in, so any count fits there.
+
 ## Writing the rules
 
 Once `directions` in `GET /api/theme` shows one `chosen`, add `### Rules` under its part of `DIRECTION.md`: 5 to 10 do/don't pairs, each with its reason, as the template shows. A rule is a directive another agent or a freelancer can follow without asking you, and the reason lets them judge a case the rule doesn't name.
