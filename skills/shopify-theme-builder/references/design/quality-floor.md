@@ -32,6 +32,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Running text stays under about 70 characters a line.
 - Headings go in order (one `h1` per page, no skipped levels), and every image the Creator placed has alt text.
 - The menu opens with the keyboard, and the focus ring shows on every control.
+- No select submits or navigates on change, which an arrow key would trigger (WCAG F37): the country and language selectors open a list whose every choice is a button.
 - Anything that moves or changes on its own (the announcement bar's rotation, a slideshow on autoplay, a marquee) has a pause button, not only a pause on hover.
 
 ## Content

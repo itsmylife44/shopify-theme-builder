@@ -58,37 +58,56 @@
     {% if localization.available_countries.size > 1 or localization.available_languages.size > 1 %}
       {% form 'localization', id: 'HeaderLocalization', class: 'header__localization text-small' %}
         {% if localization.available_countries.size > 1 %}
-          <label class="visually-hidden" for="HeaderCountry">{{ 'localization.country' | t }}</label>
-          <select id="HeaderCountry" name="country_code">
-            {% for country in localization.available_countries %}
-              <option
-                value="{{ country.iso_code }}"
-                {% if country.iso_code == localization.country.iso_code %}
-                  selected
-                {% endif %}
-              >
-                {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
-              </option>
-            {% endfor %}
-          </select>
+          <details class="header__disclosure" name="header-localization">
+            <summary>
+              <span class="visually-hidden">{{ 'localization.country' | t }}</span>
+              {{ localization.country.name }} ({{ localization.country.currency.iso_code }} {{ localization.country.currency.symbol }})
+            </summary>
+            <ul class="header__disclosure-list" role="list">
+              {% for country in localization.available_countries %}
+                <li>
+                  <button
+                    type="submit"
+                    name="country_code"
+                    value="{{ country.iso_code }}"
+                    class="header__disclosure-option"
+                    {% if country.iso_code == localization.country.iso_code %}
+                      aria-current="true"
+                    {% endif %}
+                  >
+                    {{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+          </details>
         {% endif %}
         {% if localization.available_languages.size > 1 %}
-          <label class="visually-hidden" for="HeaderLanguage">{{ 'localization.language' | t }}</label>
-          <select id="HeaderLanguage" name="language_code">
-            {% for language in localization.available_languages %}
-              <option
-                value="{{ language.iso_code }}"
-                lang="{{ language.iso_code }}"
-                {% if language.iso_code == localization.language.iso_code %}
-                  selected
-                {% endif %}
-              >
-                {{ language.endonym_name | capitalize }}
-              </option>
-            {% endfor %}
-          </select>
+          <details class="header__disclosure" name="header-localization">
+            <summary>
+              <span class="visually-hidden">{{ 'localization.language' | t }}</span>
+              {{ localization.language.endonym_name | capitalize }}
+            </summary>
+            <ul class="header__disclosure-list" role="list">
+              {% for language in localization.available_languages %}
+                <li>
+                  <button
+                    type="submit"
+                    name="language_code"
+                    value="{{ language.iso_code }}"
+                    lang="{{ language.iso_code }}"
+                    class="header__disclosure-option"
+                    {% if language.iso_code == localization.language.iso_code %}
+                      aria-current="true"
+                    {% endif %}
+                  >
+                    {{ language.endonym_name | capitalize }}
+                  </button>
+                </li>
+              {% endfor %}
+            </ul>
+          </details>
         {% endif %}
-        <button type="submit" class="button--secondary">{{ 'localization.update' | t }}</button>
       {% endform %}
     {% endif %}
   {% endif %}
@@ -505,26 +524,82 @@
     flex-wrap: nowrap;
   }
 
-  .header__icons .header__localization select {
-    max-width: 10rem;
-  }
-
   .header__drawer .header__localization {
+    flex-direction: column;
+    align-items: stretch;
     margin-block-start: auto;
   }
 
-  header-menu:defined .header__localization button {
+  .header__disclosure {
+    position: relative;
+  }
+
+  .header__disclosure summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    list-style: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .header__disclosure summary::-webkit-details-marker {
     display: none;
   }
 
-  .header__localization select {
-    padding: var(--space-2xs) var(--space-xs);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--style-border-radius-inputs);
-    background-color: transparent;
+  .header__disclosure summary::after {
+    content: '';
+    width: 0.4em;
+    height: 0.4em;
+    border-block-end: var(--border-width) solid currentcolor;
+    border-inline-end: var(--border-width) solid currentcolor;
+    rotate: 45deg;
+    translate: 0 -0.15em;
+  }
+
+  .header__disclosure[open] summary::after {
+    rotate: 225deg;
+    translate: 0 0.15em;
+  }
+
+  .header__disclosure-list {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-end: 0;
+    z-index: 10;
+    min-width: 12rem;
+    max-height: 60vh;
+    margin: 0;
+    padding: var(--space-xs) var(--space-md);
+    overflow-y: auto;
+    list-style: none;
+    border: var(--border-width) solid var(--color-border-subtle);
+    background-color: var(--color-background);
+  }
+
+  .header__drawer .header__disclosure-list {
+    position: static;
+    min-width: 0;
+  }
+
+  .header__disclosure-option {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-block-size: var(--target-size-min);
+    padding: 0;
+    border: 0;
+    background: none;
     color: inherit;
     font: inherit;
+    text-align: start;
     cursor: pointer;
+  }
+
+  .header__disclosure-option[aria-current='true'],
+  .header__disclosure-option:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.3em;
   }
 
   .header__search summary {
@@ -804,15 +879,11 @@
       this.querySelector('.header__menu-button')?.addEventListener('click', () => drawer.showModal(), { signal });
       drawer?.addEventListener('click', (event) => event.target === drawer && drawer.close(), { signal });
       this.addEventListener(
-        'change',
-        (event) => event.target.form?.classList.contains('header__localization') && event.target.form.requestSubmit(),
-        { signal }
-      );
-      this.addEventListener(
         'keydown',
         (event) => {
-          const open = event.key === 'Escape' && event.target.closest('.header__menu details[open], .header__search[open]');
+          const open = event.key === 'Escape' && event.target.closest('.header__menu details[open], .header__search[open], .header__disclosure[open]');
           if (!open) return;
+          event.preventDefault();
           open.open = false;
           open.querySelector('summary').focus();
         },
@@ -855,7 +926,7 @@
       document.addEventListener(
         'click',
         (event) => {
-          for (const details of this.querySelectorAll('.header__menu details[open], .header__search[open]')) {
+          for (const details of this.querySelectorAll('.header__menu details[open], .header__search[open], .header__disclosure[open]')) {
             if (!details.contains(event.target)) details.open = false;
           }
         },
