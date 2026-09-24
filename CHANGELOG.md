@@ -122,6 +122,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - Brand photos in every Direction: the brief asks for the photos themselves (a folder, files or links, or "none yet"), the agent uploads them to the shop's Files and places them in each Direction and on the other pages, and without photos picks sections and layouts that need no image. `check-direction.mjs` reports a `placeholder` finding for an image left blank on the home page in a section whose layout shows one, which the storefront renders as a placeholder drawing.
 
+- `check-direction.mjs` checks the home page and each Direction's home (`listings/<name>/templates/index.json`) for movement and rhythm: `movement` when no section moves or responds (a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover), `section-count` below 6 sections, and `type-only` for rich text, type banner, newsletter or spec tiles sections with no image next to each other.
+
 ### Fixed
 
 - The first image a customer sees loads first: the hero and the first slide of a slideshow at the top of the page, and the product page's main image, carry `fetchpriority="high"` and are never lazy-loaded. Every image in the Section Catalog gives the browser its `sizes` (the Base Theme's `image` snippet takes a new `sizes` parameter, `100vw` by default), and the multicolumn grid fits its images into a fixed ratio box like the other grids, so images of mixed ratios keep the rows even.
