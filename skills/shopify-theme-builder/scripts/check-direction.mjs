@@ -207,13 +207,18 @@ function checkCallsToAction({ file, sections }) {
   })
 }
 
-// An aspect-ratio declaration, and the rules whose ratio isn't an image's.
+// An aspect-ratio declaration, and the rules whose ratio isn't a photo's (a small icon's, like multicolumn's).
 const aspectRatio = /(?<![-\w])aspect-ratio\s*:\s*([^;}]+)/g
-const notImage = /iframe|video|model/
+const notImage = /iframe|video|model|--small/
+
+// The ratio each `image_ratio` value gives a section's images, as the Base Theme's `image-ratio` snippet does; `card`
+// is the product card's, and `natural` (each image's own) isn't counted.
+/** @type {Record<string, string>} */
+const imageRatios = { portrait: '4 / 5', square: '1 / 1', landscape: '4 / 3' }
 
 /**
  * A page showing images in more than two ratios: the product card's ratio for a section that renders product cards,
- * and each fixed aspect-ratio a section's stylesheet gives an image.
+ * the ratio a section's `image_ratio` setting picks, and each fixed aspect-ratio a section's stylesheet gives an image.
  * @param {string} theme
  * @param {ReturnType<typeof readSettings>} settings
  * @param {Page} page
@@ -231,13 +236,20 @@ function checkRatios(theme, { values }, { file, sections }) {
       const value = match[1].trim()
       return notImage.test(selector) || /var\(|\{\{/.test(value) ? [] : [value]
     })
-    if (productCard.test(text) && values.card_image_ratio) ratios.push(values.card_image_ratio)
+    const setting = section.settings.image_ratio
+    if ((productCard.test(text) || setting === 'card') && values.card_image_ratio) ratios.push(values.card_image_ratio)
+    if (imageRatios[setting]) ratios.push(imageRatios[setting])
     return [...new Set(ratios.map(normalRatio))].map((ratio) => ({ ratio, id: section.id }))
   })
   const ratios = groupBy(images, (image) => image.ratio)
   if (ratios.size <= 2) return []
   const list = [...ratios].map(([ratio, same]) => `${ratio} (${same.map((image) => image.id).join(', ')})`).join(', ')
-  return [finding('image-ratios', file, `${ratios.size} image ratios: ${list}. Keep a page to two at most, the card ratio among them.`)]
+  const card = values.card_image_ratio && normalRatio(values.card_image_ratio)
+  const notCard = sections
+    .filter((section) => imageRatios[section.settings.image_ratio] && normalRatio(imageRatios[section.settings.image_ratio]) !== card)
+    .map((section) => section.id)
+  const fix = notCard.length ? `: set image_ratio to card on ${notCard.join(', ')}` : ''
+  return [finding('image-ratios', file, `${ratios.size} image ratios: ${list}. Keep a page to two at most, the card ratio among them${fix}.`)]
 }
 
 const productCard = /render\s+'product-card'/

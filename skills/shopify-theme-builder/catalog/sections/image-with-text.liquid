@@ -1,5 +1,5 @@
 {% comment %}An image beside a heading, text and a button.{% endcomment %}
-<div class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}">
+<div class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="image-with-text__inner">
     <div class="image-with-text__media">
       {% if section.settings.image != blank %}
@@ -101,7 +101,7 @@
   }
 
   .image-with-text__media {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: var(--image-ratio);
     overflow: hidden;
   }
 
@@ -134,6 +134,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "image_picker",

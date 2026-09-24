@@ -537,7 +537,7 @@ describe('Product page shipping note and collapsible content', () => {
   })
 
   it('moves the vendor and dynamic checkout settings to the title and buy buttons blocks', () => {
-    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'gallery_layout', 'image_zoom'])
+    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'image_ratio', 'gallery_layout', 'image_zoom'])
     expect(parse(read('base-theme/blocks/_product-title.liquid')).settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
     expect(parse(read('base-theme/blocks/_buy-buttons.liquid')).settings).toContainEqual({
       type: 'checkbox',
@@ -783,7 +783,7 @@ describe('Product page requirements', () => {
     expect(thumbnails).toMatch(/<ul class="main-product__thumbnails" role="list" aria-label="{{ 'product\.media_thumbnails' \| t }}">\s*{% for media in ordered_media %}/)
     expect(thumbnails).toMatch(/<button\s+type="button"\s+class="main-product__thumbnail"\s+aria-label="{{ 'product\.show_media' \| t: index: forloop\.index, count: forloop\.length }}"/)
     expect(thumbnails).toContain('{% if forloop.first %}aria-current="true"{% endif %}')
-    expect(thumbnails).toContain("media.preview_image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: ''")
+    expect(thumbnails).toContain("media.preview_image | image_url: width: 160 | image_tag: alt: ''")
     // Four and a half thumbnails fill the strip, so a cut-off fifth signals more.
     expect(source).toMatch(/\.main-product__thumbnails {[^}]*grid-auto-columns: calc\(\(100% - 4 \* var\(--space-xs\)\) \/ 4\.5\);[^}]*overflow-x: auto;/)
     expect(source).toMatch(/\.main-product__thumbnail\[aria-current='true'\] {/)
@@ -1632,10 +1632,10 @@ describe('Editorial split', () => {
     expect(schema.enabled_on).toBeUndefined()
   })
 
-  it('sets a tall image beside a long text column, on either side on desktop', () => {
+  it('sets an image beside a long text column, on either side on desktop', () => {
     expect(settings.image.type).toBe('image_picker')
     expect(settings.image_position.options.map((option: { value: string }) => option.value)).toEqual(['left', 'right'])
-    expect(css).toMatch(/\.editorial-split__media {[^}]*aspect-ratio: 2 \/ 3;/)
+    expect(css).toMatch(/\.editorial-split__media {[^}]*aspect-ratio: var\(--image-ratio\);/)
     expect(settings.text.type).toBe('richtext')
     expect(css).toMatch(/\.editorial-split__content {[^}]*max-width: var\(--width-prose\);/)
   })
@@ -3289,6 +3289,56 @@ describe('Catalog updates', () => {
 
   it('is mentioned in the README', () => {
     expect(readFileSync(path.join(projectDir, 'README.md'), 'utf8')).toMatch(/catalog fixes/i)
+  })
+})
+
+describe('Image ratio', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const sections = [
+    'blog-posts',
+    'collection-list',
+    'contact-form',
+    'editorial-split',
+    'featured-product',
+    'image-gallery',
+    'image-with-text',
+    'main-blog',
+    'main-list-collections',
+    'main-product',
+    'main-search',
+    'multicolumn',
+    'newsletter',
+    'process-steps',
+    'timeline',
+  ]
+
+  it.each(sections)('lets the Merchant pick the ratio of the %s images, following the product card ratio by default', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+    expect(schema.settings).toContainEqual({
+      type: 'select',
+      id: 'image_ratio',
+      label: 't:labels.image_ratio',
+      options: ['card', 'portrait', 'square', 'landscape', 'natural'].map((value) => ({ value, label: `t:options.image_ratio.${value}` })),
+      default: 'card',
+    })
+    expect(source).toContain("--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};")
+    // Every image box takes the picked ratio; a video, a 3D model or a small icon keeps its own.
+    const css = source.match(/{% stylesheet %}([\s\S]*?){% endstylesheet %}/)![1]
+    for (const [rule, selector, body] of css.matchAll(/([^{}]+){([^{}]*)}/g)) {
+      const ratio = body.match(/aspect-ratio:\s*([^;]+);/)?.[1]
+      if (!ratio || /iframe|video|model|--small/.test(selector)) continue
+      expect(ratio, rule.trim()).toBe('var(--image-ratio)')
+    }
+    expect(css).toContain('aspect-ratio: var(--image-ratio);')
+  })
+
+  it('maps each value to a ratio in a Base Theme snippet: the card ratio, 4 / 5, 1 / 1, 4 / 3, or each image its own', () => {
+    const snippet = read('base-theme/snippets/image-ratio.liquid')
+    expect(snippet).toMatch(/{% doc %}[\s\S]*@param {string} ratio\b[\s\S]*{% enddoc %}/)
+    const values = Object.fromEntries([...snippet.matchAll(/{%- (?:when '(\w+)'|else) -%}\s*([^{]+?)\s*(?={%)/g)].map(([, value, ratio]) => [value ?? 'card', ratio]))
+    expect(values).toEqual({ portrait: '4 / 5', square: '1 / 1', landscape: '4 / 3', natural: 'auto', card: 'var(--card-image-ratio)' })
   })
 })
 

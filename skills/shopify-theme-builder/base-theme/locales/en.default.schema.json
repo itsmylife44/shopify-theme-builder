@@ -433,6 +433,13 @@
       "portrait": "4:5 portrait",
       "tall": "2:3 tall"
     },
+    "image_ratio": {
+      "card": "Same as product cards",
+      "portrait": "4:5 portrait",
+      "square": "1:1 square",
+      "landscape": "4:3 landscape",
+      "natural": "Each image's own"
+    },
     "card_anatomy": {
       "theme": "Theme default",
       "minimal": "Minimal",
