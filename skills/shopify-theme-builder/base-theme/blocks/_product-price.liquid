@@ -1,0 +1,79 @@
+{% doc %}
+  Renders the price of the selected variant, or of its selected selling plan,
+  with the per delivery price, the plan's description and the unit price.
+
+  @example
+  {% content_for 'block', type: '_product-price', id: 'product-price' %}
+{% enddoc %}
+
+{% liquid
+  assign current_variant = product.selected_or_first_available_variant
+  assign selling_plan_allocation = current_variant.selected_selling_plan_allocation
+  if product.requires_selling_plan and selling_plan_allocation == nil
+    assign selling_plan_allocation = current_variant.selling_plan_allocations.first
+  endif
+  if selling_plan_allocation
+    assign price = selling_plan_allocation.price
+    assign compare_at_price = selling_plan_allocation.compare_at_price
+  else
+    assign price = current_variant.price
+    assign compare_at_price = current_variant.compare_at_price
+  endif
+%}
+
+<div class="product-price" {{ block.shopify_attributes }}>
+  <p class="price text-h4">
+    {% if compare_at_price > price %}
+      <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
+      <span class="price__sale">{{ price | money }}</span>
+      <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
+      <s class="product-price__compare-at">{{ compare_at_price | money }}</s>
+    {% else %}
+      {{ price | money }}
+    {% endif %}
+  </p>
+  {% if selling_plan_allocation %}
+    {% if selling_plan_allocation.per_delivery_price != selling_plan_allocation.price %}
+      {% assign per_delivery_price = selling_plan_allocation.per_delivery_price | money %}
+      <p class="product-price__note text-small">{{ 'product.per_delivery' | t: price: per_delivery_price }}</p>
+    {% endif %}
+    {% if selling_plan_allocation.selling_plan.description != blank %}
+      <p class="product-price__note text-small">{{ selling_plan_allocation.selling_plan.description | escape }}</p>
+    {% endif %}
+  {% endif %}
+  {% if current_variant.unit_price_measurement %}
+    <p class="product-price__note text-small">
+      <span class="visually-hidden">{{ 'product.unit_price' | t }}</span>
+      {{ current_variant.unit_price | unit_price_with_measurement: current_variant.unit_price_measurement }}
+    </p>
+  {% endif %}
+</div>
+
+{% stylesheet %}
+  .product-price {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .product-price > * {
+    margin: 0;
+  }
+
+  .product-price__compare-at {
+    margin-inline-start: var(--space-xs);
+    opacity: var(--opacity-muted);
+  }
+
+  .product-price__note {
+    opacity: var(--opacity-muted);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.price",
+  "settings": [],
+  "presets": [{ "name": "t:general.price" }]
+}
+{% endschema %}

@@ -1,0 +1,118 @@
+{% doc %}
+  Renders a button for each value of each product option, a color or image
+  swatch when the value has one. Values of a combined listing's sibling
+  products link to them.
+
+  @example
+  {% content_for 'block', type: '_variant-picker', id: 'variant-picker' %}
+{% enddoc %}
+
+{% if product.has_only_default_variant == false or request.design_mode %}
+  <div class="variant-picker" {{ block.shopify_attributes }}>
+    {% for option in product.options_with_values %}
+      <fieldset class="variant-picker__option">
+        <legend>{{ option.name | escape }}</legend>
+        {% for option_value in option.values %}
+          {% capture input_id %}{{ section.id }}-{{ option.position }}-{{ forloop.index0 }}{% endcapture %}
+          <input
+            id="{{ input_id }}"
+            class="variant-picker__option-input visually-hidden"
+            type="radio"
+            name="{{ section.id }}-option-{{ option.position }}"
+            value="{{ option_value | escape }}"
+            data-option-value-id="{{ option_value.id }}"
+            {% if option_value.product_url %}
+              data-product-url="{{ option_value.product_url }}"
+            {% endif %}
+            {% if option_value.selected %}
+              checked
+            {% endif %}
+          >
+          <label
+            for="{{ input_id }}"
+            class="variant-picker__option-label{% if option_value.swatch.image or option_value.swatch.color %} variant-picker__option-label--swatch{% endif %}{% unless option_value.available %} variant-picker__option-label--unavailable{% endunless %}"
+          >
+            {% if option_value.swatch.image %}
+              {{ option_value.swatch.image | image_url: width: 80, height: 80, crop: 'center' | image_tag: alt: '', class: 'variant-picker__swatch', width: 40, height: 40, sizes: '2.5rem', loading: 'lazy' }}
+              <span class="visually-hidden">{{ option_value | escape }}</span>
+            {% elsif option_value.swatch.color %}
+              <span
+                class="variant-picker__swatch"
+                style="background-color: rgb({{ option_value.swatch.color.rgb }});"
+              ></span>
+              <span class="visually-hidden">{{ option_value | escape }}</span>
+            {% else %}
+              {{- option_value | escape -}}
+            {% endif %}
+            {% unless option_value.available %}
+              <span class="visually-hidden">{{ 'product.unavailable' | t }}</span>
+            {% endunless %}
+          </label>
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% stylesheet %}
+  .variant-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .variant-picker__option {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .variant-picker__option legend {
+    margin-block-end: var(--space-xs);
+  }
+
+  .variant-picker__option-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: var(--space-xs) var(--space-md);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-inputs);
+    cursor: pointer;
+  }
+
+  .variant-picker__option-label--swatch {
+    padding: var(--space-2xs);
+  }
+
+  .variant-picker__swatch {
+    display: block;
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+  }
+
+  .variant-picker__option-label--unavailable {
+    text-decoration: line-through;
+    opacity: var(--opacity-muted);
+  }
+
+  .variant-picker__option-input:checked + .variant-picker__option-label {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    border-color: var(--color-foreground);
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.variant_picker",
+  "settings": [],
+  "presets": [{ "name": "t:general.variant_picker" }]
+}
+{% endschema %}
