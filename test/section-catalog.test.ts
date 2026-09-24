@@ -3066,8 +3066,8 @@ describe('Card anatomies', () => {
     for (const render of renders) expect(render).toContain('anatomy: section.settings.card_anatomy')
   })
 
-  it('shows the vendor, color swatches, a rating and badges on the detailed card', () => {
-    expect(card).toMatch(/{% if anatomy == 'detailed' %}[\s\S]*product\.vendor \| escape/)
+  it('shows the vendor, color swatches and a rating on the detailed card', () => {
+    expect(card).toMatch(/{% if anatomy == 'detailed' and product\.vendor != blank %}\s*<p class="product-card__vendor text-small">{{ product\.vendor \| escape }}/)
     // A swatch is nil without a saved color or image, so only an option with swatches shows them.
     expect(card).toContain('option.values.first.swatch')
     expect(card).toMatch(/swatch\.image\s*\| image_url: width: \d+[^}]*\| image_tag:[^}]*sizes: /)
@@ -3075,16 +3075,27 @@ describe('Card anatomies', () => {
     // The rating slot: the standard reviews metafield review apps write.
     expect(card).toContain('product.metafields.reviews.rating.value')
     expect(card).toContain("'product_card.rating' | t:")
-    expect(card).toMatch(/{% if product\.available == false %}[\s\S]*'product\.sold_out' \| t[\s\S]*{% elsif product\.compare_at_price > product\.price %}[\s\S]*'product_card\.sale' \| t/)
-    expect(critical).toMatch(/\.product-card__badge {[^}]*border-radius: var\(--style-border-radius-badges\)/)
+    expect(card).toContain("'product_card.review_count' | t: count: review_count")
+  })
+
+  it('shows Sold out, or the saving of a sale, on every anatomy', () => {
     // The badge sits over the image's top start corner, out of the text's flow so titles line up, and outside
-    // the aria-hidden image link so screen readers still read it.
-    expect(card).toMatch(/<\/a>\s*{% if anatomy == 'detailed' %}\s*{% if product\.available == false %}\s*<p class="product-card__badge/)
+    // the aria-hidden image link so screen readers still read it. No anatomy check wraps it.
+    expect(card).toMatch(
+      /<\/a>\s*{% if product\.available == false %}\s*<p class="product-card__badge text-label">{{ 'product\.sold_out' \| t }}<\/p>\s*{% elsif product\.compare_at_price > product\.price %}\s*<p class="product-card__badge product-card__badge--sale text-label">\s*{%- render 'price-saving', price: product\.price, compare_at_price: product\.compare_at_price -%}\s*<\/p>\s*{% endif %}/,
+    )
+    expect(critical).toMatch(/\.product-card__badge {[^}]*border-radius: var\(--style-border-radius-badges\)/)
     expect(critical).toMatch(/\.product-card {[^}]*position: relative/)
     expect(critical).toMatch(/\.product-card__badge {[^}]*position: absolute;[^}]*inset-block-start: var\(--space-xs\);[^}]*inset-inline-start: var\(--space-xs\)/)
-    // A sale shows the price it replaces, crossed out, beside the sale price.
-    expect(card).toMatch(/{% if anatomy == 'detailed' and product\.compare_at_price > product\.price %}[\s\S]*<span class="price__sale">{{ product\.price \| money }}<\/span>[\s\S]*<s class="product-card__compare-at">/)
-    expect(card).toContain("'product_card.review_count' | t: count: review_count")
+  })
+
+  it('shows the crossed-out price of a sale, and "From" when the price varies, on every anatomy', () => {
+    expect(card).not.toContain("anatomy == 'detailed' and product.compare_at_price")
+    expect(card).toMatch(/assign price = product\.price \| money\s*if product\.price_varies\s*assign price = 'product_card\.from_price' \| t: price: price\s*endif/)
+    expect(card).toMatch(
+      /{% if product\.compare_at_price > product\.price %}\s*<p class="price">[\s\S]*<span class="price__sale">{{ price }}<\/span>[\s\S]*<s class="product-card__compare-at">{{ product\.compare_at_price \| money }}<\/s>\s*<\/p>\s*{% else %}\s*<p class="price">{{ price }}<\/p>/,
+    )
+    expect(JSON.parse(read('base-theme/locales/en.default.json')).product_card.from_price).toBe('From {{ price }}')
   })
 
   it('gives the editorial card a large title with the price under it and no button', () => {
@@ -3118,6 +3129,33 @@ describe('Card anatomies', () => {
         expect.objectContaining({ name: `t:general.${key}_${anatomy}`, settings: expect.objectContaining({ card_anatomy: anatomy }) }),
       )
     }
+  })
+})
+
+describe('Price savings', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const saving = read('base-theme/snippets/price-saving.liquid')
+
+  it('shows the amount saved or the percentage off, whichever number is larger', () => {
+    // Liquid gives prices in hundredths, so the percentage in hundredths compares with the amount saved.
+    expect(saving).toMatch(/assign saving = compare_at_price \| minus: price/)
+    // Rounded down, so it never promises more than the saving.
+    expect(saving).toMatch(/assign percent = saving \| times: 100 \| divided_by: compare_at_price/)
+    expect(saving).toMatch(/assign percent_in_hundredths = percent \| times: 100\s*if percent_in_hundredths > saving\s*echo 'product\.save_percent' \| t: percent: percent\s*else\s*assign amount = saving \| money\s*echo 'product\.save_amount' \| t: amount: amount\s*endif/)
+    const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+    expect(locale.product.save_amount).toBe('Save {{ amount }}')
+    expect(locale.product.save_percent).toBe('−{{ percent }}%')
+  })
+
+  it('shows the saving on the product page beside the crossed-out price', () => {
+    expect(read('base-theme/blocks/_product-price.liquid')).toMatch(
+      /<s class="product-price__compare-at">{{ compare_at_price \| money }}<\/s>\s*<span class="product-price__saving text-label">\s*{%- render 'price-saving', price: price, compare_at_price: compare_at_price -%}\s*<\/span>/,
+    )
+  })
+
+  it('sets every price in tabular, lining figures', () => {
+    expect(read('base-theme/assets/critical.css')).toMatch(/\n\.price {\s*font-variant-numeric: tabular-nums lining-nums;\s*}/)
   })
 })
 

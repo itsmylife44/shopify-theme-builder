@@ -1,0 +1,22 @@
+{% doc %}
+  Renders the saving of a price on sale as text: the amount saved ("Save €20") or the percentage off ("−15%"),
+  whichever number is larger. The percentage is rounded down, so it never promises more than the saving. The
+  product card shows it in its sale badge, the product page beside the crossed-out price.
+
+  @param {number} price - The sale price, in hundredths as Liquid gives it
+  @param {number} compare_at_price - The price it replaces, above the sale price
+
+  @example
+  {% render 'price-saving', price: product.price, compare_at_price: product.compare_at_price %}
+{% enddoc %}
+{%- liquid
+  assign saving = compare_at_price | minus: price
+  assign percent = saving | times: 100 | divided_by: compare_at_price
+  assign percent_in_hundredths = percent | times: 100
+  if percent_in_hundredths > saving
+    echo 'product.save_percent' | t: percent: percent
+  else
+    assign amount = saving | money
+    echo 'product.save_amount' | t: amount: amount
+  endif
+-%}
