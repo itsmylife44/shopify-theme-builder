@@ -1,7 +1,7 @@
 // The Studio server: Vite serves the React UI from studio/, and the studioApi
 // plugin adds the Node file API over the Theme folder on disk.
 import { execFile } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -60,7 +60,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       }
       function validateOnce() {
         validatedAt = Date.now()
-        const result = validate(theme)
+        const result = validateFiles(theme)
         result.catch(() => {
           if (validation === result) validation = null
         })
@@ -2011,6 +2011,54 @@ async function uploadImage(cli, store, body) {
 function refuseUserErrors(payload) {
   const errors = payload.userErrors ?? []
   if (errors.length) throw new BadGateway(`Shopify refused the image: ${errors.map((error) => error.message).join(' ')}`)
+}
+
+/** @type {Map<string, Promise<Offense[]>>} Theme Check results by the files checked, the latest last. */
+const checked = new Map()
+
+/**
+ * Runs Theme Check on a Theme, unless it checked the same files before: undo and redo mostly go back to them.
+ * @param {string} theme
+ * @returns {Promise<Offense[]>}
+ */
+function validateFiles(theme) {
+  const key = themeHash(theme)
+  let result = checked.get(key)
+  checked.delete(key)
+  if (!result) {
+    result = validate(theme)
+    // A result is kept only for the files it checked: none changed, nor went, while Theme Check read them.
+    const forget = () => checked.delete(key)
+    result.then(() => {
+      try {
+        if (themeHash(theme) !== key) forget()
+      } catch {
+        forget()
+      }
+    }, forget)
+  }
+  checked.set(key, result)
+  // ponytail: keeps the latest 100 results, more than the Theme states 50 undo steps reach.
+  if (checked.size > 100) checked.delete(checked.keys().next().value ?? '')
+  return result
+}
+
+/**
+ * A hash of the Theme's files, their paths and contents, without its Git history.
+ * @param {string} theme
+ */
+function themeHash(theme) {
+  const hash = createHash('sha256')
+  /** @param {string} dir */
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const file = path.join(dir, entry.name)
+      if (entry.isDirectory() && file !== path.join(theme, '.git')) walk(file)
+      else if (entry.isFile()) hash.update(`${path.relative(theme, file)}\0`).update(readFileSync(file)).update('\0')
+    }
+  }
+  walk(theme)
+  return hash.digest('hex')
 }
 
 /**
