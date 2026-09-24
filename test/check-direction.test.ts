@@ -183,6 +183,27 @@ describe('check-direction', () => {
     ])
   })
 
+  it("reports a product-template block showing its catalog default text, which isn't the shop's fact", () => {
+    const theme = sampleTheme()
+    // A Theme made from an older Base Theme, whose shipping note shipped an example policy as its default.
+    const note = path.join(theme, 'blocks/shipping-note.liquid')
+    writeFileSync(note, readFileSync(note, 'utf8').replace(/("id": "text",[\s\S]*?"info": "[^"]*")/, '$1,\n      "default": "<p>Returns accepted within 30 days.</p>"'))
+    setTemplate(theme, 'templates/product.json', (template) => {
+      template.sections.main.blocks = {
+        note: { type: 'shipping-note', settings: {} },
+        copied: { type: 'shipping-note', settings: { text: '<p>Returns accepted within 30 days.</p>' } },
+        written: { type: 'shipping-note', settings: { text: '<p>Ships from Andria in 2 days.</p>' } },
+        // A heading the preset sets is a label, not a fact.
+        description: { type: 'collapsible-content', settings: { heading: 'Description', source: 'description' } },
+      }
+    })
+    const fix = "the catalog's default text, not the shop's. Write the shop's own fact, or clear it."
+    expect(checkDirection(theme)).toEqual([
+      { check: 'default-text', file: 'templates/product.json', message: `main, shipping-note block, text: ${fix}` },
+      { check: 'default-text', file: 'templates/product.json', message: `main, shipping-note block, text: ${fix}` },
+    ])
+  })
+
   it('reports a link a page labels in more than one way', () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {

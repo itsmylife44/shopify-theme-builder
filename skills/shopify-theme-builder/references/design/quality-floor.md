@@ -12,7 +12,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 
 - The price, the options and the buy button are in the first viewport on desktop, and right under the gallery on mobile.
 - Options (size, color) are buttons, not drop-downs.
-- Shipping and returns sit next to the buy button, not only in the announcement bar.
+- Shipping and returns sit next to the buy button, not only in the announcement bar, written from the shop's buying facts: never an example policy the Creator didn't give (`check-direction.mjs` reports the catalog's default text).
 - The mobile gallery shows thumbnails, not dots only.
 - A product image opens full screen on a click or tap, large enough to see the detail, with pinch to zoom on touch (`image_zoom: lightbox`).
 - The description, materials and care are stacked sections that open in place (open on desktop, collapsed on mobile), never tabs.
@@ -22,6 +22,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Product cards show the full title and the price, and cards in one row line up.
 - Filters and sorting are there on the collection page, and applied filters show as chips that clear.
 - The cart shows the full cost before checkout.
+- With a free-shipping threshold, the cart shows how far the shopper is from it, or that shipping is free (`free_shipping_threshold`).
 - The cart and the product price say whether taxes (and duties) are included and what checkout adds, with shipping linked to the shipping policy (the Base Theme's `tax-note` snippet).
 
 ## Accessibility

@@ -274,7 +274,8 @@
     "logo_height": "Logo height",
     "gallery_layout": "Gallery layout",
     "contact_details": "Contact details",
-    "image_zoom": "Image zoom"
+    "image_zoom": "Image zoom",
+    "free_shipping_threshold": "Free-shipping threshold"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -302,7 +303,7 @@
     "type_scale_ratio": "How much larger each heading level is than the one below it, from the body size up. Smaller on mobile.",
     "type_display_size": "The size of the largest headings, like the hero heading, on desktop. Never smaller than a main heading.",
     "shape_family": "Rounds buttons, inputs, cards, images and badges together. Round makes buttons and badges pills.",
-    "shipping_note_text": "Shown next to the buy button. Links to the shipping and refund policies follow it once they're set in the Shopify admin, under Settings › Policies.",
+    "shipping_note_text": "Shown next to the buy button: the shop's shipping costs, delivery times and returns window. The free-shipping threshold from the theme settings follows it, then links to the shipping and refund policies once they're set in the Shopify admin, under Settings › Policies.",
     "card_hover": "The second image is the product's second media; a product with one image zooms instead. Only on devices with a mouse.",
     "card_text_style": "The title and price of minimal and detailed cards. Quiet: smaller than the body text. Caps: small, in capitals. Bold: the title in bold, the price muted. Editorial cards keep their large title.",
     "card_anatomy": "Every card shows a sale or sold out badge. Minimal: image, title and price. Detailed: adds the vendor, color swatches and a rating from a reviews app. Editorial: a large title and no button.",
@@ -320,7 +321,8 @@
     "header_logo_height": "For a logo image. Without one, the shop name shows at a heading size.",
     "main_product_gallery_layout": "On mobile, the media always swipes, with thumbnails below.",
     "contact_form_heading": "Leave blank to show the page's title.",
-    "contact_form_details": "Email, phone number, address and opening hours."
+    "contact_form_details": "Email, phone number, address and opening hours.",
+    "free_shipping_threshold": "The order total, in the store currency, from which shipping is free, as your shipping rates in Settings › Shipping and delivery set it. The cart shows how far the shopper is from it, and the shipping note shows it. Leave blank to show neither."
   },
   "options": {
     "alignment": {

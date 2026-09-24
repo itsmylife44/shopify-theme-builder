@@ -24,6 +24,7 @@ It reads the Theme's files, prints one line per finding (`<file> <check>: <messa
 | `section-count` | A home page with fewer than 6 sections | Add the sections the home sketch is missing, alternating image-led and type-led, up to 6 to 8 |
 | `type-only` | Two or more type-only sections in a row on a home page: rich text, type banner, newsletter or spec tiles, with no image set | Put an image-led section between them, give the newsletter its split layout with a photo, or remove one |
 | `copy` | Filler words ("elevate", "curated", "seamless" …), vague headlines, "Welcome to", em dashes, in text written or left at its default | Rewrite the text for the shop (`PATCH` the section) |
+| `default-text` | A product-page block showing the catalog's default running text, like an example shipping or returns policy, as if it were the shop's | Write the shop's buying facts the Creator confirmed (`brief.md`, Buying facts), or clear the text |
 | `todo` | A to-do in text shoppers see: bracketed text ("[Da completare: …]"), TODO, TBD, lorem ipsum, "to be completed" | Write the fact the Creator confirmed, or remove the block, and list what's missing in the hand-off |
 
 Fix each finding. A finding stays only when `DIRECTION.md` gives it a reason (the Creator pinned it, or a Rule asks for it): note it with that reason for the verdict.

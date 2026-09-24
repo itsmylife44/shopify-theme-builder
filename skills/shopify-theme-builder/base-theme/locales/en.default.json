@@ -27,6 +27,8 @@
     "continue_shopping": "Continue shopping",
     "discounts": "Discounts",
     "empty": "Your cart is empty.",
+    "free_shipping": "Free shipping",
+    "free_shipping_remaining": "{{ amount }} to free shipping",
     "note": "Order note",
     "product": "Product",
     "quantity": "Quantity",
@@ -157,7 +159,8 @@
       "message_info": "Up to 200 characters",
       "send_on": "Send on (optional)",
       "send_on_info": "Leave empty to send it now, or pick a date within 90 days"
-    }
+    },
+    "free_shipping_over": "Free shipping on orders over {{ amount }}."
   },
   "search": {
     "article": "Article",

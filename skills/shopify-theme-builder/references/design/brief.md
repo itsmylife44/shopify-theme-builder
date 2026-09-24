@@ -19,6 +19,20 @@ Then ask for the photos themselves: a folder, files or links, sorted as far as t
 
 Also ask whether the Brand is **pinned**: colors, fonts or a logo the brand already uses and must keep. What is pinned stays the same in all three Directions; what is open, each Direction decides.
 
+## Buying facts
+
+The facts a shopper needs before they buy, which the Theme shows next to the buy button, in the cart and in the product page's shipping and returns. Extra costs found late are the first reason carts are abandoned, and a shop never shows a policy the Creator didn't give. Ask them in the store decisions of step 1 (SKILL.md), all in one question, each with a default the Creator mostly confirms: take the defaults from their website when they named one, else propose ones common for the category and the market, marked as proposals.
+
+| Fact | Ask for | Where it shows |
+| --- | --- | --- |
+| **Shipping costs** | What shipping costs, and the order total from which it's free, if there is one | The `free_shipping_threshold` theme setting (`PUT /api/style`, a number in the store currency): the cart page and drawer show "€X to free shipping" or "Free shipping" with a progress bar, and the shipping note shows "Free shipping on orders over €X". Its amount matches the store's shipping rates (Shopify admin › Settings › Shipping and delivery), which the checkout charges |
+| **Delivery times** | How long an order takes to arrive, per market | The shipping note's `text` and the "Shipping and returns" collapsible block |
+| **Returns** | The returns window and who pays the return | The shipping note's `text` and the "Shipping and returns" collapsible block |
+| **Sizing** | For clothing, shoes or anything sized: how it fits, and a size chart if there is one | A collapsible block on the product page |
+| **Reviews** | Whether the shop uses a reviews app, and which | Its app block on the product page, and the rating on detailed product cards |
+
+Write only what the Creator confirmed. A fact they don't know yet stays out of the text, and goes in the hand-off's list of what's missing; never a placeholder, and never the catalog's example text (the checker reports it as `default-text`).
+
 ## Reading a reference
 
 - **A website of the brand's own**: open it. Read the colors (background, text, buttons, accent) and font families from its CSS, the logo file, the photos (cut-out or lifestyle, light, crop) and the copy's voice. Ask whether those colors and fonts are pinned or open to change.

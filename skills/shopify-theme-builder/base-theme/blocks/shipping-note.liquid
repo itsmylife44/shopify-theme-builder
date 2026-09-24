@@ -1,6 +1,7 @@
 {% doc %}
-  Renders a short shipping and returns summary, with links to the shop's
-  shipping and refund policy pages when they are set.
+  Renders a short shipping and returns summary, the free-shipping threshold
+  theme setting when it's set (only in the shop currency, the one it's in),
+  and links to the shop's shipping and refund policy pages when they are set.
 
   @example
   {% content_for 'block', type: 'shipping-note', id: 'shipping-note' %}
@@ -8,6 +9,10 @@
 
 <div class="shipping-note text-small" {{ block.shopify_attributes }}>
   {{ block.settings.text }}
+  {% if settings.free_shipping_threshold > 0 and cart.currency.iso_code == shop.currency %}
+    {% assign amount = settings.free_shipping_threshold | times: 100 | round | money %}
+    <p>{{ 'product.free_shipping_over' | t: amount: amount }}</p>
+  {% endif %}
   {% if shop.shipping_policy or shop.refund_policy %}
     <ul class="shipping-note__links" role="list">
       {% if shop.shipping_policy %}
@@ -48,8 +53,7 @@
       "type": "richtext",
       "id": "text",
       "label": "t:labels.text",
-      "info": "t:info.shipping_note_text",
-      "default": "<p>Shipping calculated at checkout. Returns accepted within 30 days.</p>"
+      "info": "t:info.shipping_note_text"
     }
   ],
   "presets": [{ "name": "t:general.shipping_note" }]
