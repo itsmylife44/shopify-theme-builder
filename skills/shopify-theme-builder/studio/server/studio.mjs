@@ -951,6 +951,11 @@ function checkTemplate(theme, catalog, template) {
   }
   const ids = Object.keys(/** @type {object} */ (sections))
   if (ids.length === 0 || ids.length > maxSections) throw new BadRequest(`template holds 1 to ${maxSections} sections.`)
+  const blockIds = Object.values(/** @type {Record<string, { blocks?: unknown }>} */ (sections)).flatMap(({ blocks }) => (isObject(blocks) ? Object.keys(/** @type {object} */ (blocks)) : []))
+  const underscored = [...ids, ...blockIds].find((id) => id.startsWith('_'))
+  if (underscored) {
+    throw new BadRequest(`Shopify rejects an id starting with _, like ${underscored}; use ${underscored.replace(/^_+/, '')}.`)
+  }
   checkOrder({ order }, ids, 'each section id of the template')
   return Object.values(/** @type {Record<string, { type?: unknown }>} */ (sections)).map(({ type }) => {
     sectionFile(theme, catalog, type, pages.home)
@@ -1053,13 +1058,14 @@ function fromPreset(type, preset) {
 }
 
 /**
- * A new id for a section or block of this type, like hero_1a2b3c, that `taken` doesn't hold.
+ * A new id for a section or block of this type, like hero_1a2b3c, that `taken` doesn't hold. A private block's
+ * type loses its leading underscores (_buy-buttons gives buy-buttons_1a2b3c): Shopify rejects an id starting with one.
  * @param {string} type
  * @param {object} taken
  */
 function newId(type, taken) {
   let id
-  do id = `${type}_${randomBytes(3).toString('hex')}`
+  do id = `${type.replace(/^_+/, '')}_${randomBytes(3).toString('hex')}`
   while (id in taken)
   return id
 }

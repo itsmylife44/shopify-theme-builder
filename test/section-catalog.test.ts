@@ -2892,3 +2892,22 @@ describe('Image loading', () => {
     },
   )
 })
+
+describe('Shipped template ids', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+
+  it('has no section or block id starting with _, which Shopify rejects on upload', () => {
+    const files = ['base-theme/templates', 'catalog/templates', 'base-theme/sections', 'catalog/sections'].flatMap((dir) =>
+      readdirSync(path.join(skillDir, dir))
+        .filter((file) => file.endsWith('.json'))
+        .map((file) => path.join(dir, file)),
+    )
+    expect(files).toContain('catalog/sections/header-group.json')
+    const underscored = files.flatMap((file) => {
+      const { sections } = parseJSON(readFileSync(path.join(skillDir, file), 'utf8')) as { sections: Record<string, { blocks?: object }> }
+      const ids = Object.entries(sections).flatMap(([id, { blocks = {} }]) => [id, ...Object.keys(blocks)])
+      return ids.filter((id) => id.startsWith('_')).map((id) => `${file}: ${id}`)
+    })
+    expect(underscored).toEqual([])
+  })
+})

@@ -125,6 +125,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - The Studio's preview no longer ends up on the store's password page after a few hours. When `theme dev`'s storefront session expires (the store answers 401, or redirects to `/password`), the Studio restarts `theme dev`. While it restarts, the top bar and `GET /api/preview` show `reconnecting`, and then the preview reloads. A session that expires again within a minute is left as it is, so the Studio never keeps restarting.
 
+- A new Theme's product page no longer breaks every page of the preview. The Studio gave the main product's private blocks ids starting with `_` (like `_buy-buttons_1a2b3c`), which Shopify rejects, failing the whole upload. A block of a private type now gets its id without the underscore (`buy-buttons_1a2b3c`), and `PUT /api/directions/<name>` refuses a home template with a section or block id starting with `_`.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.

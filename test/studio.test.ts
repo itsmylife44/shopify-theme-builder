@@ -609,6 +609,8 @@ describe('Studio API: Directions', () => {
     ['a template without sections', 'Quiet', { template: { sections: {}, order: [] } }],
     ['an order missing a section', 'Quiet', { template: { ...heroHome, order: [] } }],
     ['a section neither the Theme nor the catalog has', 'Quiet', { template: { sections: { a: { type: 'nope' } }, order: ['a'] } }],
+    ['a section id starting with _, which Shopify rejects', 'Quiet', { template: { sections: { _hero: heroHome.sections.hero }, order: ['_hero'] } }],
+    ['a block id starting with _, which Shopify rejects', 'Quiet', { template: { sections: { hero: { type: 'hero', blocks: { _note: { type: 'note' } }, block_order: ['_note'] } }, order: ['hero'] } }],
     ['a setting that is not a style setting', 'Quiet', { settings: { cart_type: 'page' }, template: heroHome }],
     ['a style value off its options', 'Quiet', { settings: { shape_family: 'blob' }, template: heroHome }],
     ['an unknown field', 'Quiet', { template: heroHome, thesis: 'Calm' }],
@@ -1414,6 +1416,19 @@ describe('Studio API: add, remove and reorder blocks', () => {
     expect(body.error).toContain('3')
   })
 
+  it('gives a block of a private type an id without its leading underscore, which Shopify rejects', async () => {
+    const theme = fixtureTheme()
+    writeFileSync(
+      path.join(theme, 'sections/notes.liquid'),
+      '<div></div>\n{% schema %}{"name": "Notes", "blocks": [{ "type": "_note", "name": "Note" }], "presets": [{ "name": "Notes" }]}{% endschema %}\n',
+    )
+    const studio = await openStudio(theme)
+    const id = (await studio.addSection('notes')).body.home.at(-1).id
+    expect((await studio.send('POST', `api/home/sections/${id}/blocks`, { type: '_note' })).status).toBe(200)
+    const [block] = readTemplate(theme).sections[id].block_order
+    expect(block).toMatch(/^note_[0-9a-f]{6}$/)
+  })
+
   it('removes a block from the section, down to none', async () => {
     const { section, addBlock, removeBlock } = await withSection('faq')
     const [first, ...rest] = section().block_order
@@ -1862,6 +1877,18 @@ describe('Studio API: product page', () => {
     const id = body.product.find((section: { type: string }) => section.type === 'main-product').id
     expect((await studio.send('GET', `api/product/sections/${id}`)).body).toMatchObject({ blockTypes: [] })
   })
+
+  it("gives the main product's private blocks ids without a leading underscore, which Shopify rejects", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const { body } = await studio.addSection('main-product', 'product')
+    const id = body.product.find((section: { type: string }) => section.type === 'main-product').id
+    const { blocks, block_order } = readTemplate(theme, 'templates/product.json').sections[id]
+    expect(blocks[block_order[0]].type).toBe('_product-title')
+    expect(block_order[0]).toMatch(/^product-title_[0-9a-f]{6}$/)
+    for (const block of block_order) expect(block).not.toMatch(/^_/)
+  })
+
   it('copies the Base Theme snippets a catalog section renders into a Theme that lacks them', async () => {
     const theme = fixtureTheme()
     rmSync(path.join(theme, 'snippets/product-card.liquid'), { force: true })
