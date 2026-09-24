@@ -55,7 +55,9 @@ function fixtureCatalog() {
 /**
  * A stand-in for the Shopify CLI: `version` prints the given version; `store execute` adds its arguments to
  * the list in store.json and prints `store` as JSON (given a list, the nth call prints the nth answer, and the
- * last one after that), or fails like the CLI without stored auth; `theme dev` records its
+ * last one after that), or fails like the CLI without stored auth; `theme package` records its --path in
+ * package.json and writes <theme_name>-<theme_version>.zip there, holding the list of files it packaged, or prints
+ * `packageError` and fails; `theme dev` records its
  * arguments and pid in run.json, prints the given output (and `later` half a second on; given a list, the
  * nth run prints the nth one, and the last one after that), prints `onSignal` on each SIGUSR2, then runs
  * until killed or exits with exitCode.
@@ -67,7 +69,16 @@ function fakeShopify({
   onSignal = '',
   exitCode,
   store,
-}: { version?: string; output?: string; later?: string | string[]; onSignal?: string; exitCode?: number; store?: object | object[] } = {}) {
+  packageError,
+}: {
+  version?: string
+  output?: string
+  later?: string | string[]
+  onSignal?: string
+  exitCode?: number
+  store?: object | object[]
+  packageError?: string
+} = {}) {
   const dir = tempDir('shopify-')
   const cli = path.join(dir, 'shopify')
   writeFileSync(
@@ -90,6 +101,20 @@ if (process.argv[2] === 'store') {
       : `console.error('No stored app authentication found for example.myshopify.com.'); process.exit(1)`
   }
   process.exit(0)
+}
+if (process.argv[2] === 'theme' && process.argv[3] === 'package') {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const dir = process.argv[process.argv.indexOf('--path') + 1]
+  fs.writeFileSync(${JSON.stringify(path.join(dir, 'package.json'))}, JSON.stringify({ path: dir }))
+  ${
+    packageError === undefined
+      ? `const info = JSON.parse(fs.readFileSync(path.join(dir, 'config/settings_schema.json'), 'utf8')).find((group) => group.name === 'theme_info')
+  const files = fs.readdirSync(dir, { recursive: true }).filter((file) => fs.statSync(path.join(dir, file)).isFile()).sort()
+  fs.writeFileSync(path.join(dir, info.theme_name + '-' + info.theme_version + '.zip'), 'PK' + JSON.stringify(files))
+  process.exit(0)`
+      : `console.error(${JSON.stringify(packageError)}); process.exit(1)`
+  }
 }
 const fs = require('node:fs')
 const runFile = ${JSON.stringify(path.join(dir, 'run.json'))}
@@ -2433,6 +2458,52 @@ describe('Studio API: save', () => {
     const again = await studio.send('POST', 'api/save')
     expect(again.status).toBe(409)
     expect(again.body.error).toBe('Nothing to save.')
+  })
+})
+
+describe('Studio API: package', () => {
+  function packageRun(cli: string): { path: string } | null {
+    const file = path.join(path.dirname(cli), 'package.json')
+    return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null
+  }
+
+  it("answers the zip the CLI packages from a copy of the Theme outside it, named after the Theme's name and version", async () => {
+    const theme = fixtureTheme()
+    const cli = fakeShopify()
+    const studio = await openStudio(theme, { cli })
+    const response = await fetch(new URL('api/package', studio.url))
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/zip')
+    expect(response.headers.get('content-disposition')).toContain('attachment; filename="Skeleton-0.1.0.zip"')
+    const zip = await response.text()
+    expect(zip.startsWith('PK')).toBe(true)
+    expect(JSON.parse(zip.slice(2))).toEqual(expect.arrayContaining(['config/settings_schema.json', 'templates/index.json', 'templates/page.contact.json']))
+
+    const run = packageRun(cli)
+    expect(run).not.toBeNull()
+    expect(path.relative(theme, run!.path).startsWith('..')).toBe(true)
+    expect(readdirSync(theme).filter((file) => file.endsWith('.zip'))).toEqual([])
+    expect(existsSync(run!.path)).toBe(false)
+  })
+
+  it('refuses with a 409, without packaging, while Theme Check finds errors', async () => {
+    const theme = fixtureTheme()
+    writeFileSync(path.join(theme, 'sections/broken.liquid'), '{% if %}\n{% schema %}{"name": "Broken"}{% endschema %}\n')
+    const cli = fakeShopify()
+    const studio = await openStudio(theme, { cli })
+    const { status, body } = await studio.send('GET', 'api/package')
+    expect(status).toBe(409)
+    expect(body.error).toContain('sections/broken.liquid')
+    expect(packageRun(cli)).toBeNull()
+  })
+
+  it("answers a 500 with the CLI's message, without its colors, when packaging fails", async () => {
+    const cli = fakeShopify({ packageError: '\u001b[31mProvide a theme_info.theme_name configuration in config/settings_schema.json.\u001b[39m' })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const { status, body } = await studio.send('GET', 'api/package')
+    expect(status).toBe(500)
+    expect(body.error).toContain('Provide a theme_info.theme_name configuration in config/settings_schema.json.')
+    expect(body.error).not.toContain('\u001b')
   })
 })
 

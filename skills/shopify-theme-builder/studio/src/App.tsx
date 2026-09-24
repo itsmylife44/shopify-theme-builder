@@ -3,8 +3,10 @@ import {
   ArrowUpIcon,
   CircleCheckIcon,
   CompassIcon,
+  DownloadIcon,
   ExternalLinkIcon,
   LayoutListIcon,
+  LoaderCircleIcon,
   MonitorIcon,
   PaletteIcon,
   PlusIcon,
@@ -177,6 +179,7 @@ export function App() {
         </Select>
         <div className="ml-auto flex items-center gap-2">
           <SaveButton saved={state.saved} onSaved={showState} />
+          <DownloadZipButton />
           <UndoRedo history={state.history} onSaved={showState} />
           <PreviewBadge preview={preview} />
           <ChecksBadge offenses={state.validation} onClick={() => setTab('checks')} />
@@ -297,6 +300,45 @@ function SaveButton({ saved, onSaved }: { saved: boolean; onSaved: (state: Theme
       </span>
       <Button size="sm" disabled={saving || saved} onClick={() => write('/api/save', { method: 'POST' })}>
         {saving ? 'Saving…' : 'Save'}
+      </Button>
+    </>
+  )
+}
+
+/** Downloads the Theme as Shopify's zip, packaged from what is on disk (what the preview shows), saved or not. */
+function DownloadZipButton() {
+  const [packaging, setPackaging] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  async function download() {
+    setPackaging(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/package')
+      if (!response.ok) throw new Error((await response.json()).error)
+      const name = /filename\*=UTF-8''([^;]+)/.exec(response.headers.get('Content-Disposition') ?? '')?.[1]
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url
+      link.download = name ? decodeURIComponent(name) : 'theme.zip'
+      link.click()
+      // Once the browser took the download.
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      setError((error as Error).message)
+    } finally {
+      setPackaging(false)
+    }
+  }
+  return (
+    <>
+      {error ? (
+        <p role="alert" title={error} className="max-w-xs truncate text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <Button size="sm" variant="outline" disabled={packaging} onClick={download}>
+        {packaging ? <LoaderCircleIcon data-icon="inline-start" className="animate-spin" /> : <DownloadIcon data-icon="inline-start" />}
+        {packaging ? 'Packaging…' : 'Download zip'}
       </Button>
     </>
   )

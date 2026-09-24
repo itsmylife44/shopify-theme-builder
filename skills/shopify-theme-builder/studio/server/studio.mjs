@@ -2,11 +2,12 @@
 // plugin adds the Node file API over the Theme folder on disk.
 import { execFile } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
+import { promisify, stripVTControlCharacters } from 'node:util'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
 import { pagePaths, startFrameProxy } from './frame.mjs'
@@ -159,6 +160,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
             .then((body) => {
               if (body instanceof File) {
                 res.setHeader('Content-Type', body.type)
+                if (body.type === 'application/zip') res.setHeader('Content-Disposition', attachment(body.name))
                 res.setHeader('Cache-Control', 'no-store')
                 // An uploaded SVG opened directly must not run scripts on the Studio's origin.
                 res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
@@ -192,6 +194,14 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       route('/api/save', 'POST', async () => {
         await save(theme)
         return readState()
+      })
+      route('/api/package', 'GET', async () => {
+        // What is on disk, which the preview shows, saved or not. Shopify refuses a Theme with errors.
+        const offenses = (await readState()).validation.filter((offense) => offense.severity === 'error')
+        if (offenses.length) {
+          throw new Conflict(`Fix the Theme's errors before packaging it: ${offenses.map((offense) => `${offense.file}:${offense.line} ${offense.message}`).join('; ')}`)
+        }
+        return packageTheme(cli, theme)
       })
       route('/api/undo', 'POST', async () => travel(steps.undo))
       route('/api/redo', 'POST', async () => travel(steps.redo))
@@ -1782,10 +1792,53 @@ async function storeExecute(cli, store, query, { variables, mutate = false } = {
     throw new Conflict(
       `The Studio reaches the store through the Shopify CLI. ` +
         `Run \`shopify store auth --store ${store} --scopes ${storeScopes}\` in a terminal, then try again. ` +
-        `The CLI said: ${(stderr || message).replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-300)}`,
+        `The CLI said: ${cliSaid(stderr || message)}`,
     )
   }
   return JSON.parse(output.slice(output.indexOf('{')))
+}
+
+/**
+ * The CLI's message on one line, without its colors and box.
+ * @param {string} output
+ */
+function cliSaid(output) {
+  return stripVTControlCharacters(output).replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-300)
+}
+
+/**
+ * Packages the Theme with `shopify theme package`, which writes its zip into the folder it packages: a copy
+ * outside the Theme, so the zip never lands in the Theme's Git tree.
+ * @param {string} cli
+ * @param {string} theme
+ * @returns {Promise<File>}
+ */
+async function packageTheme(cli, theme) {
+  const copy = mkdtempSync(path.join(tmpdir(), 'studio-package-'))
+  try {
+    // Without the Theme's Git history, nor a zip packaged into it before, which would hide the new one.
+    const skip = (/** @type {string} */ file) => file === '.git' || (!file.includes(path.sep) && file.endsWith('.zip'))
+    cpSync(theme, copy, { recursive: true, filter: (file) => !skip(path.relative(theme, file)) })
+    try {
+      await promisify(execFile)(cli, ['theme', 'package', '--path', copy], { timeout: 120_000 })
+    } catch (error) {
+      const { stderr, stdout, message } = /** @type {{ stderr?: string, stdout?: string, message: string }} */ (error)
+      throw new HttpError(`The Shopify CLI could not package the Theme: ${cliSaid(stderr || stdout || message)}`)
+    }
+    const zip = readdirSync(copy).find((file) => file.endsWith('.zip'))
+    if (!zip) throw new HttpError('The Shopify CLI packaged the Theme but wrote no zip.')
+    return new File([readFileSync(path.join(copy, zip))], zip, { type: 'application/zip' })
+  } finally {
+    rmSync(copy, { recursive: true, force: true })
+  }
+}
+
+/**
+ * A Content-Disposition that downloads a file under its name, ASCII-safe in `filename` and exact in `filename*`.
+ * @param {string} name
+ */
+function attachment(name) {
+  return `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(name)}`
 }
 
 /**
