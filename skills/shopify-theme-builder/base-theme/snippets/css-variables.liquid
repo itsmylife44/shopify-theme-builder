@@ -265,6 +265,11 @@
       --color-secondary-button: {{ scheme.settings.background }};
       --color-secondary-button-label: {{ scheme.settings.text }};
       --color-secondary-button-border: {{ scheme.settings.text }};
+      {% # On hover a filled button mixes toward its label, an outline one fills, and the secondary one tints. %}
+      --color-button-hover: {% if outline_button %}{{ scheme.settings.button }}{% else %}color-mix(in oklch, {{ scheme.settings.button }}, {{ scheme.settings.button_label }} 15%){% endif %};
+      --color-button-hover-label: {{ scheme.settings.button_label }};
+      --color-button-hover-border: var(--color-button-hover);
+      --color-secondary-button-hover: color-mix(in oklch, {{ scheme.settings.background }}, {{ scheme.settings.text }} 10%);
       {% # The accent: links in running text, sale prices and badges. %}
       --color-accent: {{ scheme.settings.accent }};
       {% # The border: inputs, bordered cards and chips; dividers take it at half strength. %}
