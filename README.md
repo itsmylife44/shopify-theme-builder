@@ -58,7 +58,7 @@ flowchart LR
     C --> E["Your Shopify store<br/>uploaded unpublished"]
 ```
 
-1. **Brief.** The agent reads your colors, fonts and logo from the reference, and asks about your brand's world, your shoppers, the feeling the shop should give and what it rejects, then the shop's languages, its name and the theme's author.
+1. **Brief.** The agent reads your colors, fonts and logo from the reference, and asks about your brand's world, your shoppers, the feeling the shop should give and what it rejects, then its name and the theme's author. Before that, together with the store's password and login, it asks the shop's languages, currency, markets and menus, writes the menus and adds the languages, and gives you the admin links for the rest.
 2. **Theme.** It creates the theme in a new folder with its own Git history and writes three Directions, each a different design with its own home page, for you to compare and choose in the Studio. It composes the product and collection pages from the Section Catalog, writes every heading and paragraph in your shop's default language, and records the chosen Direction's rules in `DIRECTION.md`.
 3. **Studio.** It opens the Studio, where you see the real store rendered by Shopify and change colors, text and section order.
 4. **Custom sections.** Need something the catalog doesn't have, like a size guide? Ask. The agent writes a section with the same conventions and validates it.
@@ -81,7 +81,7 @@ The Studio is a local app that opens next to your agent, in Google Chrome. It sh
   <img src="docs/images/studio-brand.png" alt="The Brand tab with the color schemes and fonts, next to the mobile preview" width="49%">
 </p>
 
-Images stay in Shopify's Theme Editor, and products, collections and menus in the Shopify admin.
+Images stay in Shopify's Theme Editor, and products, collections and menus in the Shopify admin (the agent writes the first menus you agree on).
 
 ## The Section Catalog
 
