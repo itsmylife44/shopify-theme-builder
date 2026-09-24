@@ -144,6 +144,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- The agent reads the brief back to the Creator and has them confirm it every time, even when their first message gave all six items: the read-back checks how it read the brief (the brand's world, the category default and its opposite, what each reference lends), in one question with the brief in a preview. Only a Creator who says to just build it skips it.
+
 - The Studio's errors that quote the Shopify CLI, like the 409 asking for `shopify store auth`, quote only the CLI's error: without its escape codes and without the lines it printed before, like its progress.
 
 - The first image a customer sees loads first: the hero and the first slide of a slideshow at the top of the page, and the product page's main image, carry `fetchpriority="high"` and are never lazy-loaded. Every image in the Section Catalog gives the browser its `sizes` (the Base Theme's `image` snippet takes a new `sizes` parameter, `100vw` by default), and the multicolumn grid fits its images into a fixed ratio box like the other grids, so images of mixed ratios keep the rows even.
