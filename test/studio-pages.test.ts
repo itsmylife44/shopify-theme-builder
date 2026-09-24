@@ -177,7 +177,7 @@ describe('Studio API: product page', () => {
     expect((await studio.addSection('main-product', 'product')).status).toBe(400)
   })
 
-  it('copies the Base Theme blocks the main product takes into a Theme that lacks them, and offers no theme block to add', async () => {
+  it('copies the Base Theme blocks the main product takes into a Theme that lacks them, and offers them to add', async () => {
     const theme = fixtureTheme()
     rmSync(path.join(theme, 'blocks/custom-liquid.liquid'))
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
@@ -185,7 +185,7 @@ describe('Studio API: product page', () => {
     expect(existsSync(path.join(theme, 'blocks/custom-liquid.liquid'))).toBe(true)
     expect(errors(body.validation)).toEqual([])
     const id = body.product.find((section: { type: string }) => section.type === 'main-product').id
-    expect((await studio.send('GET', `api/product/sections/${id}`)).body).toMatchObject({ blockTypes: [] })
+    expect((await studio.send('GET', `api/product/sections/${id}`)).body).toMatchObject({ blockTypes: expect.arrayContaining([{ type: 'custom-liquid', name: 'Custom Liquid' }]) })
   })
 
   it("gives the main product's private blocks ids without a leading underscore, which Shopify rejects", async () => {

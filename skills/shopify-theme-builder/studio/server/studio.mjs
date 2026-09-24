@@ -1335,12 +1335,31 @@ function checkOrder(body, ids, what) {
 const maxBlocks = 50
 
 /**
- * The block types a section's schema lets a page add: its own blocks, not app or theme blocks.
- * Only its own blocks have a name; `@app`, `@theme` and a theme block's type, like custom-liquid, don't.
- * @param {{ blocks?: { type: string, name?: string, limit?: number }[] }} schema
+ * The block types a section's schema lets a page add, not app blocks: its own blocks, which have a name, and the
+ * theme blocks it lists by type, named in the Theme's blocks/<type>.liquid. `@theme` stands for every theme block
+ * that isn't private. A private theme block the section lists, like _product-title, goes in once unless its schema
+ * sets a limit. A theme block comes with its first preset's settings.
+ * @param {string} theme
+ * @param {{ blocks?: { type: string, name?: string, limit?: number }[] }} schema The section's schema.
+ * @returns {{ type: string, name: string, limit?: number, settings?: object }[]}
  */
-function blockTypes(schema) {
-  return (schema.blocks ?? []).filter((block) => block.name)
+function blockTypes(theme, schema) {
+  const listed = schema.blocks ?? []
+  const dir = path.join(theme, 'blocks')
+  const everyThemeBlock =
+    listed.some((block) => block.type === '@theme') && existsSync(dir)
+      ? readdirSync(dir)
+          .filter((file) => file.endsWith('.liquid') && !file.startsWith('_'))
+          .map((file) => /** @type {{ type: string, name?: string, limit?: number }} */ ({ type: file.slice(0, -'.liquid'.length) }))
+          .filter((block) => !listed.some((other) => other.type === block.type))
+      : []
+  return [...listed, ...everyThemeBlock].flatMap((block) => {
+    if (block.name) return [{ type: block.type, name: block.name, limit: block.limit }]
+    const blockSchema = block.type.startsWith('@') ? undefined : readBlockSchema(theme, {}, block.type)
+    if (!blockSchema) return []
+    const limit = blockSchema.limit ?? (block.type.startsWith('_') ? 1 : undefined)
+    return [{ type: block.type, name: blockSchema.name ?? block.type, limit, settings: blockSchema.presets?.[0]?.settings }]
+  })
 }
 
 /**
@@ -1364,7 +1383,7 @@ function addBlock(theme, file, id, body) {
   updateJSON(theme, file, (template) => {
     const section = findSection(template, file, id)
     const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
-    const types = blockTypes(schema)
+    const types = blockTypes(theme, schema)
     const blockType = types.find((candidate) => candidate.type === type)
     if (!blockType) {
       throw new BadRequest(`The ${section.type} section has no ${type} block; it takes ${types.map((t) => t.type).join(', ') || 'none'}.`)
@@ -1378,7 +1397,7 @@ function addBlock(theme, file, id, body) {
     }
     section.blocks ??= {}
     const blockId = newId(type, section.blocks)
-    section.blocks[blockId] = { type, settings: {} }
+    section.blocks[blockId] = { type, settings: structuredClone(blockType.settings ?? {}) }
     section.block_order = [...order, blockId]
   })
 }
@@ -1580,7 +1599,7 @@ function readSection(theme, file, id) {
         media: media(blockSchema?.settings, block.settings),
       }
     }),
-    blockTypes: blockTypes(schema).map((block) => ({ type: block.type, name: translate(block.name ?? block.type) })),
+    blockTypes: blockTypes(theme, schema).map((block) => ({ type: block.type, name: translate(block.name) })),
     maxBlocks: schema.max_blocks ?? maxBlocks,
   }
 }

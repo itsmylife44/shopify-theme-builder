@@ -105,6 +105,55 @@ describe('Studio API: add, remove and reorder blocks', () => {
     expect(block).toMatch(/^note_[0-9a-f]{6}$/)
   })
 
+  it("lists the theme blocks a section names, and adds them with their preset's settings", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const id = (await studio.addSection('main-product', 'product')).body.product.find((section: { type: string }) => section.type === 'main-product').id
+    const url = `api/product/sections/${id}`
+    expect((await studio.send('GET', url)).body.blockTypes).toEqual([
+      { type: '_product-title', name: 'Title' },
+      { type: '_product-price', name: 'Price' },
+      { type: '_variant-picker', name: 'Variant picker' },
+      { type: '_buy-buttons', name: 'Buy buttons' },
+      { type: 'custom-liquid', name: 'Custom Liquid' },
+      { type: 'shipping-note', name: 'Shipping note' },
+      { type: 'collapsible-content', name: 'Collapsible content' },
+    ])
+    for (const type of ['custom-liquid', 'shipping-note', 'collapsible-content']) {
+      const { status, body } = await studio.send('POST', `${url}/blocks`, { type })
+      expect(status, type).toBe(200)
+      expect(errors(body.validation)).toEqual([])
+      const { blocks, block_order } = readTemplate(theme, 'templates/product.json').sections[id]
+      expect(blocks[block_order.at(-1)].type).toBe(type)
+      expect(block_order.at(-1)).toMatch(new RegExp(`^${type}_[0-9a-f]{6}$`))
+    }
+    // A private block the section names goes in once: the preset already has the title.
+    const { status, body } = await studio.send('POST', `${url}/blocks`, { type: '_product-title' })
+    expect(status).toBe(400)
+    expect(body.error).toContain('1')
+    expect((await studio.send('POST', `${url}/blocks`, { type: '@app' })).status).toBe(400)
+  })
+
+  it('lists every public theme block for a section that takes @theme, with its limit', async () => {
+    const theme = fixtureTheme()
+    writeFileSync(
+      path.join(theme, 'blocks/badge.liquid'),
+      '<span></span>\n{% schema %}{"name": "Badge", "limit": 1, "presets": [{ "name": "Badge" }]}{% endschema %}\n',
+    )
+    const studio = await openStudio(theme)
+    const id = (await studio.addSection('custom-section')).body.home.at(-1).id
+    const url = `api/home/sections/${id}`
+    const { blockTypes } = (await studio.send('GET', url)).body
+    expect(blockTypes).toContainEqual({ type: 'badge', name: 'Badge' })
+    expect(blockTypes).toContainEqual({ type: 'group', name: 'Group' })
+    expect(blockTypes.every((block: { type: string }) => !block.type.startsWith('_') && !block.type.startsWith('@'))).toBe(true)
+    expect((await studio.send('POST', `${url}/blocks`, { type: 'group' })).status).toBe(200)
+    const { blocks, block_order } = readTemplate(theme).sections[id]
+    expect(blocks[block_order.at(-1)]).toEqual({ type: 'group', settings: { layout_direction: 'group--vertical', alignment: 'flex-start', padding: 0 } })
+    expect((await studio.send('POST', `${url}/blocks`, { type: 'badge' })).status).toBe(200)
+    expect((await studio.send('POST', `${url}/blocks`, { type: 'badge' })).status).toBe(400)
+  })
+
   it('removes a block from the section, down to none', async () => {
     const { section, addBlock, removeBlock } = await withSection('faq')
     const [first, ...rest] = section().block_order
