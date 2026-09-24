@@ -1058,11 +1058,30 @@ describe('Announcement bar', () => {
     expect(source).toMatch(/{% if rotate and forloop\.first == false %}\s*hidden/)
   })
 
-  it('lets customers step through rotating messages, and stops rotating on hover, focus or reduced motion', () => {
+  it('lets customers step through rotating messages, and holds the rotation on hover or focus', () => {
     expect(source).toContain(`aria-label="{{ 'announcement_bar.previous' | t }}"`)
     expect(source).toContain(`aria-label="{{ 'announcement_bar.next' | t }}"`)
     expect(source).toContain("this.matches(':hover, :focus-within')")
-    expect(source).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
+  })
+
+  it('lets customers pause and play the rotation with a labelled 24px button (WCAG 2.2.2)', () => {
+    const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+    const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    expect(source).toMatch(
+      /<button\s+type="button"\s+class="announcement-bar__button"\s+data-pause\s+aria-label="{{ 'announcement_bar\.pause' \| t }}"\s+data-label-pause="{{ 'announcement_bar\.pause' \| t }}"\s+data-label-play="{{ 'announcement_bar\.play' \| t }}"\s+hidden\s*>/,
+    )
+    expect(locale.announcement_bar.pause).toBe('Pause announcements')
+    expect(locale.announcement_bar.play).toBe('Play announcements')
+    // The label says what pressing does next, so the state is announced.
+    expect(source).toContain("this.pauseButton.setAttribute('aria-label', this.pauseButton.dataset[paused ? 'labelPlay' : 'labelPause'])")
+    expect(css).toMatch(/\.announcement-bar__button {[^}]*min-inline-size: var\(--target-size-min\);[^}]*min-block-size: var\(--target-size-min\);/)
+    expect(css).toMatch(/\.announcement-bar__button\[hidden\] {\s*display: none;/)
+  })
+
+  it('stops after one full cycle when the Merchant turned motion off or the shopper prefers reduced motion', () => {
+    expect(source).toMatch(/{% if settings\.motion == 'none' %}\s*data-once\s*{% endif %}/)
+    expect(source).toContain("this.once = this.hasAttribute('data-once') || matchMedia('(prefers-reduced-motion: reduce)').matches;")
+    expect(source).toContain('if (this.once && this.current === 0) this.setPaused(true);')
   })
 
   it('is in the header group of every new Theme, above the header', () => {

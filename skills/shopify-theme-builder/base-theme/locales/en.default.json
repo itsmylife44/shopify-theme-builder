@@ -187,7 +187,9 @@
   "announcement_bar": {
     "label": "Announcements",
     "next": "Next announcement",
-    "previous": "Previous announcement"
+    "previous": "Previous announcement",
+    "pause": "Pause announcements",
+    "play": "Play announcements"
   },
   "collection_list": {
     "collection_title": "Example collection",
