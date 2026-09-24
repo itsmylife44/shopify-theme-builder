@@ -62,6 +62,7 @@ export function checkDirection(theme) {
     ...pages.flatMap(checkCallsToAction),
     ...pages.flatMap(checkEyebrows),
     ...pages.flatMap((page) => checkRatios(theme, settings, page)),
+    ...pages.filter((page) => page.file === 'templates/index.json').flatMap(checkPlaceholders),
     ...[...groups, ...pages].flatMap(checkCopy),
   ]
 }
@@ -212,6 +213,47 @@ function checkRatios(theme, { values }, { file, sections }) {
 function normalRatio(ratio) {
   const [width, height = '1'] = ratio.split('/').map((part) => part.trim())
   return `${width} / ${height}`
+}
+
+// The catalog sections whose layout shows an `image` setting, as a placeholder drawing when it's blank: the
+// section's own, or each block's. Their other image settings (a video's cover, a testimonial's portrait) show nothing.
+/** @type {Record<string, (settings: Record<string, any>) => 'section' | 'blocks' | undefined>} */
+const shownImages = {
+  hero: (settings) => (settings.video ? undefined : 'section'),
+  'image-with-text': () => 'section',
+  'editorial-split': () => 'section',
+  lookbook: () => 'section',
+  newsletter: (settings) => (settings.layout === 'split' ? 'section' : undefined),
+  slideshow: () => 'blocks',
+  'process-steps': () => 'blocks',
+  'image-gallery': () => 'blocks',
+  'logo-list': () => 'blocks',
+  multicolumn: (settings) => (settings.layout === 'numbered' ? undefined : 'blocks'),
+}
+const fix = 'Set a photo (POST /api/files), or use a section or layout that needs none.'
+
+/**
+ * An image setting left blank in a section whose layout shows it, which the storefront renders as a placeholder
+ * drawing.
+ * @param {Page} page
+ * @returns {Finding[]}
+ */
+function checkPlaceholders({ file, sections }) {
+  return sections.flatMap((section) => {
+    const shown = shownImages[section.type]?.(section.settings)
+    if (shown === 'section') {
+      return section.settings.image ? [] : [finding('placeholder', file, `${section.id}, image: blank, so it shows a placeholder drawing. ${fix}`)]
+    }
+    if (shown !== 'blocks') return []
+    const blank = groupBy(
+      section.blocks.filter((block) => !block.settings.image),
+      (block) => block.type,
+    )
+    return [...blank].map(([type, same]) => {
+      const [blocks, shows] = same.length === 1 ? ['block', 'it shows a placeholder drawing'] : ['blocks', 'they show placeholder drawings']
+      return finding('placeholder', file, `${section.id}, ${same.length} ${type} ${blocks}, image: blank, so ${shows}. ${fix}`)
+    })
+  })
 }
 
 // A section setting that holds a small label above the heading.

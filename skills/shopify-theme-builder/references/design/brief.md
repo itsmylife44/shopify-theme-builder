@@ -15,6 +15,8 @@ Ask one question at a time, in the Creator's language. Take what a reference alr
 | **Rejects** | What the brand refuses to look or sound like | "No rustic kitsch, no gold foil, no 'artisanal'" | Nothing |
 | **Photos** | What the product photos really are: cut-outs on white or lifestyle scenes, how many per product, their quality and light | "One cut-out per product on white, good; three phone photos of the grove" | "Nice photos" |
 
+Then ask for the photos themselves: a folder, files or links, sorted as far as the Creator can into hero or lifestyle scenes, products, and details or the workshop; or "none yet". Download links into your scratchpad, never into the Theme. Look at each photo and write one line on what it shows and whether it's a cut-out or a scene, like `grove.jpg: lifestyle, the Coratina trees at dawn, landscape`. The Directions place them in step 4 from this list; with "none yet", every Direction stands on type and color alone.
+
 Also ask whether the Brand is **pinned**: colors, fonts or a logo the brand already uses and must keep. What is pinned stays the same in all three Directions; what is open, each Direction decides.
 
 ## Reading a reference

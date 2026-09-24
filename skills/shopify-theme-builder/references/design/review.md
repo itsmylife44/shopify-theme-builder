@@ -19,6 +19,7 @@ It reads the Theme's files, prints one line per finding (`<file> <check>: <messa
 | `cta-labels` | One link with two or more button labels on a page | Give every button to that link the same label |
 | `eyebrows` | Small labels above the heading on more than one section in three | Clear the label on the others |
 | `image-ratios` | Images in more than two ratios on one page | Change the card ratio (`PUT /api/style`), or replace a section |
+| `placeholder` | An image left blank on the home page in a section whose layout shows one (the hero, a slide, image with text, editorial split, lookbook, a split newsletter, process steps, image gallery, logo list, multicolumn except numbered), which the storefront shows as a placeholder drawing | Set a photo from the brief (`POST /api/files`, then `PATCH`), or, without photos, replace the section with one that needs none, or pick its no-image layout |
 | `copy` | Filler words ("elevate", "curated", "seamless" …), vague headlines, "Welcome to", em dashes, in text written or left at its default | Rewrite the text for the shop (`PATCH` the section) |
 | `todo` | A to-do in text shoppers see: bracketed text ("[Da completare: …]"), TODO, TBD, lorem ipsum, "to be completed" | Write the fact the Creator confirmed, or remove the block, and list what's missing in the hand-off |
 
