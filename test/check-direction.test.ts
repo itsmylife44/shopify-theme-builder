@@ -346,7 +346,7 @@ describe('check-direction', () => {
     expect(placeholders()).toEqual([])
   })
 
-  it("reports a home, the Theme's and each Direction's, where no section moves or responds", () => {
+  it("reports a home, the Theme's and each Direction's, where no section moves", () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {
       template.sections.ticker = { type: 'timeline', settings: { heading: 'From grove to tin' } }
@@ -358,25 +358,24 @@ describe('check-direction', () => {
       change(data.presets)
       writeJSON(theme, 'config/settings_data.json', data)
     }
-    setPresets((presets) => {
-      for (const preset of Object.values(presets)) preset.card_hover = 'none'
-    })
     const movement = () => checkDirection(theme).filter((finding) => finding.check === 'movement')
     const message =
-      'No section moves or responds: add a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover (card_hover).'
+      'No section moves: add a slideshow, a marquee, a testimonials or collection list carousel, or set motion to expressive.'
+    // Product cards with the second image on hover, the default, don't count: phones can't hover.
+    setPresets((presets) => {
+      for (const preset of Object.values(presets)) preset.card_hover = 'second_image'
+    })
     expect(movement()).toEqual([
       { check: 'movement', file: 'templates/index.json', message },
       { check: 'movement', file: 'listings/harvest-date/templates/index.json', message },
     ])
 
-    // A carousel moves. Product cards with the second image on hover respond, with the card_hover of the Direction's
-    // own preset, which is the second image by default.
+    // A carousel moves on the Theme's home; expressive motion, from the Direction's own preset, moves on its home.
     setTemplate(theme, 'templates/index.json', (template) => {
       template.sections.ticker = { type: 'testimonials', settings: { heading: 'Chefs on the new oil', layout: 'carousel' } }
     })
     setPresets((presets) => {
-      presets['Harvest Date'] = { ...presets['Press Cloth'] }
-      delete presets['Harvest Date'].card_hover
+      presets['Harvest Date'] = { ...presets['Press Cloth'], motion: 'expressive' }
     })
     expect(movement()).toEqual([])
   })

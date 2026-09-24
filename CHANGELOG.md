@@ -144,6 +144,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Changed
 
+- `check-direction.mjs`'s `movement` check no longer counts product cards with the second image on hover, which does nothing on a phone: a home moves with a slideshow, a marquee, a testimonials or collection list carousel, or `motion: expressive`. `directions.md`, `review.md` and `SKILL.md` say the same.
 - The shipping note ships with empty text instead of an example policy ("Returns accepted within 30 days"), which shops showed as their own.
 - Product cards show a sale and sold out in every anatomy, not only the detailed one: a Sold out badge, or on sale the crossed-out price and a badge with the saving, the amount ("Save €20") or the percentage off ("−15%"), whichever number is larger. The anatomy only changes how the card looks. A product whose variants have different prices shows "From" before its lowest price, the product page shows the saving beside the crossed-out price, and every price takes tabular, lining figures.
 - The agent writes the social media links the footer shows through the Studio, with `PUT /api/style` (`social_instagram`, `social_facebook`, `social_tiktok`, `social_x`, `social_youtube`, `social_pinterest`), instead of editing `config/settings_data.json` by hand: each must be a full `https://` link, `""` clears it, and each write is one undo step.
