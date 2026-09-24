@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Collection and search filters no longer reload the page: every choice updates the results through the Section Rendering API, with the URL updated, focus kept on the control, and the product count above the grid announced to screen readers (`role="status"`). Below 750px one "Filter and sort" button opens the filters and sorting in a drawer that closes with "Show N results". Without JavaScript the form still submits with its Apply button.
+
 - Every section has a Section spacing setting (`spacing`): `none`, `tight` (half the theme's), `theme`, the default, or `loose` (one and a half), so a home can alternate dense and airy bands, or run a gallery with no gap. Two neighbours on the same color scheme share one gap instead of doubling it: the second drops its top padding, unless the first ends in media (a hero, a slideshow, a full-bleed image with text) or has no spacing. Sections pad their top with `--section-spacing-start` and their bottom with `--section-spacing`; the density's value is `--section-spacing-theme`.
 
 - Every section with images has an Image ratio setting (`image_ratio`): `card`, the default, follows the product card ratio, or `portrait` (4:5), `square`, `landscape` (4:3) and `natural` (each image's own). Collection list, editorial split, image with text, process steps, multicolumn, image gallery, blog posts, timeline, newsletter, contact form, featured product, the product page (thumbnails too) and the blog, search and collections list pages no longer hard-code their own ratio, so a page keeps to the card's by default. `check-direction.mjs`'s `image-ratios` finding names the sections to set back to `card`.

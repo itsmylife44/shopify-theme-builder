@@ -336,7 +336,44 @@ describe('Collection and search results', () => {
       expect(source).toContain('grid.append(...items)')
       expect(source).toContain("customElements.define('load-more'")
     })
+
+    it(`${name}: below 750px, one Filter and sort button opens the filters in a drawer that closes with a Show N results button`, () => {
+      expect(source).toMatch(/<button\s+type="button"\s+class="button button--secondary [\w-]+__open"\s+aria-haspopup="dialog"\s+data-facets-open\s*>\s*{{ 'collection\.filter_and_sort' \| t }}/)
+      expect(source).toMatch(/<dialog class="[\w-]+__drawer" aria-labelledby="[^"]+">\s*<form/)
+      // The drawer is modal, so the page's status line is inert behind it: the Show N results button announces the count there.
+      expect(source).toMatch(
+        /<\/form>\s*<div class="[\w-]+__drawer-footer" role="status">\s*<button type="button" class="button [\w-]+__show" data-facets-close>\s*<span data-facets-part="show">{{ 'collection\.show_results' \| t: count: /,
+      )
+      expect(locale.collection.filter_and_sort).toBe('Filter and sort')
+      expect(locale.collection.show_results).toEqual({ one: 'Show {{ count }} result', other: 'Show {{ count }} results' })
+      expect(source).toContain('this.dialog.showModal()')
+      // The drawer only takes over on a phone once the script runs: on desktop, or without JavaScript, the filters stay in the page.
+      expect(source).toMatch(new RegExp(`@media \\(max-width: 749px\\) {[^@]*facet-filters:defined \\.${name}__drawer:not\\(\\[open\\]\\) {\\s*display: none;`))
+      expect(source).toMatch(new RegExp(`\\.${name}__drawer {\\s*display: block;\\s*position: static;`))
+    })
+
+    it(`${name}: results update through the Section Rendering API, updating the URL, keeping focus and announcing the count`, () => {
+      expect(source).toMatch(/<facet-filters class="[\w-]+__results" data-section-id="{{ section\.id }}">/)
+      expect(source).toMatch(/<p class="[\w-]+__count" role="status" tabindex="-1" data-facets-part="count">/)
+      expect(source).toContain("fetchUrl.searchParams.set('section_id', this.dataset.sectionId)")
+      expect(source).toContain("history.replaceState(null, '', url)")
+      expect(source).toContain('target?.focus()')
+      expect(source).toContain("customElements.define('facet-filters'")
+      expect(source).not.toContain('requestSubmit')
+    })
+
+    it(`${name}: without JavaScript the filter form submits with a visible Apply button`, () => {
+      expect(source).toMatch(/<button type="submit" class="button [\w-]+__apply">{{ 'collection\.apply' \| t }}<\/button>/)
+      expect(source).toMatch(new RegExp(`facet-filters:defined \\.${name}__apply {\\s*display: none;`))
+    })
   }
+
+  it('main-collection shows how many products match above the grid', () => {
+    const source = readFileSync(path.join(skillDir, 'catalog/sections/main-collection.liquid'), 'utf8')
+    expect(source).toContain("{{ 'collection.product_count' | t: count: collection.products_count }}")
+    expect(locale.collection.product_count).toEqual({ one: '{{ count }} product', other: '{{ count }} products' })
+    expect(source.indexOf("'collection.product_count'")).toBeLessThan(source.indexOf('data-load-more-grid'))
+  })
 
   it('labels the Load more link', () => {
     expect(locale.collection.load_more).toBe('Load more')
