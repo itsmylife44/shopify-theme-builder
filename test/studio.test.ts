@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { parseJSON } from '@shopify/theme-check-node'
 import { startStudio, type Offense } from '../skills/shopify-theme-builder/studio/server/studio.mjs'
+import { checkDirection } from '../skills/shopify-theme-builder/scripts/check-direction.mjs'
 
 const projectDir = fileURLToPath(new URL('..', import.meta.url))
 type StudioServer = Awaited<ReturnType<typeof startStudio>>
@@ -600,6 +601,19 @@ describe('Studio API: Directions', () => {
     expect(existsSync(path.join(theme, 'listings/quiet/templates/index.json'))).toBe(false)
     // Each write and undo runs Theme Check.
   }, 60_000)
+
+  it('leaves the Direction just written for check-direction to check its contrast, without switching to it (SKILL.md step 4.3.2)', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    const contrast = () => checkDirection(theme).filter(({ check }) => check === 'contrast')
+    await studio.setBrand({ colorSchemes: { 'scheme-1': { background: '#FFFFFF', text: '#999999' } } })
+    await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+    expect(contrast().map(({ message }) => message)).toContain('scheme-1: text on background is 2.8:1, needs 4.5:1.')
+
+    await studio.setBrand({ colorSchemes: { 'scheme-1': { background: '#FFFFFF', text: '#222222' } } })
+    await studio.send('PUT', 'api/directions/Loud', { template: heroHome })
+    expect(contrast().filter(({ message }) => message.startsWith('scheme-1: text'))).toEqual([])
+  })
 
   it.each([
     ['a name of three words', 'Very Quiet Press', { template: heroHome }],
