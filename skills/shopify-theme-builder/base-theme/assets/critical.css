@@ -493,7 +493,7 @@ a.product-card__title:hover {
   width: 100%;
 }
 
-.basic-page a:not(.button, .button--secondary) {
+.basic-page a:not(.button, .button--secondary, .rte a) {
   color: inherit;
 }
 

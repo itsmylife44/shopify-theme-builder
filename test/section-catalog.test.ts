@@ -77,13 +77,64 @@ describe('Custom Liquid', () => {
 describe('Contact page', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
 
-  it('ships a page.contact template with the page content and the contact form', () => {
+  const form = readFileSync(path.join(skillDir, 'catalog/sections/contact-form.liquid'), 'utf8')
+  const schema = JSON.parse(form.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it('ships a page.contact template with the contact form alone, so the page shows one title', () => {
     const { sections, order } = parseJSON(readFileSync(path.join(skillDir, 'catalog/templates/page.contact.json'), 'utf8'))
-    expect(order.map((id: string) => sections[id].type)).toEqual(['page', 'contact-form'])
-    const form = readFileSync(path.join(skillDir, 'catalog/sections/contact-form.liquid'), 'utf8')
+    expect(order.map((id: string) => sections[id].type)).toEqual(['contact-form'])
     expect(form).toContain("{% form 'contact'")
     expect(form).toContain('form.posted_successfully?')
     expect(form).toContain('form.errors')
+  })
+
+  it("titles the form with the page's title, unless the heading overrides it, and shows the page's content as an intro", () => {
+    expect(form).toContain('<h1>{{ section.settings.heading | default: page.title }}</h1>')
+    expect(schema.settings).toContainEqual({ type: 'inline_richtext', id: 'heading', label: 't:labels.heading', info: 't:info.contact_form_heading' })
+    expect(form).toMatch(/{% if page\.content != blank %}\s*<div class="contact-form__intro-text rte">{{ page\.content }}<\/div>/)
+  })
+
+  it('lays out as centered, split with contact details, or beside an image, each a named preset', () => {
+    expect(schema.settings).toContainEqual({
+      type: 'select',
+      id: 'layout',
+      label: 't:labels.layout',
+      options: [
+        { value: 'centered', label: 't:options.layout.centered' },
+        { value: 'details', label: 't:options.layout.details' },
+        { value: 'image', label: 't:options.layout.image' },
+      ],
+      default: 'centered',
+    })
+    expect(schema.settings).toContainEqual({ type: 'richtext', id: 'details', label: 't:labels.contact_details', info: 't:info.contact_form_details' })
+    expect(schema.settings).toContainEqual({ type: 'image_picker', id: 'image', label: 't:labels.image' })
+    expect(form).toContain('<div class="contact-form__details rte">{{ section.settings.details }}</div>')
+    expect(form).toContain("{{ 'image' | placeholder_svg_tag: 'placeholder contact-form__placeholder' }}")
+    expect(form).toContain('contact-form--{{ section.settings.layout }}')
+    expect(schema.presets).toEqual([
+      { name: 't:general.contact_form' },
+      { name: 't:general.contact_form_split', settings: { layout: 'details' } },
+      { name: 't:general.contact_form_image', settings: { layout: 'image' } },
+    ])
+  })
+
+  it('centers the default layout in a narrow column and puts the split and image layouts side by side on desktop only', () => {
+    const css = form.match(/{% stylesheet %}([\s\S]*?){% endstylesheet %}/)![1]
+    expect(css).toMatch(/\.contact-form--centered \.contact-form__inner {[^}]*max-width: var\(--width-narrow\);/)
+    expect(css).toMatch(/\.contact-form--centered \.contact-form__intro {[^}]*text-align: center;/)
+    const desktop = css.slice(css.indexOf('@media (min-width: 750px) {'))
+    expect(desktop).toMatch(/\.contact-form--details \.contact-form__inner,\s*\.contact-form--image \.contact-form__inner {[^}]*grid-template-columns: 1fr 1fr;/)
+  })
+
+  it("keeps the links in the page's text and the contact details in the accent color", () => {
+    const critical = readFileSync(path.join(skillDir, 'base-theme/assets/critical.css'), 'utf8')
+    expect(critical).toContain('.basic-page a:not(.button, .button--secondary, .rte a) {')
+  })
+
+  it('leaves the generic page its title and content in one centered column of running text', () => {
+    const page = readFileSync(path.join(skillDir, 'base-theme/sections/page.liquid'), 'utf8')
+    expect(page).toMatch(/<div class="page__column">\s*<h1>{{ page\.title }}<\/h1>\s*{% if page\.content != blank %}/)
+    expect(page).toMatch(/\.page__column {[^}]*justify-self: center;[^}]*max-width: var\(--width-prose\);/)
   })
 
   it('is copied into every new Theme by the skill', () => {

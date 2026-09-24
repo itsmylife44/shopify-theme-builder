@@ -130,6 +130,7 @@ Gather the **brief** the Theme's design comes from, the **Brand** the shop alrea
    - **product**: add `main-product` and `related-products`, then remove `main`. Set the main product's `gallery_layout` (grid, stacked, thumbnails or carousel) to suit the Direction.
    - **collection**: add `main-collection`, then remove `main`.
    - **page**, **contact**, **cart**, **search**, **blog**, **article**, **404** and **collections** already hold their catalog main section from step 3 (`contact-form`, `main-cart` …; the plain page keeps the Base Theme's `page`). Leave them as they are, unless the Creator wants more on one: then add sections from `catalog.<page>`, like a `rich-text` on the 404 page.
+   - **contact** shows the `contact-form` alone: its title is the Contact page's title from Shopify admin (the `heading` setting overrides it), and the page's content shows as an intro above the form. Set its `layout` to suit the Direction: `centered` (the default), `details` (the shop's email, phone number, address and opening hours, in its `details` setting, beside the form; only facts the Creator confirmed, as step 4.6 says) or `image` (an image beside the form, picked as step 5.2 says).
 
    Every choice follows the chosen Direction's rules in `DIRECTION.md`.
 
