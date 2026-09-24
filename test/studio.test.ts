@@ -1139,7 +1139,12 @@ describe('Studio API: store resource settings', () => {
   it("lists the store's collections, products and menus through the Shopify CLI's stored auth, read-only", async () => {
     const cli = fakeShopify({
       store: {
-        collections: { nodes: [{ handle: 'summer-sale', title: 'Summer sale' }] },
+        collections: {
+          nodes: [
+            { handle: 'frontpage', title: 'Home page', productsCount: { count: 0 } },
+            { handle: 'summer-sale', title: 'Summer sale', productsCount: { count: 8 } },
+          ],
+        },
         products: { nodes: [{ handle: 'mug', title: 'Mug' }] },
         menus: { nodes: [{ handle: 'main-menu', title: 'Main menu' }] },
       },
@@ -1148,7 +1153,10 @@ describe('Studio API: store resource settings', () => {
     const { status, body } = await studio.send('GET', 'api/store')
     expect(status).toBe(200)
     expect(body).toEqual({
-      collections: [{ handle: 'summer-sale', title: 'Summer sale' }],
+      collections: [
+        { handle: 'frontpage', title: 'Home page', products: 0 },
+        { handle: 'summer-sale', title: 'Summer sale', products: 8 },
+      ],
       products: [{ handle: 'mug', title: 'Mug' }],
       menus: [{ handle: 'main-menu', title: 'Main menu' }],
     })
@@ -1156,6 +1164,7 @@ describe('Studio API: store resource settings', () => {
     expect(args.slice(0, 4)).toEqual(['store', 'execute', '--store', 'example.myshopify.com'])
     expect(args).toContain('--json')
     expect(args).not.toContain('--allow-mutations')
+    expect(args[args.indexOf('--query') + 1]).toContain('productsCount { count }')
   })
 
   it('tells how to authenticate the store when the CLI has no stored auth for it', async () => {
