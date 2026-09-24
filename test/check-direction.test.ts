@@ -119,7 +119,40 @@ describe('check-direction', () => {
     })
     expect(checkDirection(theme)).toEqual([
       { check: 'contrast', file: 'config/settings_data.json', message: 'scheme-1: text on background is 2.5:1, needs 4.5:1.' },
+      { check: 'contrast', file: 'config/settings_data.json', message: 'scheme-1: muted text on background is 2.5:1, needs 4.5:1.' },
       { check: 'contrast', file: 'config/settings_data.json', message: 'scheme-2: border on background is 1.1:1, needs 3:1.' },
+    ])
+  })
+
+  it('checks muted text as the Theme derives it: the text mixed toward the background only as far as 4.5:1 allows', () => {
+    const theme = sampleTheme()
+    // #767676 on white is 4.5:1, but at 70% it would be 2.6:1: the Theme mixes it less.
+    setSettings(theme, (settings) => {
+      Object.assign(settings.color_schemes['scheme-1'].settings, { background: '#FFFFFF', text: '#767676', button_label: '#FFFFFF' })
+    })
+    expect(checkDirection(theme)).toEqual([])
+  })
+
+  it('reports text and muted text below 4.5:1 on a stop of the background gradient, a translucent stop over the background', () => {
+    const theme = sampleTheme()
+    setSettings(theme, (settings) => {
+      settings.color_schemes['scheme-1'].settings.background_gradient =
+        'linear-gradient(180deg, rgba(244, 241, 234, 1) 0%, rgba(0, 0, 0, 0.01) 50%, rgba(120, 120, 120, 1) 100%)'
+    })
+    expect(checkDirection(theme)).toEqual([
+      { check: 'contrast', file: 'config/settings_data.json', message: 'scheme-1: text on the background gradient stop rgba(120, 120, 120, 1) is 3.3:1, needs 4.5:1.' },
+      { check: 'contrast', file: 'config/settings_data.json', message: 'scheme-1: muted text on the background gradient stop rgba(120, 120, 120, 1) is 1.3:1, needs 4.5:1.' },
+    ])
+  })
+
+  it('reports a button that blends into the page below 3:1', () => {
+    const theme = sampleTheme()
+    setSettings(theme, (settings) => {
+      settings.color_schemes['scheme-1'].settings.button = '#E9E4D8'
+      settings.color_schemes['scheme-1'].settings.button_label = '#1F2A1C'
+    })
+    expect(checkDirection(theme)).toEqual([
+      { check: 'contrast', file: 'config/settings_data.json', message: 'scheme-1: button on background is 1.1:1, needs 3:1.' },
     ])
   })
 
@@ -442,12 +475,12 @@ describe('check-direction', () => {
     expect([clean.status, clean.stdout]).toEqual([0, 'Direction check: 0 findings\n'])
 
     setSettings(theme, (settings) => {
-      settings.color_schemes['scheme-1'].settings.text = '#999999'
+      settings.color_schemes['scheme-1'].settings.border = '#E9E4D8'
     })
     const failing = spawnSync(process.execPath, [command, theme], { encoding: 'utf8' })
     expect([failing.status, failing.stdout]).toEqual([
       1,
-      'config/settings_data.json contrast: scheme-1: text on background is 2.5:1, needs 4.5:1.\nDirection check: 1 finding\n',
+      'config/settings_data.json contrast: scheme-1: border on background is 1.1:1, needs 3:1.\nDirection check: 1 finding\n',
     ])
   })
 

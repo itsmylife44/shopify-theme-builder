@@ -37,12 +37,15 @@ const liquid = /{{[\s\S]*?}}|{%[\s\S]*?%}/g
 // A link or a handle (like a collection's), which the storefront doesn't show as text.
 const notCopy = /^(\/|shopify:\/\/|https?:\/\/)|^[a-z0-9]+(-[a-z0-9]+)+$/
 
-// The pairs a scheme keeps readable (WCAG AA), as the Studio's Brand tab checks them: text at 4.5:1, borders at 3:1.
+// The pairs a scheme keeps readable (WCAG AA): text at 4.5:1 (muted text as css-variables.liquid derives it, and the
+// sale badge's text, the background on the accent), and the border and a button against the page at 3:1.
 const contrastPairs = /** @type {const} */ ([
   ['text', 'background', 4.5],
+  ['muted_text', 'background', 4.5],
   ['button_label', 'button', 4.5],
   ['accent', 'background', 4.5],
   ['border', 'background', 3],
+  ['button', 'background', 3],
 ])
 
 /**
@@ -491,14 +494,66 @@ function listFiles(theme, dir, pick) {
 function checkContrast({ values, schemeDefaults }) {
   return Object.entries(values.color_schemes ?? {}).flatMap(([id, scheme]) => {
     const colors = { ...schemeDefaults, .../** @type {any} */ (scheme).settings }
-    return contrastPairs.flatMap(([color, on, minimum]) => {
-      if (!colors[color] || !colors[on]) return []
-      const ratio = contrastRatio(colors[color], colors[on])
+    if (colors.text && colors.background) colors.muted_text = mutedText(colors.text, colors.background)
+    /** @param {string} color @param {string} on @param {string} onName @param {number} minimum */
+    const check = (color, on, onName, minimum) => {
+      const ratio = contrastRatio(colors[color], on)
       // Rounded down, so a failing ratio never shows as the minimum.
       const shown = Math.floor(ratio * 10) / 10
-      return ratio < minimum ? [finding('contrast', settingsData, `${id}: ${color.replace('_', ' ')} on ${on} is ${shown}:1, needs ${minimum}:1.`)] : []
-    })
+      return ratio < minimum ? [finding('contrast', settingsData, `${id}: ${color.replace('_', ' ')} on ${onName} is ${shown}:1, needs ${minimum}:1.`)] : []
+    }
+    // Text and muted text on each stop of the background gradient, a translucent stop over the background.
+    const stops = colors.background ? String(colors.background_gradient ?? '').match(/rgba?\([^)]*\)|#[0-9a-f]{6}\b/gi) ?? [] : []
+    return [
+      ...contrastPairs.flatMap(([color, on, minimum]) => (colors[color] && colors[on] ? check(color, colors[on], on, minimum) : [])),
+      ...stops.flatMap((stop) =>
+        (/** @type {const} */ (['text', 'muted_text'])).flatMap((color) =>
+          colors[color] ? check(color, overBackground(stop, colors.background), `the background gradient stop ${stop}`, 4.5) : [],
+        ),
+      ),
+    ]
   })
+}
+
+/**
+ * A gradient stop, `#rrggbb` or `rgb(a)(r, g, b[, a])`, as hex over an opaque background.
+ * @param {string} stop
+ * @param {string} background
+ */
+function overBackground(stop, background) {
+  if (stop.startsWith('#')) return stop
+  const [r, g, b, alpha = 1] = stop.slice(stop.indexOf('(') + 1, -1).split(/[\s,/]+/).filter(Boolean).map(Number)
+  return mix(toHex([r, g, b]), background, alpha)
+}
+
+/**
+ * Muted text as snippets/css-variables.liquid derives it: the text mixed toward the background (70% text, then 75%,
+ * and so on) until it reads at 4.6:1, a margin over 4.5:1 for Liquid's color_contrast, which rounds; the text itself
+ * when no mix does.
+ * @param {string} text
+ * @param {string} background
+ */
+function mutedText(text, background) {
+  for (let share = 70; share < 100; share += 5) {
+    const muted = mix(text, background, share / 100)
+    if (contrastRatio(muted, background) >= 4.6) return muted
+  }
+  return text
+}
+
+/**
+ * Two hex colors mixed channel by channel, `share` of the first, as Liquid's color_mix does.
+ * @param {string} a
+ * @param {string} b
+ * @param {number} share
+ */
+function mix(a, b, share) {
+  return toHex([1, 3, 5].map((i) => share * parseInt(a.slice(i, i + 2), 16) + (1 - share) * parseInt(b.slice(i, i + 2), 16)))
+}
+
+/** @param {number[]} channels */
+function toHex(channels) {
+  return `#${channels.map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('')}`
 }
 
 /** @param {string} hex */

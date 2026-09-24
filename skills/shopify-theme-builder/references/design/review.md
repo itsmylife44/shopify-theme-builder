@@ -12,7 +12,7 @@ It reads the Theme's files, prints one line per finding (`<file> <check>: <messa
 
 | Check | What it finds | The fix |
 | --- | --- | --- |
-| `contrast` | A color scheme's text, button label or accent below 4.5:1, or its border below 3:1 | Change the color with `PUT /api/brand` |
+| `contrast` | A color scheme's text, muted text, button label or accent (the sale badge's text on it too) below 4.5:1, text or muted text below 4.5:1 on a stop of its background gradient, or its border or button against the background below 3:1 | Change the color with `PUT /api/brand` |
 | `fonts` | A heading, body or accent font with no `<handle>, because <reason>` in the chosen Direction's part of `DIRECTION.md` | Write the reason from the brief (for a pinned font, `because the Creator pinned it`), or pick a font that has one (`PUT /api/brand`) |
 | `radius` | A `border-radius` of its own in a section, block, snippet or stylesheet | Use the shape family's `var(--style-border-radius-*)` |
 | `repeated-section` | A section type twice on one page | Remove one, or replace it with another section |
