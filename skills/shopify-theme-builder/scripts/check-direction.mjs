@@ -71,7 +71,7 @@ export function checkDirection(theme) {
     ...pages.flatMap(checkEyebrows),
     ...pages.flatMap((page) => checkRatios(theme, settings, page)),
     ...home.flatMap(checkPlaceholders),
-    ...homes.flatMap(({ page, values }) => checkHome(theme, values, page)),
+    ...homes.flatMap(({ page, values }) => checkHome(values, page)),
     ...[...groups, ...pages].flatMap(checkCopy),
     ...pages.filter((page) => /^templates\/product(\.|$)/.test(page.file)).flatMap(checkDefaultText),
   ]
@@ -243,16 +243,6 @@ function checkRatios(theme, { values }, { file, sections }) {
 const productCard = /render\s+'product-card'/
 
 /**
- * Whether a section of the Theme renders product cards.
- * @param {string} theme
- * @param {string} type
- */
-function showsProductCards(theme, type) {
-  const source = path.join(theme, 'sections', `${type}.liquid`)
-  return existsSync(source) && productCard.test(readFileSync(source, 'utf8'))
-}
-
-/**
  * A ratio as `<width> / <height>`, like `1 / 1` for `1`.
  * @param {string} ratio
  */
@@ -302,7 +292,8 @@ function checkPlaceholders({ file, sections }) {
   })
 }
 
-// What moves or responds on a home page: these sections, and product cards with the second image on hover.
+// What moves on a home page, on a phone too: these sections, and `motion: expressive`. Card hover doesn't count:
+// phones can't hover.
 /** @type {Record<string, (settings: Record<string, any>) => boolean>} */
 const movingSections = {
   slideshow: () => true,
@@ -314,17 +305,13 @@ const movingSections = {
 const typeOnlySections = ['rich-text', 'type-banner', 'newsletter', 'spec-tiles']
 
 /**
- * A home page where no section moves or responds, of fewer than 6 sections, or with type-only sections next to each
- * other.
- * @param {string} theme
+ * A home page where nothing moves, of fewer than 6 sections, or with type-only sections next to each other.
  * @param {Record<string, any>} values the global settings the home shows with
  * @param {Page} page
  * @returns {Finding[]}
  */
-function checkHome(theme, values, { file, sections }) {
-  const moves = sections.some(
-    (section) => movingSections[section.type]?.(section.settings) || (values.card_hover === 'second_image' && showsProductCards(theme, section.type)),
-  )
+function checkHome(values, { file, sections }) {
+  const moves = values.motion === 'expressive' || sections.some((section) => movingSections[section.type]?.(section.settings))
   // The runs of type-only sections next to each other.
   /** @type {Section[][]} */
   const runs = [[]]
@@ -339,7 +326,7 @@ function checkHome(theme, values, { file, sections }) {
           finding(
             'movement',
             file,
-            'No section moves or responds: add a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover (card_hover).',
+            'No section moves: add a slideshow, a marquee, a testimonials or collection list carousel, or set motion to expressive.',
           ),
         ]),
     ...(sections.length < 6 ? [finding('section-count', file, `${sections.length} sections: a home has 6 to 8, alternating image-led and type-led.`)] : []),

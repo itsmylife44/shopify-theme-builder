@@ -20,7 +20,7 @@
 - Spacing: <compact, normal or airy>; <page width>
 - Cards: <image ratio>; <plain, bordered or surface>; <text alignment>; <hover>
 - Media: <full-bleed or framed>; <tint, or none>; <what the photos show>
-- Motion: <none, subtle or expressive>, because <reason>; <what moves or responds on the home>
+- Motion: <none, subtle or expressive>, because <reason>; <what moves on the home, on a phone too>
 - Signature: <the one memorable element, and the catalog section that carries it>
 - Rejects: <what this Direction refuses, in its own terms>
 
