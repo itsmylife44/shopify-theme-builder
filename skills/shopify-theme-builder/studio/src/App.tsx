@@ -59,7 +59,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { layoutWireframe, wireframes, type Tone } from '@/wireframes.mjs'
+import { layoutWireframe, wireframes, type PresetWireframe, type Tone } from '@/wireframes.mjs'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
 type Frame = { url: string; paths: Record<Page, string>; editor: Record<Page, string> | null }
@@ -531,7 +531,7 @@ function SectionsPanel({
 }
 
 // A section without a wireframe, like a Custom Section, shows a plain heading and text.
-const plainWireframe = 'center heading text'
+const plainWireframe: PresetWireframe = { wireframe: 'center heading text' }
 const toneClasses: Record<Tone, string> = {
   image: 'fill-current opacity-15',
   strong: 'fill-current opacity-50',
@@ -540,11 +540,11 @@ const toneClasses: Record<Tone, string> = {
   panel: 'fill-background',
 }
 
-/** A preset's layout drawn in greys, from its wireframe description. */
-function Wireframe({ description, className }: { description: string; className?: string }) {
+/** A preset's layout drawn in greys, from its wireframe. */
+function Wireframe({ wireframe, className }: { wireframe: string; className?: string }) {
   return (
     <svg viewBox="0 0 160 100" aria-hidden="true" className={`rounded-md bg-muted text-muted-foreground ${className ?? ''}`}>
-      {layoutWireframe(description).map((shape, index) => (
+      {layoutWireframe(wireframe).map((shape, index) => (
         <rect key={index} x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={1} className={toneClasses[shape.tone]} />
       ))}
     </svg>
@@ -587,7 +587,8 @@ function SectionPicker({
     onAdded(added.id)
   }
 
-  const choice = (key: string, label: string, description: string, onPick: () => void) => (
+  // A preset's line under its name tells it from its section's other presets.
+  const choice = (key: string, label: string, { wireframe, description }: PresetWireframe, onPick: () => void) => (
     <li key={key} className="sm:w-40">
       <button
         type="button"
@@ -595,8 +596,11 @@ function SectionPicker({
         onClick={onPick}
         className="flex w-full items-center gap-3 rounded-lg border p-2 text-left outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 sm:flex-col sm:items-stretch"
       >
-        <Wireframe description={description} className="w-20 shrink-0 sm:w-full" />
-        <span className="text-sm">{label}</span>
+        <Wireframe wireframe={wireframe} className="w-20 shrink-0 sm:w-full" />
+        <span className="flex flex-col text-sm">
+          {label}
+          {description ? <span className="text-xs text-muted-foreground">{description}</span> : null}
+        </span>
       </button>
     </li>
   )

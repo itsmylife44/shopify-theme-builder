@@ -1,7 +1,7 @@
-// The section picker's wireframe thumbnails: one short description per catalog section preset, laid out into
+// The section picker's wireframe thumbnails: one short wireframe per catalog section preset, laid out into
 // grey shapes in a 160 × 100 frame, with as many items as the preset adds blocks. The Theme never sees them.
 //
-// A description is rows, top to bottom, split by ` / `; a row starting with `N*` is N times as tall as a plain one.
+// A wireframe is rows, top to bottom, split by ` / `; a row starting with `N*` is N times as tall as a plain one.
 // A row is columns of equal width, split by ` | `. A column is a stack of parts, centred top to bottom:
 //   image      an image; the images of a column share the height its other parts leave
 //   image@bl   an image filling the column, with the column's other parts over it at a position:
@@ -13,6 +13,7 @@
 /**
  * @typedef {'image' | 'strong' | 'text' | 'outline' | 'panel'} Tone
  * @typedef {{ tone: Tone, x: number, y: number, width: number, height: number }} Shape
+ * @typedef {{ wireframe: string, description?: string }} PresetWireframe
  */
 
 const frame = { width: 160, height: 100, padding: 8, gap: 6 }
@@ -60,12 +61,12 @@ const round = (value) => Math.round(value * 10) / 10
 const shape = (tone, x, y, width, height) => ({ tone, x: round(x), y: round(y), width: round(width), height: round(height) })
 
 /**
- * Lays out a wireframe description into shapes, back to front.
- * @param {string} description
+ * Lays out a wireframe into shapes, back to front.
+ * @param {string} wireframe
  * @returns {Shape[]}
  */
-export function layoutWireframe(description) {
-  const rows = description.split(' / ').map((row) => {
+export function layoutWireframe(wireframe) {
+  const rows = wireframe.split(' / ').map((row) => {
     const weight = row.match(/^(\d+(?:\.\d+)?)\*\s+/)
     const columns = row
       .slice(weight?.[0].length ?? 0)
@@ -178,76 +179,152 @@ function layoutStack(stack, x, y, width, height, center, padding) {
 }
 
 /**
- * Each catalog section's presets, by type and by the preset's name as its schema writes it.
- * @type {Record<string, Record<string, string>>}
+ * Each catalog section's presets, by type and by the preset's name as its schema writes it: its wireframe and, when
+ * the section has other presets, a line under its name that tells it apart from them.
+ * @type {Record<string, Record<string, PresetWireframe>>}
  */
 export const wireframes = {
-  'blog-posts': { 't:general.blog_posts': 'heading / 3* image title text x3' },
-  'collection-list': { 't:general.collection_list': 'heading / 3* image title x3' },
-  'comparison-table': { 't:general.comparison_table': 'center heading / line x3 / rule / line x3 / rule / line x3' },
-  'contact-form': { 't:general.contact_form': 'heading / input | input / 2* input button' },
-  'custom-liquid': { 't:general.custom_liquid': 'panel line text line' },
+  'blog-posts': { 't:general.blog_posts': { wireframe: 'heading / 3* image title text x3' } },
+  'collection-list': { 't:general.collection_list': { wireframe: 'heading / 3* image title x3' } },
+  'comparison-table': { 't:general.comparison_table': { wireframe: 'center heading / line x3 / rule / line x3 / rule / line x3' } },
+  'contact-form': { 't:general.contact_form': { wireframe: 'heading / input | input / 2* input button' } },
+  'custom-liquid': { 't:general.custom_liquid': { wireframe: 'panel line text line' } },
   'editorial-split': {
-    't:general.editorial_split': 'image | heading text text text',
-    't:general.editorial_split_right': 'heading text text text | image',
+    't:general.editorial_split': {
+      wireframe: 'image | heading text text text',
+      description: 'Image on the left, a long text on the right',
+    },
+    't:general.editorial_split_right': {
+      wireframe: 'heading text text text | image',
+      description: 'A long text on the left, image on the right',
+    },
   },
-  faq: { 't:general.faq': 'center heading / 3* rule line rule line rule line rule' },
+  faq: { 't:general.faq': { wireframe: 'center heading / 3* rule line rule line rule line rule' } },
   'featured-collection': {
-    't:general.featured_collection': 'heading / 3* image title line x4',
-    't:general.featured_collection_minimal': 'heading / 3* image line x4',
-    't:general.featured_collection_detailed': 'heading / 2* image title line button x4 / 2* image title line button x4',
-    't:general.featured_collection_editorial': 'heading / 4* image title x3',
+    't:general.featured_collection': {
+      wireframe: 'heading / 3* image title line x4',
+      description: "Product cards in the theme's card style",
+    },
+    't:general.featured_collection_minimal': {
+      wireframe: 'heading / 3* image line x4',
+      description: 'Plain cards: the image, name and price',
+    },
+    't:general.featured_collection_detailed': {
+      wireframe: 'heading / 2* image title line button x4 / 2* image title line button x4',
+      description: 'Two rows of cards with the brand, swatches and rating',
+    },
+    't:general.featured_collection_editorial': {
+      wireframe: 'heading / 4* image title x3',
+      description: 'Three large cards with big names and no button',
+    },
   },
-  'featured-product': { 't:general.featured_product': 'image | heading line button text' },
+  'featured-product': { 't:general.featured_product': { wireframe: 'image | heading line button text' } },
   hero: {
-    't:general.hero': 'image@ml panel heading text button',
-    't:general.hero_full_screen': 'image@mc heading text button',
-    't:general.hero_split': 'image | heading text button',
-    't:general.hero_text_on_image': 'image@bl heading text button',
-    't:general.hero_small_banner': '2* image@ml heading button / _',
+    't:general.hero': {
+      wireframe: 'image@ml panel heading text button',
+      description: 'Text on a panel over an image',
+    },
+    't:general.hero_full_screen': {
+      wireframe: 'image@mc heading text button',
+      description: 'Text centered over an image that fills the screen',
+    },
+    't:general.hero_split': {
+      wireframe: 'image | heading text button',
+      description: 'Image on one side, text on the other',
+    },
+    't:general.hero_text_on_image': {
+      wireframe: 'image@bl heading text button',
+      description: 'Text at the bottom left of the image',
+    },
+    't:general.hero_small_banner': {
+      wireframe: '2* image@ml heading button / _',
+      description: 'A short strip with a heading and a button',
+    },
   },
-  'image-gallery': { 't:general.image_gallery': 'image x3' },
+  'image-gallery': { 't:general.image_gallery': { wireframe: 'image x3' } },
   'image-with-text': {
-    't:general.image_with_text': 'image | heading text button',
-    't:general.image_with_text_right': 'heading text button | image',
+    't:general.image_with_text': {
+      wireframe: 'image | heading text button',
+      description: 'Image on the left, text on the right',
+    },
+    't:general.image_with_text_right': {
+      wireframe: 'heading text button | image',
+      description: 'Text on the left, image on the right',
+    },
   },
-  'logo-list': { 't:general.logo_list': 'center heading / logo x4' },
-  lookbook: { 't:general.lookbook': 'image@mr icon _ icon' },
-  'main-404': { 't:general.main_404': 'center heading text input button' },
-  'main-article': { 't:general.main_article': '3* image / center heading line / 2* text text' },
-  'main-blog': { 't:general.main_blog': 'heading line / 3* image title line x3' },
-  'main-cart': { 't:general.main_cart': 'heading / 2* image | title line | line / 2* image | title line | line / button' },
-  'main-collection': { 't:general.collection_product_grid': 'heading / 4* line line line | image title line x3' },
-  'main-list-collections': { 't:general.main_list_collections': 'heading / 3* image title x4' },
+  'logo-list': { 't:general.logo_list': { wireframe: 'center heading / logo x4' } },
+  lookbook: { 't:general.lookbook': { wireframe: 'image@mr icon _ icon' } },
+  'main-404': { 't:general.main_404': { wireframe: 'center heading text input button' } },
+  'main-article': { 't:general.main_article': { wireframe: '3* image / center heading line / 2* text text' } },
+  'main-blog': { 't:general.main_blog': { wireframe: 'heading line / 3* image title line x3' } },
+  'main-cart': { 't:general.main_cart': { wireframe: 'heading / 2* image | title line | line / 2* image | title line | line / button' } },
+  'main-collection': { 't:general.collection_product_grid': { wireframe: 'heading / 4* line line line | image title line x3' } },
+  'main-list-collections': { 't:general.main_list_collections': { wireframe: 'heading / 3* image title x4' } },
   'main-product': {
-    't:general.main_product': 'image image | image image | title line button text',
-    't:general.main_product_stacked': 'image image | title line button text',
-    't:general.main_product_thumbnails': 'image thumbs | title line button text',
-    't:general.main_product_carousel': 'image dots | title line button text',
+    't:general.main_product': {
+      wireframe: 'image image | image image | title line button text',
+      description: 'Images in a grid beside the product details',
+    },
+    't:general.main_product_stacked': {
+      wireframe: 'image image | title line button text',
+      description: 'Images one under the other',
+    },
+    't:general.main_product_thumbnails': {
+      wireframe: 'image thumbs | title line button text',
+      description: 'One large image, thumbnails below it',
+    },
+    't:general.main_product_carousel': {
+      wireframe: 'image dots | title line button text',
+      description: 'One image at a time, swiped',
+    },
   },
-  'main-search': { 't:general.search_results': 'center input / 4* line line line | image title line x3' },
-  marquee: { 't:general.marquee': 'rule / line x4 / rule' },
-  multicolumn: { 't:general.multicolumn': 'center heading / 3* center icon title text x3' },
-  newsletter: { 't:general.newsletter': 'center heading text input button' },
+  'main-search': { 't:general.search_results': { wireframe: 'center input / 4* line line line | image title line x3' } },
+  marquee: { 't:general.marquee': { wireframe: 'rule / line x4 / rule' } },
+  multicolumn: { 't:general.multicolumn': { wireframe: 'center heading / 3* center icon title text x3' } },
+  newsletter: { 't:general.newsletter': { wireframe: 'center heading text input button' } },
   'press-quotes': {
-    't:general.press_quotes': 'center logo text x3',
-    't:general.press_quotes_wall': 'panel logo text x2 / panel logo text | _',
+    't:general.press_quotes': {
+      wireframe: 'center logo text x3',
+      description: 'Quotes side by side in a row',
+    },
+    't:general.press_quotes_wall': {
+      wireframe: 'panel logo text x2 / panel logo text | _',
+      description: 'Quotes on cards in a staggered wall',
+    },
   },
-  'process-steps': { 't:general.process_steps': 'heading / 3* image icon title text x3' },
+  'process-steps': { 't:general.process_steps': { wireframe: 'heading / 3* image icon title text x3' } },
   'related-products': {
-    't:general.related_products': 'heading / 3* image title line x4',
-    't:general.complementary_products': 'heading / 2* image | title line / 2* image | title line',
+    't:general.related_products': {
+      wireframe: 'heading / 3* image title line x4',
+      description: 'A row of product cards',
+    },
+    't:general.complementary_products': {
+      wireframe: 'heading / 2* image | title line / 2* image | title line',
+      description: 'A short list of products to pair with it',
+    },
   },
-  'rich-text': { 't:general.rich_text': 'center heading text button' },
+  'rich-text': { 't:general.rich_text': { wireframe: 'center heading text button' } },
   slideshow: {
-    't:general.slideshow': '6* image@ml panel heading text button / center dots',
-    't:general.slideshow_full_screen': '6* image@mc heading text button / center dots',
-    't:general.slideshow_split': '6* image | heading text button / center dots',
-    't:general.slideshow_text_on_image': '6* image@bl heading text button / center dots',
+    't:general.slideshow': {
+      wireframe: '6* image@ml panel heading text button / center dots',
+      description: 'Slides with text on a panel over the image',
+    },
+    't:general.slideshow_full_screen': {
+      wireframe: '6* image@mc heading text button / center dots',
+      description: 'Slides that fill the screen, text centered',
+    },
+    't:general.slideshow_split': {
+      wireframe: '6* image | heading text button / center dots',
+      description: 'Slides with the image beside the text',
+    },
+    't:general.slideshow_text_on_image': {
+      wireframe: '6* image@bl heading text button / center dots',
+      description: 'Slides with text at the bottom left',
+    },
   },
-  'spec-tiles': { 't:general.spec_tiles': 'heading / 2* rule heading line x2 / 2* rule heading line x2' },
-  testimonials: { 't:general.testimonials': 'center heading / 3* panel text line x3' },
-  timeline: { 't:general.timeline': 'heading / rule / 3* icon line title text x3' },
-  'type-banner': { 't:general.type_banner': 'display display line' },
-  video: { 't:general.video': 'center heading / 4* image@mc icon' },
+  'spec-tiles': { 't:general.spec_tiles': { wireframe: 'heading / 2* rule heading line x2 / 2* rule heading line x2' } },
+  testimonials: { 't:general.testimonials': { wireframe: 'center heading / 3* panel text line x3' } },
+  timeline: { 't:general.timeline': { wireframe: 'heading / rule / 3* icon line title text x3' } },
+  'type-banner': { 't:general.type_banner': { wireframe: 'display display line' } },
+  video: { 't:general.video': { wireframe: 'center heading / 4* image@mc icon' } },
 }

@@ -19,11 +19,23 @@ function pagePresets() {
 }
 
 describe('Studio section picker wireframes', () => {
-  it.each(pagePresets())('has a wireframe for the %s preset %s that lays out', (type, name) => {
-    const description = wireframes[type]?.[name]
-    expect(description).toEqual(expect.any(String))
-    expect(layoutWireframe(description).length).toBeGreaterThan(0)
+  const presets = pagePresets()
+  it.each(presets)('has a wireframe for the %s preset %s that lays out', (type, name) => {
+    const wireframe = wireframes[type]?.[name]?.wireframe
+    expect(wireframe).toEqual(expect.any(String))
+    expect(layoutWireframe(wireframe!).length).toBeGreaterThan(0)
   })
+
+  // Sibling presets are told apart by a line under their name; a section's only preset has its section's description.
+  const siblingPresets = presets.filter(([type]) => presets.filter(([other]) => other === type).length > 1)
+  it.each(siblingPresets)(
+    'describes the %s preset %s in one short line',
+    (type, name) => {
+      const description = wireframes[type]?.[name]?.description
+      expect(description).toEqual(expect.any(String))
+      expect(description!.length).toBeLessThanOrEqual(60)
+    },
+  )
 
   it('lays out columns side by side, an image filling its column and text centred in its own', () => {
     expect(layoutWireframe('image | heading')).toEqual([
