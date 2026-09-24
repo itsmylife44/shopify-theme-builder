@@ -144,6 +144,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- The Studio's errors that quote the Shopify CLI, like the 409 asking for `shopify store auth`, quote only the CLI's error: without its escape codes and without the lines it printed before, like its progress.
+
 - The first image a customer sees loads first: the hero and the first slide of a slideshow at the top of the page, and the product page's main image, carry `fetchpriority="high"` and are never lazy-loaded. Every image in the Section Catalog gives the browser its `sizes` (the Base Theme's `image` snippet takes a new `sizes` parameter, `100vw` by default), and the multicolumn grid fits its images into a fixed ratio box like the other grids, so images of mixed ratios keep the rows even.
 
 - The Studio's preview no longer ends up on the store's password page after a few hours. When `theme dev`'s storefront session expires (the store answers 401, or redirects to `/password`), the Studio restarts `theme dev`. While it restarts, the top bar and `GET /api/preview` show `reconnecting`, and then the preview reloads. A session that expires again within a minute is left as it is, so the Studio never keeps restarting.
