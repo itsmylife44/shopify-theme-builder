@@ -183,12 +183,13 @@
     --button-font-weight: {{ button_weight }};
     {% comment %}
       Product cards: the shared .product-card in critical.css. A bordered card sets a border width, a card on a
-      surface a background (with the color scheme, below); both pad it. The hover zooms the image by a scale.
+      surface a background (with the color scheme, below); both pad the text, and the image fills the card's top
+      and sides. The hover zooms the image by a scale.
     {% endcomment %}
     --card-image-ratio: {{ settings.card_image_ratio }};
     --card-text-align: {{ settings.card_text_alignment | replace: 'left', 'start' | replace: 'right', 'end' }};
     --card-border-width: {% if settings.card_style == 'bordered' %}var(--border-width){% else %}0{% endif %};
-    --card-padding: {% if settings.card_style == 'plain' %}0{% else %}var(--space-sm){% endif %};
+    --card-padding: {% if settings.card_style == 'plain' %}0{% else %}var(--space-md){% endif %};
     --card-hover-scale: {% if settings.card_hover == 'zoom' %}1.05{% else %}1{% endif %};
     {% comment %}
       Media, for product images only (product cards, the product page, featured product, quick add, predictive
@@ -237,6 +238,20 @@
   {% # The first color scheme is the page default; sections opt into others with a color-<scheme id> class. %}
   {% # Variables also go on :root, the background only on the class, so it paints the element that uses it. %}
   {% for scheme in settings.color_schemes %}
+    {% liquid
+      # A surface card sits on the media tint, so its image and text share one field, where the scheme's text
+      # reads on the tint (4.5:1); otherwise, and without a tint, on 5% of the text color.
+      assign card_background = 'transparent'
+      if settings.card_style == 'surface'
+        assign card_background = 'rgb(from var(--color-foreground) r g b / 0.05)'
+        if settings.media_tint != blank
+          assign tint_contrast = scheme.settings.text | color_contrast: settings.media_tint
+          if tint_contrast >= 4.5
+            assign card_background = settings.media_tint
+          endif
+        endif
+      endif
+    %}
     {% if forloop.first %}:root,{% endif %}
     .color-{{ scheme.id }} {
       --color-background: {{ scheme.settings.background }};
@@ -255,7 +270,7 @@
       {% # The border: inputs, bordered cards and chips; dividers take it at half strength. %}
       --color-border: {{ scheme.settings.border }};
       --color-border-subtle: rgb(from {{ scheme.settings.border }} r g b / 0.5);
-      --card-background: {% if settings.card_style == 'surface' %}rgb(from var(--color-foreground) r g b / 0.05){% else %}transparent{% endif %};
+      --card-background: {{ card_background }};
     }
     .color-{{ scheme.id }} {
       background-color: var(--color-background);

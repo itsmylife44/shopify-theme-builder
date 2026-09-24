@@ -311,6 +311,19 @@ input:not([type='checkbox'], [type='radio']) {
   mix-blend-mode: var(--media-blend);
 }
 
+/* A bordered or surface card: the image fills its top edge and both sides, with no corners of its own, so the
+   card's radius alone shapes it. Only the text is padded, --card-padding on every side (the gap included). */
+.product-card--bordered,
+.product-card--surface {
+  overflow: clip;
+}
+
+.product-card--bordered .product-card__image,
+.product-card--surface .product-card__image {
+  margin: calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding)) calc(var(--card-padding) - var(--space-xs));
+  border-radius: 0;
+}
+
 /* The second image lies over the first, in the same box, and shows on hover. */
 .product-card__image .product-card__image-secondary {
   position: absolute;

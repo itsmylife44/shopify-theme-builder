@@ -22,7 +22,7 @@
     assign anatomy = settings.card_anatomy | default: 'minimal'
   endif
 %}
-<div class="product-card product-card--{{ anatomy }}">
+<div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}">
   {% if product %}
     <a class="product-card__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
       {% if product.featured_image %}

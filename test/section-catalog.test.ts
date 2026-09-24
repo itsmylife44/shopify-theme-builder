@@ -2450,7 +2450,8 @@ describe('Shape and button settings', () => {
     const sources = [{ file: 'base-theme/assets/critical.css', css: critical }, ...liquidFiles.map((file) => ({ file, css: read(file) }))]
     for (const { file, css } of sources) {
       for (const [, value] of css.matchAll(/border-radius\s*:\s*([^;]+);/g)) {
-        expect(radii.map((name) => `var(${name})`), `${file}: border-radius: ${value}`).toContain(value.trim())
+        // 0 squares a corner off, like the image of a bordered or surface card, whose card rounds it.
+        expect(['0', ...radii.map((name) => `var(${name})`)], `${file}: border-radius: ${value}`).toContain(value.trim())
       }
     }
   })
@@ -2596,11 +2597,27 @@ describe('Card and media settings', () => {
     expect(values('card_style')).toEqual(['plain', 'bordered', 'surface'])
     expect(setting('card_style').default).toBe('plain')
     expect(variables).toMatch(/--card-border-width: {% if settings\.card_style == 'bordered' %}var\(--border-width\){% else %}0{% endif %};/)
-    expect(variables).toMatch(/--card-padding: {% if settings\.card_style == 'plain' %}0{% else %}var\(--space-sm\){% endif %};/)
+    expect(variables).toMatch(/--card-padding: {% if settings\.card_style == 'plain' %}0{% else %}var\(--space-md\){% endif %};/)
+  })
+
+  it("puts a surface card on the media tint where the scheme's text reads on it, else on 5% of the text color", () => {
     // The surface follows each color scheme's text color, so it is set with the scheme.
-    expect(variables.slice(variables.indexOf('{% for scheme in settings.color_schemes %}'))).toContain(
-      "--card-background: {% if settings.card_style == 'surface' %}rgb(from var(--color-foreground) r g b / 0.05){% else %}transparent{% endif %};",
+    const schemes = variables.slice(variables.indexOf('{% for scheme in settings.color_schemes %}'))
+    expect(schemes).toMatch(/assign card_background = 'transparent'/)
+    expect(schemes).toMatch(/if settings\.card_style == 'surface'\s+assign card_background = 'rgb\(from var\(--color-foreground\) r g b \/ 0\.05\)'/)
+    expect(schemes).toMatch(/assign tint_contrast = scheme\.settings\.text \| color_contrast: settings\.media_tint/)
+    expect(schemes).toMatch(/if tint_contrast >= 4\.5\s+assign card_background = settings\.media_tint/)
+    expect(schemes).toContain('--card-background: {{ card_background }};')
+  })
+
+  it('fills the top and sides of a bordered or surface card with its image, and pads only the text', () => {
+    expect(card).toContain('<div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}">')
+    expect(critical).toMatch(/\.product-card--bordered,\s*\.product-card--surface {[^}]*overflow: clip/)
+    expect(critical).toMatch(
+      /\.product-card--bordered \.product-card__image,\s*\.product-card--surface \.product-card__image {[^}]*margin: calc\(-1 \* var\(--card-padding\)\) calc\(-1 \* var\(--card-padding\)\) calc\(var\(--card-padding\) - var\(--space-xs\)\);[^}]*border-radius: 0/,
     )
+    // A plain card keeps its image's own corners.
+    expect(critical).toMatch(/\.product-card__image {[^}]*border-radius: var\(--style-border-radius-media\)/)
   })
 
   it('aligns the card text to the start, center or end', () => {
@@ -2916,7 +2933,7 @@ describe('Card anatomies', () => {
   it('takes the anatomy a section passes, or the theme setting for the theme default', () => {
     expect(card).toContain('@param {string} [anatomy]')
     expect(card).toMatch(/if anatomy == blank or anatomy == 'theme'\s*assign anatomy = settings\.card_anatomy/)
-    expect(card).toContain('<div class="product-card product-card--{{ anatomy }}">')
+    expect(card).toContain('<div class="product-card product-card--{{ anatomy }} ')
   })
 
   it.each(sections)('lets %s override the anatomy on its cards and example cards', (name) => {
