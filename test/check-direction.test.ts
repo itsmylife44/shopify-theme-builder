@@ -144,6 +144,38 @@ describe('check-direction', () => {
     ])
   })
 
+  it('reports text that looks like a to-do', () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/product.json', (template) => {
+      template.sections.main.blocks = {
+        shipping: { type: 'collapsible-content', settings: { heading: 'Spedizione e resi', source: 'text', text: '<p>[Da completare: tempi di spedizione e condizioni di reso.]</p>' } },
+      }
+    })
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.note.settings.heading = 'Harvest date TBD'
+      template.sections.story.settings.text = '<p>Lorem ipsum dolor sit amet.</p>'
+      template.sections.rows.settings.heading = 'Grove story: to be completed'
+      // Spanish "todo" (all) and Liquid code aren't to-dos.
+      template.sections.hero.settings.heading = 'Todo el aceite de un olivar'
+      template.sections.code = { type: 'custom-liquid', settings: { custom_liquid: "{{ product.metafields['custom']['harvest'] }}" } }
+      template.order.push('code')
+    })
+    setTemplate(theme, 'sections/header-group.json', (group) => {
+      group.sections['announcement-bar'].blocks.announcement.settings.text = 'TODO: shipping line'
+    })
+    expect(checkDirection(theme)).toEqual([
+      { check: 'todo', file: 'sections/header-group.json', message: 'announcement-bar, announcement block, text: "TODO". Write the fact, or leave it out and tell the Creator.' },
+      { check: 'todo', file: 'templates/index.json', message: 'rows, heading: "to be completed". Write the fact, or leave it out and tell the Creator.' },
+      { check: 'todo', file: 'templates/index.json', message: 'story, text: "Lorem ipsum". Write the fact, or leave it out and tell the Creator.' },
+      { check: 'todo', file: 'templates/index.json', message: 'note, heading: "TBD". Write the fact, or leave it out and tell the Creator.' },
+      {
+        check: 'todo',
+        file: 'templates/product.json',
+        message: 'main, collapsible-content block, text: "[Da completare: tempi di spedizione e condizioni di reso.]". Write the fact, or leave it out and tell the Creator.',
+      },
+    ])
+  })
+
   it('reports a link a page labels in more than one way', () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {

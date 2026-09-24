@@ -20,6 +20,7 @@ It reads the Theme's files, prints one line per finding (`<file> <check>: <messa
 | `eyebrows` | Small labels above the heading on more than one section in three | Clear the label on the others |
 | `image-ratios` | Images in more than two ratios on one page | Change the card ratio (`PUT /api/style`), or replace a section |
 | `copy` | Filler words ("elevate", "curated", "seamless" …), vague headlines, "Welcome to", em dashes, in text written or left at its default | Rewrite the text for the shop (`PATCH` the section) |
+| `todo` | A to-do in text shoppers see: bracketed text ("[Da completare: …]"), TODO, TBD, lorem ipsum, "to be completed" | Write the fact the Creator confirmed, or remove the block, and list what's missing in the hand-off |
 
 Fix each finding. A finding stays only when `DIRECTION.md` gives it a reason (the Creator pinned it, or a Rule asks for it): note it with that reason for the verdict.
 
