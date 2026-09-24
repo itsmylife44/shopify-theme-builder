@@ -39,4 +39,10 @@ A look the Creator names is followed exactly, even when it is on the tell list (
 
 ## Where it goes
 
-The brief is the `## Brief` part of `<theme>/DIRECTION.md` (`direction-template.md`), written in step 4 when the Theme exists. Read it back to the Creator in a few lines before writing the Directions, and confirm it.
+The brief is the `## Brief` part of `<theme>/DIRECTION.md` (`direction-template.md`), written in step 4 when the Theme exists.
+
+## Reading it back
+
+Before writing the Directions, read the brief back to the Creator in a few lines and have them confirm it: the six items as you understood them, the seven things from the brand's world, the category default and its opposite you will steer clear of, and what each reference lends. Ask it as one question with the brief shown in it (like Claude Code's `AskUserQuestion` with the brief in an option's preview), so the Creator can confirm or correct it in one answer.
+
+Do it every time, even when the Creator's first message gave every item. The read-back doesn't collect missing facts: it checks your *interpretation*, which a complete brief leaves unchecked. How you read "contemporary, not classic" or what a reference lends decides all three Directions, and here the Creator catches a wrong reading before they are built on it. A complete first message is not a confirmation. Only a Creator who said not to ask and to just build it skips the read-back.
