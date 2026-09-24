@@ -12,6 +12,9 @@
     aria-label="{{ 'announcement_bar.label' | t }}"
     {% if rotate %}
       data-rotate
+      {% if settings.motion == 'none' %}
+        data-once
+      {% endif %}
     {% endif %}
   >
     <div class="announcement-bar__inner">
@@ -43,6 +46,22 @@
         <button type="button" class="announcement-bar__button" data-step="1" aria-label="{{ 'announcement_bar.next' | t }}">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
             <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="announcement-bar__button"
+          data-pause
+          aria-label="{{ 'announcement_bar.pause' | t }}"
+          data-label-pause="{{ 'announcement_bar.pause' | t }}"
+          data-label-play="{{ 'announcement_bar.play' | t }}"
+          hidden
+        >
+          <svg class="announcement-bar__icon-pause" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10m6-10v10" />
+          </svg>
+          <svg class="announcement-bar__icon-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linejoin="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10l8-5z" />
           </svg>
         </button>
       {% endif %}
@@ -93,12 +112,21 @@
     cursor: pointer;
   }
 
+  .announcement-bar__button[hidden] {
+    display: none;
+  }
+
   .announcement-bar__button svg {
     width: 1.25rem;
   }
 
-  .announcement-bar__button svg:dir(rtl) {
+  .announcement-bar__button[data-step] svg:dir(rtl) {
     scale: -1 1;
+  }
+
+  .announcement-bar__button[data-paused] .announcement-bar__icon-pause,
+  .announcement-bar__button:not([data-paused]) .announcement-bar__icon-play {
+    display: none;
   }
 {% endstylesheet %}
 
@@ -113,8 +141,10 @@
       this.addEventListener(
         'click',
         (event) => {
-          const button = event.target.closest('[data-step]');
-          if (button) this.show(this.current + Number(button.dataset.step));
+          const button = event.target.closest('[data-step], [data-pause]');
+          if (!button) return;
+          if (button.hasAttribute('data-pause')) this.setPaused(!this.paused);
+          else this.show(this.current + Number(button.dataset.step));
         },
         { signal }
       );
@@ -127,9 +157,13 @@
         { signal }
       );
       this.addEventListener('shopify:block:deselect', () => (this.selected = false), { signal });
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      this.once = this.hasAttribute('data-once') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.pauseButton = this.querySelector('[data-pause]');
+      this.pauseButton.hidden = false;
       this.timer = setInterval(() => {
-        if (!this.selected && !this.matches(':hover, :focus-within')) this.show(this.current + 1);
+        if (this.paused || this.selected || this.matches(':hover, :focus-within')) return;
+        this.show(this.current + 1);
+        if (this.once && this.current === 0) this.setPaused(true);
       }, 5000);
     }
 
@@ -141,6 +175,12 @@
     show(index) {
       this.current = (index + this.messages.length) % this.messages.length;
       this.messages.forEach((message, i) => (message.hidden = i !== this.current));
+    }
+
+    setPaused(paused) {
+      this.paused = paused;
+      this.pauseButton.toggleAttribute('data-paused', paused);
+      this.pauseButton.setAttribute('aria-label', this.pauseButton.dataset[paused ? 'labelPlay' : 'labelPause']);
     }
   }
 
