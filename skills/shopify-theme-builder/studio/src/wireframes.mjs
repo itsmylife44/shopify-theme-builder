@@ -258,7 +258,24 @@ export const wireframes = {
   'main-article': { 't:general.main_article': { wireframe: '3* image / center heading line / 2* text text' } },
   'main-blog': { 't:general.main_blog': { wireframe: 'heading line / 3* image title line x3' } },
   'main-cart': { 't:general.main_cart': { wireframe: 'heading / 2* image | title line | line / 2* image | title line | line / button' } },
-  'main-collection': { 't:general.collection_product_grid': { wireframe: 'heading / 4* line line line | image title line x3' } },
+  'main-collection': {
+    't:general.collection_product_grid': {
+      wireframe: 'heading / 4* line line line | image title line x3',
+      description: "Filters beside cards in the theme's card style",
+    },
+    't:general.collection_product_grid_minimal': {
+      wireframe: 'heading / 4* line line line | image line x3',
+      description: 'Plain cards: the image, name and price',
+    },
+    't:general.collection_product_grid_detailed': {
+      wireframe: 'heading / 4* line line line | image title line button x3',
+      description: 'Cards with the brand, swatches and rating',
+    },
+    't:general.collection_product_grid_editorial': {
+      wireframe: 'heading / 4* line line line | image title x2',
+      description: 'Larger cards with big names and no button',
+    },
+  },
   'main-list-collections': { 't:general.main_list_collections': { wireframe: 'heading / 3* image title x4' } },
   'main-product': {
     't:general.main_product': {
@@ -278,8 +295,34 @@ export const wireframes = {
       description: 'One image at a time, swiped',
     },
   },
-  'main-search': { 't:general.search_results': { wireframe: 'center input / 4* line line line | image title line x3' } },
-  marquee: { 't:general.marquee': { wireframe: 'rule / line x4 / rule' } },
+  'main-search': {
+    't:general.search_results': {
+      wireframe: 'center input / 4* line line line | image title line x3',
+      description: "Filters beside cards in the theme's card style",
+    },
+    't:general.search_results_minimal': {
+      wireframe: 'center input / 4* line line line | image line x3',
+      description: 'Plain cards: the image, name and price',
+    },
+    't:general.search_results_detailed': {
+      wireframe: 'center input / 4* line line line | image title line button x3',
+      description: 'Cards with the brand, swatches and rating',
+    },
+    't:general.search_results_editorial': {
+      wireframe: 'center input / 4* line line line | image title x2',
+      description: 'Larger cards with big names and no button',
+    },
+  },
+  marquee: {
+    't:general.marquee': {
+      wireframe: 'rule / line x4 / rule',
+      description: 'Short texts scrolling in a line',
+    },
+    't:general.marquee_badges': {
+      wireframe: '_ / center panel line x3 / _',
+      description: 'Short texts on badges scrolling in a line',
+    },
+  },
   multicolumn: { 't:general.multicolumn': { wireframe: 'center heading / 3* center icon title text x3' } },
   newsletter: { 't:general.newsletter': { wireframe: 'center heading text input button' } },
   'press-quotes': {
@@ -302,6 +345,18 @@ export const wireframes = {
       wireframe: 'heading / 2* image | title line / 2* image | title line',
       description: 'A short list of products to pair with it',
     },
+    't:general.related_products_minimal': {
+      wireframe: 'heading / 3* image line x4',
+      description: 'Plain cards: the image, name and price',
+    },
+    't:general.related_products_detailed': {
+      wireframe: 'heading / 3* image title line button x4',
+      description: 'Cards with the brand, swatches and rating',
+    },
+    't:general.related_products_editorial': {
+      wireframe: 'heading / 4* image title x3',
+      description: 'Three large cards with big names and no button',
+    },
   },
   'rich-text': { 't:general.rich_text': { wireframe: 'center heading text button' } },
   slideshow: {
@@ -322,7 +377,16 @@ export const wireframes = {
       description: 'Slides with text at the bottom left',
     },
   },
-  'spec-tiles': { 't:general.spec_tiles': { wireframe: 'heading / 2* rule heading line x2 / 2* rule heading line x2' } },
+  'spec-tiles': {
+    't:general.spec_tiles': {
+      wireframe: 'heading / 2* rule heading line x2 / 2* rule heading line x2',
+      description: 'Big figures under a thin rule',
+    },
+    't:general.spec_tiles_boxes': {
+      wireframe: 'heading / 2* panel heading line x2 / 2* panel heading line x2',
+      description: 'Big figures in bordered boxes',
+    },
+  },
   testimonials: { 't:general.testimonials': { wireframe: 'center heading / 3* panel text line x3' } },
   timeline: { 't:general.timeline': { wireframe: 'heading / rule / 3* icon line title text x3' } },
   'type-banner': { 't:general.type_banner': { wireframe: 'display display line' } },

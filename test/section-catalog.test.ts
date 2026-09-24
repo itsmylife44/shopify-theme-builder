@@ -842,10 +842,10 @@ describe('Announcement bar', () => {
   const source = readFileSync(path.join(skillDir, 'catalog/sections/announcement-bar.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
 
-  it('sits once in the header group, with a color scheme and a preset', () => {
+  it('sits once in the header group, with a color scheme and a rotating and a stacked preset', () => {
     expect(schema.enabled_on).toEqual({ groups: ['header'] })
     expect(schema.limit).toBe(1)
-    expect(schema.presets).toHaveLength(1)
+    expect(schema.presets[1]).toEqual({ name: 't:general.announcement_bar_stacked', settings: { layout: 'stack' }, blocks: schema.presets[0].blocks })
     expect(source).toContain('class="announcement-bar full-width color-{{ section.settings.color_scheme }}"')
   })
 
@@ -1278,6 +1278,10 @@ describe('Marquee', () => {
     expect(schema.enabled_on).toBeUndefined()
   })
 
+  it('offers badges as a named preset with the same items', () => {
+    expect(schema.presets[1]).toEqual({ name: 't:general.marquee_badges', settings: { item_style: 'badge' }, blocks: schema.presets[0].blocks })
+  })
+
   it('scrolls short texts or badges, each an item block', () => {
     expect(schema.blocks).toEqual([expect.objectContaining({ type: 'item', name: 't:general.item' })])
     expect(settings.item_style.options.map((option: { value: string }) => option.value)).toEqual(['text', 'badge'])
@@ -1328,6 +1332,10 @@ describe('Spec tiles', () => {
     expect(schema.presets[0].name).toBe('t:general.spec_tiles')
     expect(schema.presets[0].blocks.length).toBeGreaterThan(1)
     expect(schema.enabled_on).toBeUndefined()
+  })
+
+  it('offers boxed tiles as a named preset with the same tiles', () => {
+    expect(schema.presets[1]).toEqual({ name: 't:general.spec_tiles_boxes', settings: { tile_style: 'box' }, blocks: schema.presets[0].blocks })
   })
 
   it('shows each tile as a big value and its label, read label first', () => {
@@ -2562,6 +2570,19 @@ describe('Card anatomies', () => {
       }
     }
     expect(schema.presets.slice(1).map((preset: { settings: { card_anatomy: string } }) => preset.settings.card_anatomy)).toEqual(values(global))
+  })
+
+  it.each([
+    ['main-collection', 'collection_product_grid'],
+    ['main-search', 'search_results'],
+    ['related-products', 'related_products'],
+  ])('offers each anatomy as a named %s preset', (name, key) => {
+    const presets = parse(read(`catalog/sections/${name}.liquid`)).presets
+    for (const anatomy of values(global)) {
+      expect(presets).toContainEqual(
+        expect.objectContaining({ name: `t:general.${key}_${anatomy}`, settings: expect.objectContaining({ card_anatomy: anatomy }) }),
+      )
+    }
   })
 })
 
