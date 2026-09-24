@@ -897,6 +897,43 @@ describe('Country and language selector', () => {
   })
 })
 
+describe('Footer', () => {
+  const catalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections')
+  const source = readFileSync(path.join(catalog, 'footer.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const block = (type: string) => schema.blocks.find((block: { type: string }) => block.type === type)
+
+  it('takes a text block: a heading and a rich text line, like the brand, an address or opening hours', () => {
+    expect(block('text').settings).toEqual([
+      expect.objectContaining({ type: 'text', id: 'heading' }),
+      expect.objectContaining({ type: 'richtext', id: 'text' }),
+    ])
+    expect(source).toMatch(/<div class="rte">{{ block\.settings\.text }}<\/div>/)
+  })
+
+  it("takes a social block that links the theme's social media settings as icons, named for screen readers", () => {
+    expect(block('social').settings).toContainEqual(expect.objectContaining({ type: 'text', id: 'heading' }))
+    expect(block('social').settings).toContainEqual({ type: 'paragraph', content: 't:info.social_links_setting' })
+    expect(source).toContain("assign key = 'social_' | append: id")
+    for (const network of ['instagram', 'facebook', 'tiktok', 'x', 'youtube', 'pinterest']) {
+      expect(source).toMatch(new RegExp(`when '${network}' -?%}\\s*<svg[^>]*aria-hidden="true"`))
+    }
+    expect(source).toMatch(/<a\s+href="{{ settings\[key\] }}"[^>]*aria-label="{{ social_names\[forloop\.index0\] }}"/)
+    expect(schema.blocks.map((block: { type: string }) => block.type)).toEqual(['text', 'menu', 'social'])
+  })
+
+  it('starts every new Theme, and the preset, with the brand text, a menu and the social links', () => {
+    const group = JSON.parse(readFileSync(path.join(catalog, 'footer-group.json'), 'utf8')).sections.footer
+    expect(group.block_order.map((id: string) => group.blocks[id].type)).toEqual(['text', 'menu', 'social'])
+    expect(schema.presets[0].blocks.map((block: { type: string }) => block.type)).toEqual(['text', 'menu', 'social'])
+  })
+
+  it('sets the blocks in columns on desktop and stacks them on mobile', () => {
+    expect(source).toMatch(/\.footer__columns {[^}]*grid-template-columns: 1fr;/)
+    expect(source).toMatch(/@media \(min-width: 750px\) {\s*\.footer__columns {[^}]*grid-template-columns: repeat\(auto-fit, minmax\(/)
+  })
+})
+
 describe('Announcement bar', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const source = readFileSync(path.join(skillDir, 'catalog/sections/announcement-bar.liquid'), 'utf8')
