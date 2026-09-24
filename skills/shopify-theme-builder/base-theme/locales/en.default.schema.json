@@ -273,7 +273,8 @@
     "sticky_header": "Sticky header",
     "logo_height": "Logo height",
     "gallery_layout": "Gallery layout",
-    "contact_details": "Contact details"
+    "contact_details": "Contact details",
+    "image_zoom": "Image zoom"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -505,6 +506,10 @@
       "stacked": "Stacked, full bleed",
       "thumbnails": "Main image with thumbnails",
       "carousel": "Carousel"
+    },
+    "image_zoom": {
+      "lightbox": "Full-screen lightbox",
+      "none": "None"
     }
   }
 }

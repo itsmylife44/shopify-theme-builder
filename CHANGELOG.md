@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Product images open full screen: clicking or tapping one on the product page opens it at 3000 pixels in a `<dialog>`, with pinch to zoom and pan on touch, previous and next buttons and arrow keys between images (mirrored in right-to-left shops), Escape and a close button, and focus back on the image once closed. The main product's new Image zoom setting (`image_zoom`) turns it off with `none`; `lightbox` is the default.
+
 - A screenshot script for the review before the hand-off: `node <skill-dir>/scripts/screenshot.mjs <url> <out.png> [--width 1440] [--mobile]` drives the system's Google Chrome (or Chromium, or Microsoft Edge; `CHROME_PATH` names another) headless with no new dependency, captures the full page with reduced motion so the reveal on scroll hides no section, prints the page's `scrollWidth` to show horizontal overflow, and ends within a minute. It replaces Chrome's `--screenshot` flag, which hung on the `theme dev` preview and couldn't lay out 390 pixels wide.
 
 - The agent carries on by itself once the Creator presses Choose on a Direction in the Studio: after handing over the choice it runs `wait-for-choice` (`node <skill-dir>/studio/bin/wait-for-choice.mjs --port <port>`) in the background, which ends printing the chosen Direction's name, or with a message on timeout or when the Studio stops. On agents without background commands, the Creator writes "done" instead.

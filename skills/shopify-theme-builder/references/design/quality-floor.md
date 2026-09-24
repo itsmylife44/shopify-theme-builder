@@ -14,6 +14,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Options (size, color) are buttons, not drop-downs.
 - Shipping and returns sit next to the buy button, not only in the announcement bar.
 - The mobile gallery shows thumbnails, not dots only.
+- A product image opens full screen on a click or tap, large enough to see the detail, with pinch to zoom on touch (`image_zoom: lightbox`).
 - The description, materials and care are stacked sections that open in place (open on desktop, collapsed on mobile), never tabs.
 
 ## Collection and cart

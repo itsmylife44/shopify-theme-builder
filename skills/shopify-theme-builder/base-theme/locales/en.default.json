@@ -144,6 +144,10 @@
     "unit_price": "Unit price",
     "previous_media": "Previous media",
     "next_media": "Next media",
+    "zoom": "Open image {{ index }} of {{ count }} in full screen",
+    "lightbox": "Enlarged product images",
+    "close_lightbox": "Close full screen",
+    "media_position": "{{ index }} of {{ count }}",
     "recipient": {
       "send_to_recipient": "Send as a gift to a recipient",
       "email": "Recipient email",
