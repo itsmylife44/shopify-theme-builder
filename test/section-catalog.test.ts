@@ -1982,6 +1982,33 @@ describe('Product recommendations', () => {
   })
 })
 
+describe('Product rows', () => {
+  const read = (name: string) => readFileSync(path.join(projectDir, `skills/shopify-theme-builder/catalog/sections/${name}.liquid`), 'utf8')
+
+  // Two columns on a phone leave the third of three cards alone on its row: below 750px the row swipes instead,
+  // one row whatever the count, each card three quarters wide so the next one peeks in.
+  it.each(['featured-collection', 'related-products'])('%s swipes as one snapped row below 750px, never a grid with a lone card', (name) => {
+    const css = read(name).match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    const grid = `.${name}__grid`
+    const mobile = css.match(/@media \(max-width: 749px\) {([\s\S]*?)\n  }\n/)![1]
+    expect(mobile).toMatch(new RegExp(`\\${grid} {[^}]*grid-auto-flow: column;[^}]*grid-auto-columns: 75%;[^}]*overflow-x: auto;[^}]*scroll-snap-type: x mandatory;`))
+    expect(mobile).toMatch(new RegExp(`\\${grid} > \\* {\\s*scroll-snap-align: start;`))
+    // Keyboard: focusing a card's title link scrolls it into view. Right to left: a column-flow grid follows the
+    // page's direction, so the row starts on the right with no rule of its own.
+    // No two-column grid outside the desktop rule, so an odd count can't orphan a card.
+    expect(css.replace(/@media \(min-width: 750px\) {[\s\S]*?\n  }\n/, '')).not.toMatch(/grid-template-columns: repeat\(2/)
+  })
+
+  it.each(['featured-collection', 'related-products'])('%s presets show a multiple of their desktop columns, so no desktop row ends short', (name) => {
+    const schema = JSON.parse(read(name).match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+    const defaults = Object.fromEntries(schema.settings.map((setting: { id: string; default: unknown }) => [setting.id, setting.default]))
+    for (const preset of schema.presets) {
+      const { products_to_show, columns } = { ...defaults, ...preset.settings }
+      expect(products_to_show % columns, preset.name).toBe(0)
+    }
+  })
+})
+
 describe('Quick add', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
