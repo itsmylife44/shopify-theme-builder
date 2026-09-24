@@ -795,6 +795,15 @@ describe('Header menu', () => {
     expect(locale.header.menu).toBeTruthy()
     expect(locale.header.close_menu).toBeTruthy()
   })
+
+  it('keeps the menu button, the logo and the icons on one row on mobile, shrinking only the logo', () => {
+    const mobile = source.slice(source.indexOf('@media (max-width: 749px) {'), source.indexOf('@media (min-width: 750px) {'))
+    expect(mobile).toMatch(/\.header__inner {[^}]*flex-wrap: nowrap;/)
+    expect(mobile).toMatch(/\.header__logo {[^}]*min-width: 0;/)
+    expect(mobile).toMatch(/\.header__menu-button,\s*\.header__icons {[^}]*flex-shrink: 0;/)
+    // The centered logo's column gives way before the side columns do, so that layout stays one row too.
+    expect(mobile).toMatch(/\.header--logo_center_menu_below \.header__inner {[^}]*grid-template-columns: minmax\(max-content, 1fr\) minmax\(0, auto\) minmax\(max-content, 1fr\);/)
+  })
 })
 
 describe('Country and language selector', () => {
