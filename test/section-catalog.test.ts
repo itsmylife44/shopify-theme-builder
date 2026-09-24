@@ -1104,7 +1104,7 @@ describe('Multicolumn', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
     expect(source).toContain('class="multicolumn full-width color-{{ section.settings.color_scheme }}"')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.multicolumn', blocks: [{ type: 'column' }, { type: 'column' }, { type: 'column' }] }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.multicolumn', blocks: [{ type: 'column' }, { type: 'column' }, { type: 'column' }] })
     expect(schema.enabled_on).toBeUndefined()
   })
 
@@ -1114,6 +1114,28 @@ describe('Multicolumn', () => {
     expect(source).toContain('{% for block in section.blocks %}')
     expect(source).toContain('{{ block.shopify_attributes }}')
     expect(source).toContain("{{ 'image' | placeholder_svg_tag")
+  })
+
+  it('lays the columns out as icons (the default, as before), images on top, numbered steps or cards', () => {
+    const layout = schema.settings.find((setting: { id: string }) => setting.id === 'layout')
+    expect(layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'icons' })
+    expect(layout.options).toEqual([
+      { value: 'icons', label: 't:options.layout.icons' },
+      { value: 'images', label: 't:options.layout.images' },
+      { value: 'numbered', label: 't:options.layout.numbered' },
+      { value: 'cards', label: 't:options.layout.cards' },
+    ])
+    expect(source).toContain('multicolumn__grid--{{ section.settings.layout }}')
+    expect(source).toContain('{{ forloop.index }}')
+    for (const variable of ['--card-padding', '--card-border-width', '--card-background', '--style-border-radius-cards']) {
+      expect(source).toContain(`var(${variable})`)
+    }
+  })
+
+  it('offers each other layout as a named preset with the same columns', () => {
+    expect(schema.presets.slice(1)).toEqual(
+      ['images', 'numbered', 'cards'].map((layout) => ({ name: `t:general.multicolumn_${layout}`, settings: { layout }, blocks: schema.presets[0].blocks })),
+    )
   })
 })
 

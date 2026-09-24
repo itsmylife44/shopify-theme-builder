@@ -1,29 +1,49 @@
-{% comment %}Columns of an icon or image, a heading and text, for benefits or steps.{% endcomment %}
-{% assign text_alignment = section.settings.text_alignment | replace: 'left', 'start' | replace: 'right', 'end' %}
+{% comment %}Columns of an icon or image, a heading and text, for benefits, steps or features.{% endcomment %}
+{% liquid
+  assign layout = section.settings.layout
+  assign text_alignment = section.settings.text_alignment | replace: 'left', 'start' | replace: 'right', 'end'
+  if layout == 'images'
+    assign text_alignment = 'start'
+  endif
+  assign list_tag = 'ul'
+  if layout == 'numbered'
+    assign list_tag = 'ol'
+  endif
+%}
 <div class="multicolumn full-width color-{{ section.settings.color_scheme }}">
   <div class="multicolumn__inner">
     {% if section.settings.heading != blank %}
       <h2 class="multicolumn__heading">{{ section.settings.heading }}</h2>
     {% endif %}
 
-    <ul
-      class="multicolumn__grid"
+    <{{ list_tag }}
+      class="multicolumn__grid multicolumn__grid--{{ section.settings.layout }}"
       role="list"
       style="--columns: {{ section.settings.columns }}; --text-alignment: {{ text_alignment }};"
     >
       {% for block in section.blocks %}
         <li class="multicolumn__column" {{ block.shopify_attributes }}>
-          <div class="multicolumn__media multicolumn__media--{{ block.settings.image_size }}">
-            {% if block.settings.image != blank %}
-              {{
-                block.settings.image
-                | image_url: width: 1200
-                | image_tag: widths: '100, 200, 300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 33vw, 100vw', loading: 'lazy'
-              }}
-            {% else %}
-              {{ 'image' | placeholder_svg_tag: 'placeholder multicolumn__placeholder' }}
-            {% endif %}
-          </div>
+          {% if layout == 'numbered' %}
+            <span class="multicolumn__number text-h1">{{ forloop.index }}</span>
+          {% else %}
+            {% liquid
+              assign image_size = block.settings.image_size
+              if layout == 'images'
+                assign image_size = 'large'
+              endif
+            %}
+            <div class="multicolumn__media multicolumn__media--{{ image_size }}">
+              {% if block.settings.image != blank %}
+                {{
+                  block.settings.image
+                  | image_url: width: 1200
+                  | image_tag: widths: '100, 200, 300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 33vw, 100vw', loading: 'lazy'
+                }}
+              {% else %}
+                {{ 'image' | placeholder_svg_tag: 'placeholder multicolumn__placeholder' }}
+              {% endif %}
+            </div>
+          {% endif %}
           {% if block.settings.heading != blank %}
             <h3 class="multicolumn__column-heading text-h4">{{ block.settings.heading }}</h3>
           {% endif %}
@@ -32,7 +52,7 @@
           {% endif %}
         </li>
       {% endfor %}
-    </ul>
+    </{{ list_tag }}>
   </div>
 </div>
 
@@ -77,6 +97,13 @@
     align-items: var(--text-alignment);
     gap: var(--space-sm);
     text-align: var(--text-alignment);
+  }
+
+  .multicolumn__grid--cards .multicolumn__column {
+    padding: var(--card-padding);
+    border: var(--card-border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-cards);
+    background-color: var(--card-background);
   }
 
   .multicolumn__media {
@@ -152,9 +179,22 @@
       "default": 3
     },
     {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "icons", "label": "t:options.layout.icons" },
+        { "value": "images", "label": "t:options.layout.images" },
+        { "value": "numbered", "label": "t:options.layout.numbered" },
+        { "value": "cards", "label": "t:options.layout.cards" }
+      ],
+      "default": "icons"
+    },
+    {
       "type": "text_alignment",
       "id": "text_alignment",
       "label": "t:labels.alignment",
+      "visible_if": "{{ section.settings.layout != 'images' }}",
       "default": "center"
     }
   ],
@@ -197,6 +237,33 @@
   "presets": [
     {
       "name": "t:general.multicolumn",
+      "blocks": [
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" }
+      ]
+    },
+    {
+      "name": "t:general.multicolumn_images",
+      "settings": { "layout": "images" },
+      "blocks": [
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" }
+      ]
+    },
+    {
+      "name": "t:general.multicolumn_numbered",
+      "settings": { "layout": "numbered" },
+      "blocks": [
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" }
+      ]
+    },
+    {
+      "name": "t:general.multicolumn_cards",
+      "settings": { "layout": "cards" },
       "blocks": [
         { "type": "column" },
         { "type": "column" },
