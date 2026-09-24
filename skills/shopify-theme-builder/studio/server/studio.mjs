@@ -55,7 +55,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         const files = await readThemeState(theme, catalog, (validation ??= validateOnce()))
         // A file theme dev failed to upload breaks the preview as a Theme Check error would.
         const uploads = preview.state.uploadErrors.map(({ file, message }) => ({ file, line: 1, severity: 'error', check: 'ThemeDevUpload', message }))
-        return { ...files, validation: [...files.validation, ...uploads], history: steps.state() }
+        return { ...files, validation: [...files.validation, ...uploads], history: steps.state(), saved: await isSaved(theme) }
       }
       function validateOnce() {
         validatedAt = Date.now()
@@ -71,11 +71,13 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         return readState()
       }
       /**
-       * Runs a Studio write as one undo step.
+       * Runs a Studio write as one undo step, or as part of the latest one when it's a live edit of the same field.
        * @param {() => void} change
+       * @param {import('node:http').IncomingMessage} [req] Its X-Studio-Field header names the field of the Studio's UI a live edit comes from.
        */
-      function write(change) {
-        steps.record(change)
+      function write(change, req) {
+        const field = req?.headers['x-studio-field']
+        steps.record(change, typeof field === 'string' ? field : undefined)
         return readStateAfterWrite()
       }
 
@@ -83,7 +85,14 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       /** @type {NodeJS.Timeout | undefined} */
       let notify
       const watcher = watch(theme, { recursive: true }, (_, file) => {
-        if (file?.split(path.sep)[0] === '.git') return
+        if (file?.split(path.sep)[0] === '.git') {
+          // Git writes its own files on every status. A commit, the agent's too, logs a move of HEAD: the Theme may be saved now.
+          if (file === path.join('.git', 'logs', 'HEAD')) {
+            clearTimeout(notify)
+            notify = setTimeout(() => server.ws.send('studio:theme'), 100)
+          }
+          return
+        }
         // A file written before the latest Theme Check started, like the Studio's own writes, is already in it.
         const mtime = file ? statSync(path.join(theme, file), { throwIfNoEntry: false })?.mtimeMs : undefined
         if (validation && mtime !== undefined && mtime < validatedAt) return
@@ -180,6 +189,10 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         }
         return readStateAfterWrite()
       }
+      route('/api/save', 'POST', async () => {
+        await save(theme)
+        return readState()
+      })
       route('/api/undo', 'POST', async () => travel(steps.undo))
       route('/api/redo', 'POST', async () => travel(steps.redo))
       route('/api/preview', 'GET', async () => preview.state)
@@ -196,7 +209,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       route('/api/files', 'POST', async (req) => uploadImage(cli, store, await readBody(req)))
       route('/api/brand', 'PUT', async (req) => {
         const change = await readBody(req)
-        return write(() => setBrand(theme, change))
+        return write(() => setBrand(theme, change), req)
       })
       route('/api/brand/logo', 'GET', async () => readLogo(theme))
       route('/api/brand/logo', 'PUT', async (req) => {
@@ -206,7 +219,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       route('/api/brand/logo', 'DELETE', async () => write(() => removeLogo(theme)))
       route('/api/style', 'PUT', async (req) => {
         const change = await readBody(req)
-        return write(() => setStyle(theme, change))
+        return write(() => setStyle(theme, change), req)
       })
       // Before the Direction route, which would take current and chosen as names.
       route('/api/directions/current', 'PUT', async (req) => {
@@ -237,7 +250,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         route(`/api/${name}/sections/:id`, 'GET', async (_, id) => readSection(theme, template, id))
         route(`/api/${name}/sections/:id`, 'PATCH', async (req, id) => {
           const body = await readBody(req)
-          return write(() => updateSection(theme, template, id, body))
+          return write(() => updateSection(theme, template, id, body), req)
         })
         route(`/api/${name}/sections/:id/blocks`, 'POST', async (req, id) => {
           const body = await readBody(req)
@@ -347,6 +360,7 @@ const maxSteps = 50
 /**
  * The Studio's undo history, in memory only: a step holds each file one write changed, before and after it.
  * Undo and redo refuse a step whose files changed since, so edits made outside the Studio are never undone.
+ * The live edits of one field in a row, like a burst of typing, make one step.
  * @param {string} theme
  */
 function history(theme) {
@@ -355,6 +369,8 @@ function history(theme) {
   const undo = []
   /** @type {Step[]} */
   const redo = []
+  /** @type {string | undefined} The field the latest step's live edits came from, until another write, undo or redo. */
+  let burst
 
   /**
    * Moves the latest step of `from` onto `to`, putting its files back to `restore`.
@@ -385,8 +401,9 @@ function history(theme) {
     /**
      * Runs a Studio write and records the files it changed as one step; a new step clears redo.
      * @param {() => void} write
+     * @param {string} [field] The field of a live edit: another from the same field joins the latest step.
      */
-    record(write) {
+    record(write, field) {
       touched = new Map()
       try {
         write()
@@ -396,15 +413,71 @@ function history(theme) {
           .filter((entry) => !same(entry.before, entry.after))
         touched = null
         if (step.length > 0) {
-          undo.push(step)
-          if (undo.length > maxSteps) undo.shift()
+          const last = undo.at(-1)
+          // Joined only when no file changed between the two writes, so an edit made outside the Studio is never undone.
+          const joins =
+            field !== undefined &&
+            field === burst &&
+            last !== undefined &&
+            step.every((entry) => same(last.find((earlier) => earlier.file === entry.file)?.after ?? entry.before, entry.before))
+          if (joins) {
+            for (const entry of step) {
+              const earlier = last.find((other) => other.file === entry.file)
+              if (earlier) earlier.after = entry.after
+              else last.push(entry)
+            }
+          } else {
+            undo.push(step)
+            if (undo.length > maxSteps) undo.shift()
+          }
           redo.length = 0
+          burst = field
         }
       }
     },
-    undo: () => move(undo, redo, 'before', 'undo'),
-    redo: () => move(redo, undo, 'after', 'redo'),
+    undo: () => {
+      burst = undefined
+      move(undo, redo, 'before', 'undo')
+    },
+    redo: () => {
+      burst = undefined
+      move(redo, undo, 'after', 'redo')
+    },
   }
+}
+
+/**
+ * Runs Git in the Theme folder and answers its output.
+ * @param {string} theme
+ * @param {string[]} args
+ */
+async function git(theme, ...args) {
+  return (await promisify(execFile)('git', args, { cwd: theme })).stdout
+}
+
+/**
+ * Whether the Theme's files match its last commit; never while it has no Git history of its own.
+ * @param {string} theme
+ */
+async function isSaved(theme) {
+  if (!existsSync(path.join(theme, '.git'))) return false
+  return (await git(theme, 'status', '--porcelain').catch(() => '?')) === ''
+}
+
+/**
+ * Saves a checkpoint: commits every change to the Theme in its own Git history, naming the files in the message.
+ * @param {string} theme
+ */
+async function save(theme) {
+  if (!existsSync(path.join(theme, '.git'))) await git(theme, 'init', '--quiet', '-b', 'main')
+  await git(theme, 'add', '-A')
+  const files = (await git(theme, 'diff', '--cached', '--name-only', '-z')).split('\0').filter(Boolean)
+  if (files.length === 0) throw new Conflict('Nothing to save.')
+  const list = files.slice(0, 20).map((file) => `- ${file}`)
+  if (files.length > 20) list.push(`- and ${files.length - 20} more`)
+  await git(theme, 'commit', '--quiet', '-m', ['Studio: save', '', ...list].join('\n')).catch((/** @type {{ stderr?: string, message: string }} */ error) => {
+    throw new Conflict(`Git could not commit the Theme: ${(error.stderr || error.message).trim()}`)
+  })
 }
 
 /**
@@ -428,7 +501,8 @@ function history(theme) {
  *   A section preset: its name in the Theme's schema language, and as its schema writes it (key), like t:general.hero_split.
  * @typedef {{ type: string, presets: Preset[] }} CatalogSection
  * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, CatalogSection[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, style: StyleGroup[], directions: Direction[], validation: Offense[] }} ThemeFiles
- * @typedef {ThemeFiles & { history: { undo: boolean, redo: boolean } }} ThemeState The Theme's files, and whether the Studio can undo or redo a write.
+ * @typedef {ThemeFiles & { history: { undo: boolean, redo: boolean }, saved: boolean }} ThemeState The Theme's files, whether the Studio can undo or
+ *   redo a write, and whether the files match the Theme's last commit.
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'accentFont' | 'logo'>>} BrandChange
  */
 
