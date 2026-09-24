@@ -20,10 +20,18 @@ const loginStopped = 'Run `shopify auth login` in a terminal, then restart the S
 const passwordPrompt = /Enter your store password/
 const passwordMissing =
   "The store has a password page: restart the Studio with --store-password <password>, from the Shopify admin's Online Store › Preferences."
+// A line of theme dev's output, or a whole box it draws around a message, once its last line arrived.
+const block = /^[^\n╭]*╭[\s\S]*?╰[^\n]*\n|^(?![^\n]*╭)[^\n]*\n/
+// The CLI's session expired and it can't ask for a login without a terminal; a new run gets fresh credentials.
+const credentialsInvalid = /credentials are invalid/
+const uploadFailed = /Failed to upload file "([^"]+)" to remote theme\.(.*)/
+const synced = /Synced » update (\S+)/
 
 
 /**
- * @typedef {{ status: 'starting' | 'login-required' | 'reconnecting' | 'error', message: string } | { status: 'running', url: string }} PreviewState
+ * @typedef {{ file: string, message: string }} UploadError A file theme dev failed to upload, and why.
+ * @typedef {{ status: 'starting' | 'login-required' | 'reconnecting' | 'error', message: string } | { status: 'running', url: string }} PreviewStatus
+ * @typedef {PreviewStatus & { uploadErrors: UploadError[] }} PreviewState
  */
 
 /**
@@ -31,23 +39,66 @@ const passwordMissing =
  * @param {{ cli: string, theme: string, store: string, storePassword?: string, onChange: (state: PreviewState) => void }} options
  */
 export function startPreview({ cli, theme, store, storePassword, onChange }) {
+  /** @type {Map<string, string>} The files whose latest upload failed, until theme dev syncs them. */
+  const uploadErrors = new Map()
   /** @type {PreviewState} */
-  let state = { status: 'starting', message: 'Starting `shopify theme dev`…' }
+  let state = { status: 'starting', message: 'Starting `shopify theme dev`…', uploadErrors: [] }
   /** @type {import('node:child_process').ChildProcess | undefined} */
   let child
   let stopped = false
   /** @type {string | undefined} */
   let editor
 
-  /** @param {PreviewState} next */
+  /** @param {PreviewStatus} next */
   function set(next) {
     if (stopped) return
-    state = next
+    state = { ...next, uploadErrors: [...uploadErrors].map(([file, message]) => ({ file, message })) }
     onChange(state)
   }
 
-  // ponytail: one restart a minute at most; a session lost again right away isn't one a restart fixes.
+  // ponytail: one restart a minute at most per cause; a session lost again right away isn't one a restart fixes.
   let reconnected = 0
+  let reauthenticated = 0
+
+  /**
+   * Replaces theme dev with a new run. The new run uploads every file that differs from the store, so the
+   * failed uploads are forgotten.
+   * @param {string} message
+   */
+  function restart(message) {
+    // ponytail: the new run's first sync reports failed uploads only on theme dev's error page, not in its output.
+    uploadErrors.clear()
+    set({ status: 'reconnecting', message })
+    const previous = child
+    child = undefined
+    // The new run waits for the old one to free the preview port, so it takes the same port again.
+    if (previous && previous.exitCode === null && previous.signalCode === null) previous.once('exit', run).kill()
+    else run()
+  }
+
+  /**
+   * Reads one line or box of theme dev's output: failed and synced uploads, and expired credentials.
+   * @param {string} text
+   */
+  function read(text) {
+    const flat = unbox(text)
+    const [, failed, reason] = flat.match(uploadFailed) ?? []
+    const [, updated] = flat.match(synced) ?? []
+    if (failed) uploadErrors.set(failed, reason.trim().slice(0, 500))
+    if (updated) uploadErrors.delete(updated)
+    if (credentialsInvalid.test(flat)) {
+      if (Date.now() - reauthenticated < 60_000) {
+        set({ status: 'login-required', message: loginStopped })
+        // theme dev can't upload anything more: it stops, and its last words don't change the status.
+        child?.kill()
+        child = undefined
+        return
+      }
+      reauthenticated = Date.now()
+      return restart('Restarting `shopify theme dev`, whose Shopify CLI credentials expired…')
+    }
+    if (failed || updated) set(state)
+  }
 
   function run() {
     freePort(themePort(theme)).then((port) => {
@@ -63,23 +114,36 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
        * Echoes the CLI's output to the Studio's terminal, where the Creator logs in, and reads the status from it.
        * @param {NodeJS.WriteStream} terminal
        */
-      const echoAndRead = (terminal) => (/** @type {Buffer} */ chunk) => {
-        terminal.write(chunk)
-        // ponytail: keeps the last 4 KB only, enough for the status lines and the final error box.
-        output = (output + stripVTControlCharacters(chunk.toString())).slice(-4096)
-        editor ??= editorUrl(output)
-        if (state.status === 'running') return
-        const url = previewUrl(output)
-        if (url) set({ status: 'running', url })
-        else if (state.status === 'starting' && loginPrompt.test(output)) {
-          set({ status: 'login-required', message: loginWaiting })
+      const echoAndRead = (terminal) => {
+        // Each stream's own unread text, so a box on one never takes in a line of the other.
+        let unread = ''
+        return (/** @type {Buffer} */ chunk) => {
+          terminal.write(chunk)
+          const text = stripVTControlCharacters(chunk.toString())
+          // ponytail: keeps the last 4 KB only, enough for the status lines and the final error box.
+          output = (output + text).slice(-4096)
+          editor ??= editorUrl(output)
+          // A run that restart() replaced says nothing more about the preview.
+          unread += text
+          for (let match; current === child && (match = unread.match(block)); ) {
+            unread = unread.slice(match[0].length)
+            read(match[0])
+          }
+          // ponytail: a box that never closes is dropped after 16 KB; its lines are then read one by one.
+          unread = unread.slice(-16384)
+          if (current !== child || state.status === 'running') return
+          const url = previewUrl(output)
+          if (url) set({ status: 'running', url })
+          else if (state.status === 'starting' && loginPrompt.test(output)) {
+            set({ status: 'login-required', message: loginWaiting })
+          }
         }
       }
       current.stdout?.on('data', echoAndRead(process.stdout))
       current.stderr?.on('data', echoAndRead(process.stderr))
       current.on('error', (error) => set({ status: 'error', message: `Could not run the Shopify CLI: ${error.message}` }))
       current.on('exit', (code) => {
-        // A run that reconnect() replaced ends quietly.
+        // A run that restart() replaced, or that lost its credentials, ends quietly.
         if (current !== child) return
         if (state.status === 'login-required') return set({ status: 'login-required', message: loginStopped })
         if (passwordPrompt.test(output)) return set({ status: 'error', message: passwordMissing })
@@ -105,12 +169,7 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     reconnect() {
       if (state.status !== 'running' || Date.now() - reconnected < 60_000) return false
       reconnected = Date.now()
-      set({ status: 'reconnecting', message: 'Reconnecting to the store, whose storefront session expired…' })
-      const previous = child
-      child = undefined
-      // The new run waits for the old one to free the preview port, so it takes the same port again.
-      if (previous && previous.exitCode === null && previous.signalCode === null) previous.once('exit', run).kill()
-      else run()
+      restart('Reconnecting to the store, whose storefront session expired…')
       return true
     },
     stop() {
@@ -193,5 +252,13 @@ function freePort(port) {
  * @param {string} output
  */
 function lastLines(output) {
-  return output.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-500)
+  return unbox(output).slice(-500)
+}
+
+/**
+ * The CLI's output on one line, without the box it draws around messages.
+ * @param {string} output
+ */
+function unbox(output) {
+  return output.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim()
 }

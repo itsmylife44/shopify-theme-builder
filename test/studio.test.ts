@@ -56,16 +56,18 @@ function fixtureCatalog() {
  * A stand-in for the Shopify CLI: `version` prints the given version; `store execute` adds its arguments to
  * the list in store.json and prints `store` as JSON (given a list, the nth call prints the nth answer, and the
  * last one after that), or fails like the CLI without stored auth; `theme dev` records its
- * arguments and pid in run.json, prints the given output (and `later` half a second on), then runs until
- * killed or exits with exitCode.
+ * arguments and pid in run.json, prints the given output (and `later` half a second on; given a list, the
+ * nth run prints the nth one, and the last one after that), prints `onSignal` on each SIGUSR2, then runs
+ * until killed or exits with exitCode.
  */
 function fakeShopify({
   version = '4.8.0',
   output = '',
   later = '',
+  onSignal = '',
   exitCode,
   store,
-}: { version?: string; output?: string; later?: string; exitCode?: number; store?: object | object[] } = {}) {
+}: { version?: string; output?: string; later?: string | string[]; onSignal?: string; exitCode?: number; store?: object | object[] } = {}) {
   const dir = tempDir('shopify-')
   const cli = path.join(dir, 'shopify')
   writeFileSync(
@@ -89,9 +91,14 @@ if (process.argv[2] === 'store') {
   }
   process.exit(0)
 }
-require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'run.json'))}, JSON.stringify({ args: process.argv.slice(2), pid: process.pid, storePassword: process.env.SHOPIFY_FLAG_STORE_PASSWORD }))
+const fs = require('node:fs')
+const runFile = ${JSON.stringify(path.join(dir, 'run.json'))}
+const runs = (fs.existsSync(runFile) ? JSON.parse(fs.readFileSync(runFile, 'utf8')).runs : 0) + 1
+fs.writeFileSync(runFile, JSON.stringify({ args: process.argv.slice(2), pid: process.pid, runs, storePassword: process.env.SHOPIFY_FLAG_STORE_PASSWORD }))
+const later = ${JSON.stringify([later].flat())}
+process.on('SIGUSR2', () => process.stdout.write(${JSON.stringify(onSignal)}))
 process.stdout.write(${JSON.stringify(output)})
-setTimeout(() => process.stdout.write(${JSON.stringify(later)}), 500)
+setTimeout(() => process.stdout.write(later[Math.min(runs, later.length) - 1]), 500)
 ${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `setTimeout(() => process.exit(${exitCode}), 600)`}
 `,
     { mode: 0o755 },
@@ -100,7 +107,7 @@ ${exitCode === undefined ? 'setInterval(() => {}, 1000)' : `setTimeout(() => pro
 }
 
 /** The arguments and pid of the fake CLI's `theme dev` run, once it started. */
-async function fakeRun(cli: string): Promise<{ args: string[]; pid: number; storePassword?: string }> {
+async function fakeRun(cli: string): Promise<{ args: string[]; pid: number; runs: number; storePassword?: string }> {
   const file = path.join(path.dirname(cli), 'run.json')
   await expect.poll(() => existsSync(file)).toBe(true)
   return JSON.parse(readFileSync(file, 'utf8'))
@@ -2385,7 +2392,7 @@ describe('Studio: live preview', () => {
       '--port',
       expect.stringMatching(/^\d+$/),
     ])
-    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: 'http://127.0.0.1:9292' })
   })
 
   it('refuses to start without a store, so theme dev never runs on the store the CLI used last', async () => {
@@ -2417,7 +2424,7 @@ describe('Studio: live preview', () => {
     cleanup.push(() => new Promise((resolve) => themeDev.close(() => resolve())))
     const themeDevUrl = `http://127.0.0.1:${(themeDev.address() as import('node:net').AddressInfo).port}`
     const studio = await openStudio(fixtureTheme(), { cli: fakeShopify({ output: running.replace('http://127.0.0.1:9292', themeDevUrl) }) })
-    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: themeDevUrl })
     const { status, body } = await studio.send('GET', 'api/frame')
     expect(status).toBe(200)
     expect(body.paths).toEqual({
@@ -2467,17 +2474,17 @@ describe('Studio: live preview', () => {
     // Every run prints its preview link half a second after it starts, long enough to see the reconnection.
     const cli = fakeShopify({ later: running.replace('http://127.0.0.1:9292', themeDevUrl) })
     const studio = await openStudio(fixtureTheme(), { cli, storePassword: 'secret' })
-    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: themeDevUrl })
     const { pid } = await fakeRun(cli)
     const { body } = await studio.send('GET', 'api/frame')
 
     // The Creator's preview never lands on the password page: the proxy answers while theme dev restarts.
     const lost = await fetch(`${body.url}/`, { redirect: 'manual' })
     expect(lost.status).toBe(503)
-    expect(await studio.readPreview()).toEqual({ status: 'reconnecting', message: expect.stringContaining('Reconnecting') })
+    expect(await studio.readPreview()).toMatchObject({ status: 'reconnecting', message: expect.stringContaining('Reconnecting') })
     await expect.poll(() => isRunning(pid)).toBe(false)
     expired = false
-    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: themeDevUrl })
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: themeDevUrl })
     expect((await fakeRun(cli)).pid).not.toBe(pid)
     expect(await (await fetch(`${body.url}/`)).text()).toContain('<p>Shop</p>')
 
@@ -2486,6 +2493,74 @@ describe('Studio: live preview', () => {
     const again = await fetch(`${body.url}/`, { redirect: 'manual' })
     expect(again.status).not.toBe(503)
     expect((await studio.readPreview()).status).toBe('running')
+  })
+
+  // How Shopify CLI 4.8 reports an upload that failed because its credentials expired (#153).
+  const credentialsExpired =
+    '╭─ error ──────────────────────────────────────────────────────────────────────╮\n' +
+    '│                                                                              │\n' +
+    '│  Failed to upload file "sections/related-products.liquid" to remote theme.   │\n' +
+    '│  The currently available CLI credentials are invalid.                        │\n' +
+    '│                                                                              │\n' +
+    '│  The CLI is currently unable to prompt for reauthentication.                 │\n' +
+    '│                                                                              │\n' +
+    '│  What to try                                                                 │\n' +
+    '│    • Restart the CLI process you were running. If in an interactive          │\n' +
+    '│      terminal, you will be prompted to reauthenticate.                       │\n' +
+    '│                                                                              │\n' +
+    '╰──────────────────────────────────────────────────────────────────────────────╯\n'
+
+  it('restarts theme dev when its CLI credentials expire, and the new run uploads the failed files again', async () => {
+    // Only the first run loses its credentials; a new run gets fresh ones.
+    const cli = fakeShopify({ output: running, later: [credentialsExpired, ''] })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const first = await fakeRun(cli)
+    await expect.poll(async () => (await fakeRun(cli)).runs).toBe(2)
+    await expect.poll(() => isRunning(first.pid)).toBe(false)
+    // A new run uploads every file that differs from the store, the failed one included.
+    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292', uploadErrors: [] })
+  })
+
+  it('asks for `shopify auth login` when the credentials expire again right after a restart', async () => {
+    const cli = fakeShopify({ output: running, later: credentialsExpired })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    await expect
+      .poll(() => studio.readPreview(), { timeout: 3000 })
+      .toMatchObject({ status: 'login-required', message: expect.stringContaining('shopify auth login') })
+    const second = await fakeRun(cli)
+    expect(second.runs).toBe(2)
+    await expect.poll(() => isRunning(second.pid)).toBe(false)
+  })
+
+  it('shows the uploads Shopify refused in the preview and in validation, until theme dev syncs the file', async () => {
+    const refused =
+      '╭─ error ──────────────────────────────────────────────╮\n' +
+      '│                                                      │\n' +
+      '│  Failed to upload file "templates/product.json" to   │\n' +
+      '│  remote theme.                                       │\n' +
+      '│                                                      │\n' +
+      '│  Section type "related-products" does not refer to   │\n' +
+      '│  an existing section file                            │\n' +
+      '│                                                      │\n' +
+      '╰──────────────────────────────────────────────────────╯\n'
+    const cli = fakeShopify({
+      output: running,
+      later: refused,
+      onSignal: '• 17:12:04  Synced » update templates/product.json\n',
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const uploadError = {
+      file: 'templates/product.json',
+      message: 'Section type "related-products" does not refer to an existing section file',
+    }
+    await expect
+      .poll(() => studio.readPreview())
+      .toEqual({ status: 'running', url: 'http://127.0.0.1:9292', uploadErrors: [uploadError] })
+    expect((await studio.readTheme()).validation).toContainEqual(expect.objectContaining({ ...uploadError, severity: 'error' }))
+
+    process.kill((await fakeRun(cli)).pid, 'SIGUSR2')
+    await expect.poll(async () => (await studio.readPreview()).uploadErrors).toEqual([])
+    expect((await studio.readTheme()).validation).not.toContainEqual(expect.objectContaining({ file: 'templates/product.json' }))
   })
 
   const loginPrompt =
@@ -2497,12 +2572,12 @@ describe('Studio: live preview', () => {
     const studio = await openStudio(fixtureTheme(), { cli: fakeShopify({ output: loginPrompt }) })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'login-required', message: expect.stringContaining("Studio's terminal") })
+      .toMatchObject({ status: 'login-required', message: expect.stringContaining("Studio's terminal") })
   })
 
   it('shows the preview URL once the Creator logged in', async () => {
     const studio = await openStudio(fixtureTheme(), { cli: fakeShopify({ output: loginPrompt, later: running }) })
-    await expect.poll(() => studio.readPreview()).toEqual({ status: 'running', url: 'http://127.0.0.1:9292' })
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: 'http://127.0.0.1:9292' })
   })
 
   it('asks for `shopify auth login` when the CLI stops for want of a login', async () => {
@@ -2515,7 +2590,7 @@ describe('Studio: live preview', () => {
     const studio = await openStudio(fixtureTheme(), { cli })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'login-required', message: expect.stringContaining('shopify auth login') })
+      .toMatchObject({ status: 'login-required', message: expect.stringContaining('shopify auth login') })
   })
 
   it('shows the CLI error when theme dev stops', async () => {
@@ -2529,7 +2604,7 @@ describe('Studio: live preview', () => {
     const studio = await openStudio(fixtureTheme(), { cli })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'error', message: expect.stringContaining('A store is required') })
+      .toMatchObject({ status: 'error', message: expect.stringContaining('A store is required') })
   })
 
   it('hands the storefront password to theme dev without putting it in the arguments', async () => {
@@ -2552,14 +2627,14 @@ describe('Studio: live preview', () => {
     const studio = await openStudio(fixtureTheme(), { cli })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'error', message: expect.stringContaining('--store-password') })
+      .toMatchObject({ status: 'error', message: expect.stringContaining('--store-password') })
   })
 
   it('explains a missing Shopify CLI', async () => {
     const studio = await openStudio(fixtureTheme(), { cli: path.join(tempDir('empty-'), 'shopify') })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'error', message: expect.stringContaining('npm install -g @shopify/cli') })
+      .toMatchObject({ status: 'error', message: expect.stringContaining('npm install -g @shopify/cli') })
   })
 
   it('explains a Shopify CLI below the required version', async () => {
@@ -2567,7 +2642,7 @@ describe('Studio: live preview', () => {
     const studio = await openStudio(fixtureTheme(), { cli })
     await expect
       .poll(() => studio.readPreview())
-      .toEqual({ status: 'error', message: expect.stringMatching(/4\.7\.9.*4\.8\.0/) })
+      .toMatchObject({ status: 'error', message: expect.stringMatching(/4\.7\.9.*4\.8\.0/) })
     expect(existsSync(path.join(path.dirname(cli), 'run.json'))).toBe(false)
   })
 

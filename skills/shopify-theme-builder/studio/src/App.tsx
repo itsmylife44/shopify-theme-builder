@@ -357,7 +357,7 @@ function usePreview() {
         setPreview(body)
       })
       .catch((error: Error) => {
-        if (!controller.signal.aborted) setPreview({ status: 'error', message: error.message })
+        if (!controller.signal.aborted) setPreview({ status: 'error', message: error.message, uploadErrors: [] })
       })
     import.meta.hot?.on('studio:preview', update)
     return () => {
@@ -397,8 +397,16 @@ function PreviewBadge({ preview }: { preview: PreviewState | null }) {
     error: 'Preview error',
   }
   const status = preview?.status ?? 'starting'
+  const uploadErrors = preview?.uploadErrors ?? []
   return (
-    <Badge variant={status === 'error' ? 'destructive' : status === 'running' ? 'secondary' : 'outline'}>{labels[status]}</Badge>
+    <>
+      <Badge variant={status === 'error' ? 'destructive' : status === 'running' ? 'secondary' : 'outline'}>{labels[status]}</Badge>
+      {uploadErrors.length > 0 ? (
+        <Badge variant="destructive" title={uploadErrors.map((error) => `${error.file}: ${error.message}`).join('\n')}>
+          {plural(uploadErrors.length, 'upload')} failed
+        </Badge>
+      ) : null}
+    </>
   )
 }
 

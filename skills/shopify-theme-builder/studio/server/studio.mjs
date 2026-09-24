@@ -51,7 +51,12 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       let validation = null
       let validatedAt = 0
       const steps = history(theme)
-      const readState = async () => ({ ...(await readThemeState(theme, catalog, (validation ??= validateOnce()))), history: steps.state() })
+      const readState = async () => {
+        const files = await readThemeState(theme, catalog, (validation ??= validateOnce()))
+        // A file theme dev failed to upload breaks the preview as a Theme Check error would.
+        const uploads = preview.state.uploadErrors.map(({ file, message }) => ({ file, line: 1, severity: 'error', check: 'ThemeDevUpload', message }))
+        return { ...files, validation: [...files.validation, ...uploads], history: steps.state() }
+      }
       function validateOnce() {
         validatedAt = Date.now()
         const result = validate(theme)
@@ -87,12 +92,19 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
         notify = setTimeout(() => server.ws.send('studio:theme'), 100)
       })
 
+      let uploadErrors = '[]'
       const preview = startPreview({
         cli,
         theme,
         store,
         storePassword,
-        onChange: (state) => server.ws.send('studio:preview', state),
+        onChange: (state) => {
+          server.ws.send('studio:preview', state)
+          // The upload errors are in the Theme's validation too.
+          const errors = JSON.stringify(state.uploadErrors)
+          if (errors !== uploadErrors) server.ws.send('studio:theme')
+          uploadErrors = errors
+        },
       })
       const frame = await startFrameProxy(
         () => (preview.state.status === 'running' ? preview.state.url : undefined),
