@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer as createHttpServer } from 'node:http'
 import { createServer } from 'node:net'
@@ -809,6 +809,51 @@ describe('Studio API: Directions', () => {
     expect(quiet.choices.map((choice: string) => choice.split(':')[0])).toEqual(['Type', 'Color', 'Shape', 'Spacing', 'Cards', 'Media', 'Motion', 'Signature', 'Rejects'])
     expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toMatch(/^# .+\n\nChosen: Quiet\n\n/)
   }, 30_000)
+
+  describe('wait-for-choice command (SKILL.md step 4.4)', () => {
+    /** Runs the waiter without blocking, so the Studio in this process keeps answering it. */
+    function waitForChoice(...args: string[]) {
+      const child = spawn('node', [path.join(projectDir, 'skills/shopify-theme-builder/studio/bin/wait-for-choice.mjs'), ...args])
+      cleanup.push(() => void child.kill())
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', (chunk) => (stdout += chunk))
+      child.stderr.on('data', (chunk) => (stderr += chunk))
+      return new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) =>
+        child.on('close', (code) => resolve({ code, stdout, stderr })),
+      )
+    }
+
+    it('exits with the Direction the Creator chooses', async () => {
+      const studio = await openStudio(fixtureTheme())
+      await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+      await studio.send('PUT', 'api/directions/Loud', { template: heroHome })
+      const waiting = waitForChoice('--port', new URL(studio.url).port)
+      await new Promise((resolve) => setTimeout(resolve, 2500))
+      await studio.send('PUT', 'api/directions/chosen', { name: 'Loud' })
+      const { code, stdout } = await waiting
+      expect(code).toBe(0)
+      expect(stdout.trim()).toBe('Loud')
+    }, 30_000)
+
+    it('gives up with a message after its timeout', async () => {
+      const studio = await openStudio(fixtureTheme())
+      const { code, stdout, stderr } = await waitForChoice('--port', new URL(studio.url).port, '--timeout', '1')
+      expect(code).toBe(1)
+      expect(stdout).toBe('')
+      expect(stderr).toContain('No Direction chosen after 1 seconds')
+    }, 30_000)
+
+    it('stops with a message when the Studio stops', async () => {
+      const studio = await openStudio(fixtureTheme())
+      const waiting = waitForChoice('--port', new URL(studio.url).port)
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      await studio.close()
+      const { code, stderr } = await waiting
+      expect(code).toBe(1)
+      expect(stderr).toContain(`No Studio answers on port ${new URL(studio.url).port}`)
+    }, 30_000)
+  })
 
   it('names only reference files the skill has', () => {
     const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')

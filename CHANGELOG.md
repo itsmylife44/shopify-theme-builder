@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The agent carries on by itself once the Creator presses Choose on a Direction in the Studio: after handing over the choice it runs `wait-for-choice` (`node <skill-dir>/studio/bin/wait-for-choice.mjs --port <port>`) in the background, which ends printing the chosen Direction's name, or with a message on timeout or when the Studio stops. On agents without background commands, the Creator writes "done" instead.
+
 - A Download zip button in the Studio's top bar gives the Theme as the zip Shopify takes, packaged from what is on disk (what the preview shows, saved or not) in a copy outside the Theme, so the zip never lands in its Git history. It refuses while Theme Check finds errors. An agent gets the same zip with `GET /api/package`.
 
 - The Studio applies every edit live: selects, switches, sliders, colors and fonts at once, text once typing pauses and on leaving the field, with the preview refreshing after each. The per-panel Save buttons are gone; a burst of edits to one field is one undo step, and a value the Studio refuses shows its message under the field, kept as typed. One Save in the top bar commits the Theme to its Git history as a checkpoint (`POST /api/save`), "● Unsaved changes" shows while the Theme differs from its last commit (`saved` in `GET /api/theme`, whoever changed it), and closing the Studio's tab then asks first.
