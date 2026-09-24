@@ -137,7 +137,9 @@
     "testimonials_carousel": "Testimonials: carousel",
     "testimonials_portraits": "Testimonials: with portraits",
     "rich_text_left_wide": "Rich text: left aligned, wide",
-    "rich_text_eyebrow": "Rich text: eyebrow and two buttons"
+    "rich_text_eyebrow": "Rich text: eyebrow and two buttons",
+    "image_with_text_overlap": "Image with text: overlapping panel",
+    "image_with_text_full_bleed": "Image with text: full bleed"
   },
   "labels": {
     "accent": "Accent",
@@ -358,7 +360,10 @@
       "carousel": "Carousel",
       "portraits": "With portraits",
       "centered": "Centered",
-      "left_wide": "Left aligned, wide"
+      "left_wide": "Left aligned, wide",
+      "side_by_side": "Side by side",
+      "overlap": "Overlapping panel",
+      "full_bleed": "Full bleed"
     },
     "cart_type": {
       "drawer": "Drawer",

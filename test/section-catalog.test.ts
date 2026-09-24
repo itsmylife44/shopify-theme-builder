@@ -1287,6 +1287,44 @@ describe('Type banner', () => {
   })
 })
 
+describe('Image with text', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/image-with-text.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+
+  it('lays the image and text out side by side by default, on an overlapping panel or full bleed, with the image on either side', () => {
+    expect(source).toContain(
+      'class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}"',
+    )
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'side_by_side' })
+    expect(values(settings.layout)).toEqual(['side_by_side', 'overlap', 'full_bleed'])
+    expect(values(settings.image_position)).toEqual(['left', 'right'])
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets[0]).toEqual({ name: 't:general.image_with_text' })
+  })
+
+  it('offers the image on the right and each other layout as a named preset', () => {
+    expect(schema.presets.slice(1)).toEqual([
+      { name: 't:general.image_with_text_right', settings: { image_position: 'right' } },
+      { name: 't:general.image_with_text_overlap', settings: { layout: 'overlap' } },
+      { name: 't:general.image_with_text_full_bleed', settings: { layout: 'full_bleed' } },
+    ])
+  })
+
+  it("sets the text on a panel in the scheme's background over the image's edge on desktop, stacked under it on mobile", () => {
+    const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+    expect(desktop).toMatch(/\.image-with-text--overlap \.image-with-text__content {[^}]*background-color: var\(--color-background\);[^}]*padding: var\(--space-2xl\);/)
+    expect(desktop).toMatch(/\.image-with-text--overlap\.image-with-text--image-right \.image-with-text__media {[^}]*grid-column:/)
+  })
+
+  it('fills its half with the image to the edge of the page in the full bleed layout, square, the text in a narrow column', () => {
+    expect(css).toMatch(/\.image-with-text--full_bleed \.image-with-text__inner {[^}]*grid-column: 1 \/ -1;/)
+    expect(css).toMatch(/\.image-with-text:not\(\.image-with-text--full_bleed\) \.image-with-text__media {\s*border-radius: var\(--style-border-radius-media\);/)
+    expect(css).toMatch(/\.image-with-text--full_bleed \.image-with-text__content {[^}]*max-width: var\(--width-text\);/)
+  })
+})
+
 describe('Editorial split', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

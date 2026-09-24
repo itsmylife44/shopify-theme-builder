@@ -1,5 +1,5 @@
 {% comment %}An image beside a heading, text and a button.{% endcomment %}
-<div class="image-with-text full-width image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}">
+<div class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}">
   <div class="image-with-text__inner">
     <div class="image-with-text__media">
       {% if section.settings.image != blank %}
@@ -46,6 +46,18 @@
     padding-block: var(--section-spacing);
   }
 
+  .image-with-text--full_bleed .image-with-text__inner {
+    grid-column: 1 / -1;
+    gap: 0;
+    padding-block: 0;
+  }
+
+  .image-with-text--full_bleed .image-with-text__content {
+    justify-self: center;
+    max-width: var(--width-text);
+    padding: var(--section-spacing) var(--page-margin);
+  }
+
   @media (min-width: 750px) {
     .image-with-text__inner {
       grid-template-columns: 1fr 1fr;
@@ -55,13 +67,47 @@
     .image-with-text--image-right .image-with-text__media {
       order: 1;
     }
+
+    .image-with-text--overlap .image-with-text__inner {
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0;
+    }
+
+    .image-with-text--overlap .image-with-text__media {
+      grid-row: 1;
+      grid-column: 1 / 5;
+    }
+
+    .image-with-text--overlap .image-with-text__content {
+      z-index: 1;
+      grid-row: 1;
+      grid-column: 4 / 7;
+      background-color: var(--color-background);
+      padding: var(--space-2xl);
+      border-radius: var(--style-border-radius-cards);
+    }
+
+    .image-with-text--overlap.image-with-text--image-right .image-with-text__media {
+      grid-column: 3 / 7;
+    }
+
+    .image-with-text--overlap.image-with-text--image-right .image-with-text__content {
+      grid-column: 1 / 4;
+    }
+
+    .image-with-text--full_bleed .image-with-text__content {
+      padding: var(--section-spacing) var(--space-2xl);
+    }
   }
 
   .image-with-text__media {
     aspect-ratio: 4 / 3;
     overflow: hidden;
-    border-radius: var(--style-border-radius-media);
     background-color: var(--media-background);
+  }
+
+  .image-with-text:not(.image-with-text--full_bleed) .image-with-text__media {
+    border-radius: var(--style-border-radius-media);
   }
 
   .image-with-text__media img,
@@ -96,6 +142,17 @@
       "type": "image_picker",
       "id": "image",
       "label": "t:labels.image"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "side_by_side", "label": "t:options.layout.side_by_side" },
+        { "value": "overlap", "label": "t:options.layout.overlap" },
+        { "value": "full_bleed", "label": "t:options.layout.full_bleed" }
+      ],
+      "default": "side_by_side"
     },
     {
       "type": "select",
@@ -139,6 +196,18 @@
       "name": "t:general.image_with_text_right",
       "settings": {
         "image_position": "right"
+      }
+    },
+    {
+      "name": "t:general.image_with_text_overlap",
+      "settings": {
+        "layout": "overlap"
+      }
+    },
+    {
+      "name": "t:general.image_with_text_full_bleed",
+      "settings": {
+        "layout": "full_bleed"
       }
     }
   ]

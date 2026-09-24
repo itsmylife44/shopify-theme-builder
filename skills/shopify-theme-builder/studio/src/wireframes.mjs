@@ -8,7 +8,8 @@
 //              t(op), m(iddle) or b(ottom), then l(eft), c(entre) or r(ight)
 //   display (oversized type), heading, title, text (two lines), line, button, buttons (a primary and a secondary
 //   side by side), input, icon, number (a big step number), logo, rule, thumbs (a thumbnail strip), dots, _ (a gap)
-// and modifiers: `center` centres the parts, `panel` puts them on a panel, `x3` repeats the column three times.
+// and modifiers: `center` centres the parts, `panel` puts them on a panel, `bleed` stretches the column to the frame's
+// edges it borders, `x3` repeats the column three times.
 
 /**
  * @typedef {'image' | 'strong' | 'text' | 'outline' | 'panel'} Tone
@@ -90,7 +91,16 @@ export function layoutWireframe(wireframe) {
     const height = (inner * row.weight) / total
     const width = (frame.width - 2 * frame.padding - frame.gap * (row.columns.length - 1)) / row.columns.length
     row.columns.forEach((tokens, index) => {
-      shapes.push(...layoutColumn(tokens, frame.padding + index * (width + frame.gap), y, width, height))
+      let box = { x: frame.padding + index * (width + frame.gap), y, width, height }
+      if (tokens.includes('bleed')) {
+        const left = index === 0 ? 0 : box.x
+        const top = row === rows[0] ? 0 : box.y
+        const right = index === row.columns.length - 1 ? frame.width : box.x + box.width
+        const bottom = row === rows.at(-1) ? frame.height : box.y + box.height
+        box = { x: left, y: top, width: right - left, height: bottom - top }
+      }
+      const parts = tokens.filter((token) => token !== 'bleed')
+      shapes.push(...layoutColumn(parts, box.x, box.y, box.width, box.height))
     })
     y += height + frame.gap
   }
@@ -256,6 +266,14 @@ export const wireframes = {
     't:general.image_with_text_right': {
       wireframe: 'heading text button | image',
       description: 'Text on the left, image on the right',
+    },
+    't:general.image_with_text_overlap': {
+      wireframe: 'image@mr panel heading text button',
+      description: 'Text on a panel overlapping the edge of the image',
+    },
+    't:general.image_with_text_full_bleed': {
+      wireframe: 'bleed image | center heading text button',
+      description: 'Image to the edge of the page, text in a narrow column',
     },
   },
   'logo-list': { 't:general.logo_list': { wireframe: 'center heading / logo x4' } },
