@@ -69,6 +69,7 @@ function fakeShopify({
   onSignal = '',
   exitCode,
   store,
+  storeError = 'No stored app authentication found for example.myshopify.com.',
   packageError,
 }: {
   version?: string
@@ -77,6 +78,7 @@ function fakeShopify({
   onSignal?: string
   exitCode?: number
   store?: object | object[]
+  storeError?: string
   packageError?: string
 } = {}) {
   const dir = tempDir('shopify-')
@@ -98,7 +100,7 @@ if (process.argv[2] === 'store') {
     store
       ? `const answers = ${JSON.stringify([store].flat())}
   console.log(JSON.stringify(answers[Math.min(calls.length, answers.length) - 1], null, 2))`
-      : `console.error('No stored app authentication found for example.myshopify.com.'); process.exit(1)`
+      : `process.stderr.write(${JSON.stringify(storeError)}); process.exit(1)`
   }
   process.exit(0)
 }
@@ -1423,6 +1425,23 @@ describe("Studio API: images in the shop's Files", () => {
     expect(answer.status).toBe(400)
     expect(answer.body.error).toContain(named)
     expect(storeCalls(cli)).toEqual([])
+  })
+
+  it("quotes only the CLI's error, without its escape codes or the lines before it", async () => {
+    const cli = fakeShopify({
+      storeError:
+        '\x1b[2K\x1b[1A\x1b[2K\x1b[G  value="shopify-ai-toolkit@claude-plugins-official" />\n' +
+        'Loading stored store auth...\n' +
+        '\x1b[31m╭─ error ──────────────────────────────╮\x1b[39m\n' +
+        '│                                      │\n' +
+        '│  No stored app authentication found  │\n' +
+        '│  for example.myshopify.com.          │\n' +
+        '╰──────────────────────────────────────╯\n',
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const { status, body } = await studio.send('POST', 'api/files', { path: localImage() })
+    expect(status).toBe(409)
+    expect(body.error).toMatch(/The CLI said: error No stored app authentication found for example\.myshopify\.com\.$/)
   })
 
   it('tells the command that grants write_files when the CLI has no stored auth or scope for it', async () => {

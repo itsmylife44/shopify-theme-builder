@@ -1799,11 +1799,20 @@ async function storeExecute(cli, store, query, { variables, mutate = false } = {
 }
 
 /**
- * The CLI's message on one line, without its colors and box.
+ * The CLI's message on one line, without its colors and box, and without the lines it printed before
+ * its error (its progress, a stray fragment of a plugin's config): from its `error` line on, else its last three lines.
  * @param {string} output
  */
 function cliSaid(output) {
-  return stripVTControlCharacters(output).replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-300)
+  const lines = stripVTControlCharacters(output).trim().split('\n')
+  const error = lines.findIndex((line) => /\berror\b/i.test(line))
+  return lines
+    .slice(error === -1 ? -3 : error)
+    .join(' ')
+    .replace(/[│╭╮╰╯─]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(-300)
 }
 
 /**
