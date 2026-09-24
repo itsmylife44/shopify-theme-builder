@@ -423,11 +423,12 @@ function history(theme) {
  * @returns {Promise<ThemeFiles>}
  */
 async function readThemeState(theme, catalog, validation) {
+  const presets = readCatalogPresets(theme, catalog)
   return {
     ...perPage((file) => readTemplate(theme, file)),
     header: readTemplate(theme, groups.header),
     footer: readTemplate(theme, groups.footer),
-    catalog: perPage((file) => listCatalog(theme, catalog, file)),
+    catalog: perPage((file) => listSections(catalog, file).map((type) => ({ type, presets: presets[type] }))),
     custom: perPage((file) => listCustomSections(theme, catalog, file)),
     sectionInfo: readSectionInfo(theme, catalog),
     brand: readBrand(theme),
@@ -1565,18 +1566,21 @@ function listSections(dir, template) {
 }
 
 /**
- * The catalog sections a page can take, each with the presets of the file the Studio would place: the Theme's own, else the catalog's.
+ * Each catalog section's presets, from the file the Studio would place: the Theme's own, else the catalog's.
  * @param {string} theme
  * @param {string} catalog
- * @param {string} template The page's JSON template.
- * @returns {CatalogSection[]}
+ * @returns {Record<string, Preset[]>}
  */
-function listCatalog(theme, catalog, template) {
+function readCatalogPresets(theme, catalog) {
   const translate = schemaTranslator(theme)
-  return listSections(catalog, template).map((type) => {
-    const own = path.join(theme, 'sections', `${type}.liquid`)
-    return { type, presets: readPresets(existsSync(own) ? own : path.join(catalog, 'sections', `${type}.liquid`), translate) }
-  })
+  /** @type {Record<string, Preset[]>} */
+  const presets = {}
+  for (const file of readdirSync(path.join(catalog, 'sections'))) {
+    if (!file.endsWith('.liquid')) continue
+    const own = path.join(theme, 'sections', file)
+    presets[file.slice(0, -'.liquid'.length)] = readPresets(existsSync(own) ? own : path.join(catalog, 'sections', file), translate)
+  }
+  return presets
 }
 
 /**

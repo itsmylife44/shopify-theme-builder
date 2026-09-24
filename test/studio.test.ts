@@ -1780,7 +1780,8 @@ describe('Studio API: home page', () => {
       expect(body.home.slice(1)).toEqual(half.map((type) => expect.objectContaining({ type, colorScheme: 'scheme-1' })))
       expect(errors(body.validation)).toEqual([])
     }
-  }, 20_000)
+    // 25 writes, each validated by Theme Check: close to 20 seconds on CI.
+  }, 60_000)
 
   it('never offers the real catalog header or footer for the home page', async () => {
     const theme = fixtureTheme()
