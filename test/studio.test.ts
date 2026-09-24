@@ -579,6 +579,18 @@ describe('Studio API: style settings', () => {
     expect(undone.history).toEqual({ undo: false, redo: true })
   })
 
+  it("writes and clears the free-shipping threshold the cart and shipping note show, from the Creator's buying facts (SKILL.md step 4.6)", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    const { status, body } = await studio.setStyle({ free_shipping_threshold: 60 })
+    expect(status).toBe(200)
+    expect(readSettingsData(theme).current.free_shipping_threshold).toBe(60)
+    expect(errors(body.validation)).toEqual([])
+
+    await studio.setStyle({ free_shipping_threshold: null })
+    expect(readSettingsData(theme).current).not.toHaveProperty('free_shipping_threshold')
+  })
+
   it('writes the social media links into the current Direction, which keeps them when the preview switches Directions', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme)
@@ -597,6 +609,7 @@ describe('Studio API: style settings', () => {
     ['a social link that is not https', { social_instagram: 'http://instagram.com/acme' }],
     ['a social link that is a store path', { social_facebook: '/pages/about' }],
     ['a social link that is not a string', { social_x: null }],
+    ['a free-shipping threshold that is not a number', { free_shipping_threshold: '60' }],
     ['a range value off its step', { type_scale_ratio: 132 }],
     ['a range value out of bounds', { type_body_size: 20 }],
     ['an option the setting does not have', { shape_family: 'blob' }],

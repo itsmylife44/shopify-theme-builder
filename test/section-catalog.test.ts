@@ -167,6 +167,41 @@ describe('Cart page', () => {
     expect(source).toContain('routes.all_products_collection_url')
   })
 
+  it('has a free-shipping threshold theme setting, a number in the shop currency, off when blank', () => {
+    const groups = parseJSON(readFileSync(path.join(skillDir, 'base-theme/config/settings_schema.json'), 'utf8'))
+    const cart = groups.find((group: { name: string }) => group.name === 't:general.cart')
+    const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.schema.json'), 'utf8'))
+    expect(cart.settings).toContainEqual({
+      type: 'number',
+      id: 'free_shipping_threshold',
+      label: 't:labels.free_shipping_threshold',
+      info: 't:info.free_shipping_threshold',
+    })
+    expect(locale.labels.free_shipping_threshold).toBeTruthy()
+    expect(locale.info.free_shipping_threshold).toBeTruthy()
+  })
+
+  it('shows how far the cart is from free shipping, or that it ships free, with a progress bar, in the drawer too', () => {
+    const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+    expect(source).toMatch(/{%-? if settings\.free_shipping_threshold > 0 and cart\.currency\.iso_code == shop\.currency -?%}/)
+    expect(source).toContain("'cart.free_shipping_remaining' | t: amount:")
+    expect(source).toContain("'cart.free_shipping' | t")
+    expect(source).toMatch(/<progress[^>]*max="{{ threshold }}"[^>]*value="{{ progress }}"/)
+    expect(locale.cart.free_shipping_remaining).toBe('{{ amount }} to free shipping')
+    expect(locale.cart.free_shipping).toBe('Free shipping')
+    // The drawer shows the same section, so it shows the bar too.
+    expect(readFileSync(path.join(skillDir, 'catalog/sections/header.liquid'), 'utf8')).toContain('?section_id=main-cart')
+  })
+
+  it('tells the agent to ask the buying facts up front and write only the confirmed ones', () => {
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    const brief = readFileSync(path.join(skillDir, 'references/design/brief.md'), 'utf8')
+    expect(skill).toMatch(/\*\*Buying facts\*\*/)
+    expect(skill).toContain('"free_shipping_threshold": 60')
+    expect(brief).toContain('## Buying facts')
+    expect(readFileSync(path.join(skillDir, 'references/design/review.md'), 'utf8')).toContain('| `default-text` |')
+  })
+
   it('is copied into every new Theme by the skill', () => {
     expect(starterFiles).toContain('sections/main-cart.liquid')
     expect(starterFiles).toContain('templates/cart.json')
@@ -527,6 +562,19 @@ describe('Product page shipping note and collapsible content', () => {
       expect(source).toContain(`{{ shop.${policy}.title | escape }}`)
     }
     expect(schema.settings).toContainEqual(expect.objectContaining({ type: 'richtext', id: 'text' }))
+  })
+
+  it("ships no example policy: the text is empty until the Creator's facts fill it", () => {
+    const text = parse(read('base-theme/blocks/shipping-note.liquid')).settings.find((setting: { id: string }) => setting.id === 'text')
+    expect(text).not.toHaveProperty('default')
+  })
+
+  it('shows the free-shipping threshold, only in the shop currency', () => {
+    const source = read('base-theme/blocks/shipping-note.liquid')
+    const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+    expect(source).toMatch(/{%-? if settings\.free_shipping_threshold > 0 and cart\.currency\.iso_code == shop\.currency -?%}/)
+    expect(source).toContain("'product.free_shipping_over' | t: amount:")
+    expect(locale.product.free_shipping_over).toBe('Free shipping on orders over {{ amount }}.')
   })
 
   it('collapses content in a native disclosure, open on desktop, never in tabs', () => {

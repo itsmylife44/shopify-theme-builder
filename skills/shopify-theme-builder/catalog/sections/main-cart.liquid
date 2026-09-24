@@ -1,4 +1,4 @@
-{% comment %}The cart page's items, discounts, order note, checkout and accelerated checkout buttons.{% endcomment %}
+{% comment %}The cart page's items, discounts, free-shipping progress, order note, checkout and accelerated checkout buttons.{% endcomment %}
 <div class="main-cart basic-page full-width color-{{ section.settings.color_scheme }}">
   <h1>{{ 'cart.title' | t }}</h1>
 
@@ -113,6 +113,23 @@
                 <li>{{ discount.title | escape }} (-{{ discount.total_allocated_amount | money }})</li>
               {% endfor %}
             </ul>
+          {% endif %}
+          {% if settings.free_shipping_threshold > 0 and cart.currency.iso_code == shop.currency %}
+            {% liquid
+              assign threshold = settings.free_shipping_threshold | times: 100 | round
+              assign progress = cart.total_price | at_most: threshold
+              assign remaining = threshold | minus: cart.total_price | money
+            %}
+            <div class="main-cart__shipping">
+              <p id="FreeShipping-{{ section.id }}">
+                {%- if progress < threshold -%}
+                  {{- 'cart.free_shipping_remaining' | t: amount: remaining -}}
+                {%- else -%}
+                  {{- 'cart.free_shipping' | t -}}
+                {%- endif -%}
+              </p>
+              <progress aria-labelledby="FreeShipping-{{ section.id }}" max="{{ threshold }}" value="{{ progress }}"></progress>
+            </div>
           {% endif %}
           <p class="main-cart__subtotal price text-h4">
             {{ 'cart.subtotal' | t }}
@@ -229,6 +246,17 @@
     gap: var(--space-sm);
     margin-inline-start: auto;
     text-align: end;
+  }
+
+  .main-cart__shipping {
+    display: grid;
+    gap: var(--space-2xs);
+    width: min(100%, 20rem);
+  }
+
+  .main-cart__shipping progress {
+    width: 100%;
+    accent-color: var(--color-accent);
   }
 
   .main-cart__actions {

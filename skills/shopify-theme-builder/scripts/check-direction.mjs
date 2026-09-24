@@ -73,10 +73,11 @@ export function checkDirection(theme) {
     ...home.flatMap(checkPlaceholders),
     ...homes.flatMap(({ page, values }) => checkHome(theme, values, page)),
     ...[...groups, ...pages].flatMap(checkCopy),
+    ...pages.filter((page) => /^templates\/product(\.|$)/.test(page.file)).flatMap(checkDefaultText),
   ]
 }
 
-/** @typedef {{ id: string, type: string, settings: Record<string, any>, blocks: { type: string, settings: Record<string, any> }[] }} Section */
+/** @typedef {{ id: string, type: string, settings: Record<string, any>, blocks: { type: string, settings: Record<string, any>, schema: any[] }[] }} Section */
 /** @typedef {{ file: string, sections: Section[] }} Page */
 
 /**
@@ -93,12 +94,14 @@ function readPages(theme, dir, pick) {
     const sections = (template.order ?? []).flatMap((/** @type {string} */ id) => {
       const section = template.sections?.[id]
       if (!section || section.disabled) return []
-      const schema = readSchema(theme, section.type)
+      const schema = readSchema(theme, 'sections', section.type)
       const blocks = (section.block_order ?? Object.keys(section.blocks ?? {})).flatMap((/** @type {string} */ blockId) => {
         const block = section.blocks?.[blockId]
         if (!block || block.disabled) return []
-        const blockSchema = schema.blocks?.find((/** @type {any} */ other) => other.type === block.type)
-        return [{ type: block.type, settings: { ...defaults(blockSchema?.settings), ...block.settings } }]
+        // A section's own block has its settings in the section's schema; a theme block, in its blocks/ file.
+        const own = schema.blocks?.find((/** @type {any} */ other) => other.type === block.type && other.settings)
+        const blockSettings = (own ?? readSchema(theme, 'blocks', block.type)).settings ?? []
+        return [{ type: block.type, settings: { ...defaults(blockSettings), ...block.settings }, schema: blockSettings }]
       })
       return [{ id, type: section.type, settings: { ...defaults(schema.settings), ...section.settings }, blocks }]
     })
@@ -107,13 +110,14 @@ function readPages(theme, dir, pick) {
 }
 
 /**
- * A section's schema, or an empty one when the Theme lacks its file.
+ * A section's or theme block's schema, or an empty one when the Theme lacks its file.
  * @param {string} theme
+ * @param {'sections' | 'blocks'} dir
  * @param {string} type
  * @returns {any}
  */
-function readSchema(theme, type) {
-  const file = path.join(theme, 'sections', `${type}.liquid`)
+function readSchema(theme, dir, type) {
+  const file = path.join(theme, dir, `${type}.liquid`)
   if (!existsSync(file)) return {}
   const schema = readFileSync(file, 'utf8').match(/{%-?\s*schema\s*-?%}([\s\S]*?){%-?\s*endschema\s*-?%}/)?.[1]
   const data = schema ? parseJSON(schema) : {}
@@ -155,6 +159,27 @@ function checkCopy({ file, sections }) {
         ...(left ? [finding('todo', file, `${owner}, ${id}: "${left}". Write the fact, or leave it out and tell the Creator.`)] : []),
       ]
     }),
+  )
+}
+
+// The setting types of running text, whose catalog default is example copy, not a label like a heading.
+const runningText = new Set(['richtext', 'inline_richtext', 'textarea'])
+
+/**
+ * A block of a product template showing its catalog default running text, like an example shipping policy: text
+ * shoppers read as the shop's fact.
+ * @param {Page} page
+ * @returns {Finding[]}
+ */
+function checkDefaultText({ file, sections }) {
+  return sections.flatMap((section) =>
+    section.blocks.flatMap((block) =>
+      block.schema
+        .filter((setting) => runningText.has(setting.type) && setting.default?.trim() && block.settings[setting.id] === setting.default)
+        .map((setting) =>
+          finding('default-text', file, `${section.id}, ${block.type} block, ${setting.id}: the catalog's default text, not the shop's. Write the shop's own fact, or clear it.`),
+        ),
+    ),
   )
 }
 

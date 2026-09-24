@@ -243,6 +243,12 @@
           }
         ],
         "default": "drawer"
+      },
+      {
+        "type": "number",
+        "id": "free_shipping_threshold",
+        "label": "t:labels.free_shipping_threshold",
+        "info": "t:info.free_shipping_threshold"
       }
     ]
   },
