@@ -1,5 +1,5 @@
 {% comment %}The blog page: its articles as cards with image, title, date and excerpt, with tag links and pagination.{% endcomment %}
-<div class="main-blog full-width color-{{ section.settings.color_scheme }}">
+<div class="main-blog full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="main-blog__inner">
     <h1 class="main-blog__title">{{ blog.title | escape }}</h1>
 
@@ -142,7 +142,7 @@
 
   .main-blog__image {
     display: block;
-    aspect-ratio: 3 / 2;
+    aspect-ratio: var(--image-ratio);
     overflow: hidden;
     border-radius: var(--style-border-radius-media);
   }
@@ -207,6 +207,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "range",

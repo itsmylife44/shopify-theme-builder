@@ -281,19 +281,33 @@ describe('check-direction', () => {
     ])
   })
 
-  it('reports a page showing images in more than two ratios', () => {
+  it('reports a page showing images in more than two ratios, suggesting the card ratio', () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {
-      template.sections.list = { type: 'collection-list', settings: { heading: 'By harvest' } }
+      template.sections.story.settings.image_ratio = 'landscape'
+      template.sections.list = { type: 'collection-list', settings: { heading: 'By harvest', image_ratio: 'square' } }
       template.order.push('list')
     })
     expect(checkDirection(theme)).toEqual([
       {
         check: 'image-ratios',
         file: 'templates/index.json',
-        message: '3 image ratios: 4 / 5 (rows), 4 / 3 (story), 1 / 1 (list). Keep a page to two at most, the card ratio among them.',
+        message: '3 image ratios: 4 / 5 (rows), 4 / 3 (story), 1 / 1 (list). Keep a page to two at most, the card ratio among them: set image_ratio to card on story, list.',
       },
     ])
+  })
+
+  it('counts an image section following the card ratio, by default, as the card ratio, and a natural one or an icon as none', () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.list = { type: 'collection-list', settings: { heading: 'By harvest' } }
+      template.sections.split = { type: 'editorial-split', settings: { image: 'shopify://shop_images/grove.jpg', image_ratio: 'natural' } }
+      template.sections.gallery = { type: 'image-gallery', settings: { image_ratio: 'landscape' } }
+      // Its small icons aren't photos.
+      template.sections.why = { type: 'multicolumn', settings: { heading: 'Why one grove' } }
+      template.order.push('list', 'split', 'gallery', 'why')
+    })
+    expect(checkDirection(theme).filter((finding) => finding.check === 'image-ratios')).toEqual([])
   })
 
   it('reports an image setting left blank in a home section whose layout shows it, as it renders a placeholder drawing', () => {

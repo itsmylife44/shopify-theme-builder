@@ -15,7 +15,7 @@
     assign carousel = true
   endif
 %}
-<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}">
+<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="collection-list__inner">
     {% if section.settings.heading != blank %}
       <h2 class="collection-list__heading">{{ section.settings.heading }}</h2>
@@ -157,7 +157,7 @@
 
   .collection-list__image {
     display: block;
-    aspect-ratio: 1;
+    aspect-ratio: var(--image-ratio);
     overflow: hidden;
     border-radius: var(--style-border-radius-media);
     background-color: var(--media-background);
@@ -295,6 +295,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "inline_richtext",

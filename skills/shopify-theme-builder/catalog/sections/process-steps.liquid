@@ -3,7 +3,7 @@
   assign columns = section.blocks.size | at_most: 4 | at_least: 1
   assign image_sizes = 100 | divided_by: columns | prepend: '(min-width: 750px) ' | append: 'vw, 100vw'
 %}
-<div class="process-steps full-width color-{{ section.settings.color_scheme }}">
+<div class="process-steps full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="process-steps__inner">
     {% if section.settings.heading != blank %}
       <h2 class="process-steps__heading">{{ section.settings.heading }}</h2>
@@ -76,7 +76,7 @@
   }
 
   .process-steps__media {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: var(--image-ratio);
     overflow: hidden;
     margin-block-end: var(--space-xs);
     border-radius: var(--style-border-radius-media);
@@ -127,6 +127,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "inline_richtext",

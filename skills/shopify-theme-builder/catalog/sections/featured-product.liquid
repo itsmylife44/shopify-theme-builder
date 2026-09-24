@@ -5,7 +5,7 @@
   assign featured_media = current_variant.featured_media | default: product.featured_media
 %}
 
-<div class="featured-product full-width color-{{ section.settings.color_scheme }}">
+<div class="featured-product full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <featured-product class="featured-product__inner">
     <div class="featured-product__media">
       {% if featured_media %}
@@ -151,12 +151,10 @@
     display: block;
     width: 100%;
     height: auto;
+    aspect-ratio: var(--image-ratio);
     padding: var(--media-inset);
+    object-fit: var(--media-fit);
     mix-blend-mode: var(--media-blend);
-  }
-
-  .featured-product__placeholder {
-    aspect-ratio: 1;
   }
 
   .featured-product__details,
@@ -214,6 +212,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "product",

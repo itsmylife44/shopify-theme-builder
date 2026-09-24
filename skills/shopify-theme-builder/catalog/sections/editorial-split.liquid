@@ -1,5 +1,5 @@
 {% comment %}A tall image beside a long text column, with a drop cap or a pull quote, for brand stories.{% endcomment %}
-<div class="editorial-split full-width editorial-split--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}">
+<div class="editorial-split full-width editorial-split--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="editorial-split__inner">
     <div class="editorial-split__media">
       {% if section.settings.image != blank %}
@@ -74,7 +74,7 @@
   }
 
   .editorial-split__media {
-    aspect-ratio: 2 / 3;
+    aspect-ratio: var(--image-ratio);
     overflow: hidden;
     border-radius: var(--style-border-radius-media);
   }
@@ -133,6 +133,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "image_picker",

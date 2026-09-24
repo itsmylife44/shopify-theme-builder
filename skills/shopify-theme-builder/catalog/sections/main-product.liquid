@@ -19,7 +19,7 @@
   {{ 'https://cdn.shopify.com/shopifycloud/model-viewer-ui/assets/v1.0/model-viewer-ui.css' | stylesheet_tag }}
 {% endif %}
 
-<div class="main-product main-product--{{ section.settings.gallery_layout }} full-width color-{{ section.settings.color_scheme }}">
+<div class="main-product main-product--{{ section.settings.gallery_layout }} full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <product-info
     class="main-product__inner"
     data-url="{{ product.url }}"
@@ -91,7 +91,7 @@
                 aria-label="{{ 'product.show_media' | t: index: forloop.index, count: forloop.length }}"
                 {% if forloop.first %}aria-current="true"{% endif %}
               >
-                {{ media.preview_image | image_url: width: 160, height: 160, crop: 'center' | image_tag: alt: '', width: 80, height: 80, sizes: '5rem', loading: 'lazy' }}
+                {{ media.preview_image | image_url: width: 160 | image_tag: alt: '', sizes: '5rem', loading: 'lazy' }}
               </button>
             </li>
           {% endfor %}
@@ -500,7 +500,7 @@
     display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 1;
+    aspect-ratio: var(--image-ratio);
     object-fit: var(--media-fit);
     border-radius: var(--style-border-radius-media);
     background-color: var(--media-background);
@@ -638,7 +638,9 @@
   }
 
   .main-product__media-item img {
+    aspect-ratio: var(--image-ratio);
     padding: var(--media-inset);
+    object-fit: var(--media-fit);
     mix-blend-mode: var(--media-blend);
   }
 
@@ -666,7 +668,7 @@
   }
 
   .main-product__placeholder {
-    aspect-ratio: 1;
+    aspect-ratio: var(--image-ratio);
   }
 
   .main-product__details {
@@ -697,6 +699,19 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "select",

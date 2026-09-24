@@ -6,7 +6,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 
 - The first viewport's image (the hero, the first slide, the product's main image) shows at once: no entrance animation, no blank box while it loads.
 - Every image sits in a box of its own ratio, so nothing jumps as images load, and a grid keeps even rows when the store's photos have mixed ratios.
-- A page shows images in two ratios at most, the product card's ratio among them (`check-direction.mjs` counts them).
+- A page shows images in two ratios at most, the product card's ratio among them (`check-direction.mjs` counts them): a section's `image_ratio` on `card`, its default, shows the card's.
 
 ## Product page
 
