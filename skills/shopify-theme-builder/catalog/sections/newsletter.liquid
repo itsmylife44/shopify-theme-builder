@@ -1,31 +1,49 @@
 {% comment %}An email signup under a heading and text.{% endcomment %}
-<div class="newsletter full-width color-{{ section.settings.color_scheme }}">
+<div class="newsletter full-width newsletter--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}">
   <div class="newsletter__inner">
-    {% if section.settings.heading != blank %}
-      <h2 class="newsletter__heading">{{ section.settings.heading }}</h2>
-    {% endif %}
-    {% if section.settings.text != blank %}
-      <div class="newsletter__text rte">{{ section.settings.text }}</div>
+    {% if section.settings.layout == 'split' %}
+      <div class="newsletter__media">
+        {% if section.settings.image != blank %}
+          {{
+            section.settings.image
+            | image_url: width: 1500
+            | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: 'lazy'
+          }}
+        {% else %}
+          {{ 'image' | placeholder_svg_tag: 'placeholder newsletter__placeholder' }}
+        {% endif %}
+      </div>
     {% endif %}
 
-    {% assign form_id = 'Newsletter-' | append: section.id %}
-    {% form 'customer', id: form_id, class: 'newsletter__form' %}
-      <input type="hidden" name="contact[tags]" value="newsletter">
-      <input
-        type="email"
-        name="contact[email]"
-        autocomplete="email"
-        required
-        placeholder="{{ 'footer.newsletter_email' | t }}"
-        aria-label="{{ 'footer.newsletter_email' | t }}"
-      >
-      <button type="submit" class="button">{{ section.settings.button_label | escape }}</button>
-      {% if form.posted_successfully? %}
-        <p class="newsletter__message" role="status">{{ 'footer.newsletter_success' | t }}</p>
-      {% elsif form.errors %}
-        <div class="newsletter__message" role="alert">{{ form.errors | default_errors }}</div>
-      {% endif %}
-    {% endform %}
+    <div class="newsletter__body">
+      <div class="newsletter__content">
+        {% if section.settings.heading != blank %}
+          <h2 class="newsletter__heading">{{ section.settings.heading }}</h2>
+        {% endif %}
+        {% if section.settings.text != blank %}
+          <div class="newsletter__text rte">{{ section.settings.text }}</div>
+        {% endif %}
+      </div>
+
+      {% assign form_id = 'Newsletter-' | append: section.id %}
+      {% form 'customer', id: form_id, class: 'newsletter__form' %}
+        <input type="hidden" name="contact[tags]" value="newsletter">
+        <input
+          type="email"
+          name="contact[email]"
+          autocomplete="email"
+          required
+          placeholder="{{ 'footer.newsletter_email' | t }}"
+          aria-label="{{ 'footer.newsletter_email' | t }}"
+        >
+        <button type="submit" class="button">{{ section.settings.button_label | escape }}</button>
+        {% if form.posted_successfully? %}
+          <p class="newsletter__message" role="status">{{ 'footer.newsletter_success' | t }}</p>
+        {% elsif form.errors %}
+          <div class="newsletter__message" role="alert">{{ form.errors | default_errors }}</div>
+        {% endif %}
+      {% endform %}
+    </div>
   </div>
 </div>
 
@@ -37,11 +55,23 @@
 
   .newsletter__inner {
     grid-column: 2;
+    display: grid;
+    align-items: center;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing);
+  }
+
+  .newsletter__body,
+  .newsletter__content {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-md);
-    padding-block: var(--section-spacing);
+  }
+
+  .newsletter--centered .newsletter__body,
+  .newsletter--centered .newsletter__content {
+    align-items: center;
     text-align: center;
   }
 
@@ -52,10 +82,13 @@
   .newsletter__form {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     gap: var(--space-xs);
     width: 100%;
     max-width: var(--width-narrow);
+  }
+
+  .newsletter--centered .newsletter__form {
+    justify-content: center;
   }
 
   .newsletter__form input[type='email'] {
@@ -71,6 +104,41 @@
     flex-basis: 100%;
     margin: 0;
   }
+
+  .newsletter__media {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background-color: var(--media-background);
+    border-radius: var(--style-border-radius-media);
+  }
+
+  .newsletter__media img,
+  .newsletter__placeholder {
+    width: 100%;
+    height: 100%;
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
+  }
+
+  @media (min-width: 750px) {
+    .newsletter--split .newsletter__inner {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2xl);
+    }
+
+    .newsletter--inline .newsletter__body {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2xl);
+    }
+
+    .newsletter--inline .newsletter__content,
+    .newsletter--inline .newsletter__form {
+      flex: 1 1 0;
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -83,6 +151,23 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "centered", "label": "t:options.layout.centered" },
+        { "value": "split", "label": "t:options.layout.split" },
+        { "value": "inline", "label": "t:options.layout.inline" }
+      ],
+      "default": "centered"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.layout == 'split' }}"
     },
     {
       "type": "inline_richtext",
@@ -106,6 +191,18 @@
   "presets": [
     {
       "name": "t:general.newsletter"
+    },
+    {
+      "name": "t:general.newsletter_split",
+      "settings": {
+        "layout": "split"
+      }
+    },
+    {
+      "name": "t:general.newsletter_inline",
+      "settings": {
+        "layout": "inline"
+      }
     }
   ]
 }

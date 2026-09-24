@@ -1325,6 +1325,45 @@ describe('Image with text', () => {
   })
 })
 
+describe('Newsletter', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/newsletter.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('lays the signup out centered by default, split with an image or inline', () => {
+    expect(source).toContain('class="newsletter full-width newsletter--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'centered' })
+    expect(values(settings.layout)).toEqual(['centered', 'split', 'inline'])
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets[0]).toEqual({ name: 't:general.newsletter' })
+  })
+
+  it("shows an optional image, Shopify's placeholder when blank, beside the signup in the split layout, stacked on mobile", () => {
+    expect(settings.image).toEqual({
+      type: 'image_picker',
+      id: 'image',
+      label: 't:labels.image',
+      visible_if: "{{ section.settings.layout == 'split' }}",
+    })
+    expect(source).toContain("{% if section.settings.layout == 'split' %}")
+    expect(source).toContain("{{ 'image' | placeholder_svg_tag: 'placeholder newsletter__placeholder' }}")
+    expect(desktop).toMatch(/\.newsletter--split \.newsletter__inner {[^}]*grid-template-columns: 1fr 1fr;/)
+  })
+
+  it('sets the heading and text beside the form in one row on desktop in the inline layout', () => {
+    expect(desktop).toMatch(/\.newsletter--inline \.newsletter__body {[^}]*flex-direction: row;/)
+  })
+
+  it('offers each other layout as a named preset with the same blocks as the first', () => {
+    expect(schema.presets.slice(1)).toEqual([
+      { name: 't:general.newsletter_split', settings: { layout: 'split' } },
+      { name: 't:general.newsletter_inline', settings: { layout: 'inline' } },
+    ])
+  })
+})
+
 describe('Editorial split', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])

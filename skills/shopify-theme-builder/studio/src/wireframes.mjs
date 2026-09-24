@@ -365,7 +365,20 @@ export const wireframes = {
       description: 'Each column on a card',
     },
   },
-  newsletter: { 't:general.newsletter': { wireframe: 'center heading text input button' } },
+  newsletter: {
+    't:general.newsletter': {
+      wireframe: 'center heading text input button',
+      description: 'A centered heading, text and signup form',
+    },
+    't:general.newsletter_split': {
+      wireframe: 'image | heading text input button',
+      description: 'An image on one side, the signup form on the other',
+    },
+    't:general.newsletter_inline': {
+      wireframe: 'heading text | input button',
+      description: 'Heading and text beside the form in one slim row',
+    },
+  },
   'press-quotes': {
     't:general.press_quotes': {
       wireframe: 'center logo text x3',
