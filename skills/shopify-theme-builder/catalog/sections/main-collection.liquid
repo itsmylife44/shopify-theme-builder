@@ -22,188 +22,276 @@
       {% endif %}
     </div>
 
-    {% if show_filters or section.settings.enable_sorting %}
-      <collection-facets>
-        <form class="main-collection__facets" action="{{ collection.url }}" method="get">
-          {% if show_filters %}
-            {% for filter in collection.filters %}
-              <details class="main-collection__filter">
-                <summary>{{ filter.label | escape }}</summary>
-                <div class="main-collection__filter-values">
-                  {% case filter.type %}
-                    {% when 'price_range' %}
-                      <div class="main-collection__price-range">
-                        <label>
-                          {{ 'collection.price_from' | t }}
-                          <input
-                            type="number"
-                            name="{{ filter.min_value.param_name }}"
-                            min="0"
-                            step="any"
-                            max="{{ filter.range_max | divided_by: 100.0 }}"
-                            placeholder="0"
-                            {% if filter.min_value.value %}
-                              value="{{ filter.min_value.value | divided_by: 100.0 }}"
-                            {% endif %}
-                          >
-                        </label>
-                        <label>
-                          {{ 'collection.price_to' | t }}
-                          <input
-                            type="number"
-                            name="{{ filter.max_value.param_name }}"
-                            min="0"
-                            step="any"
-                            max="{{ filter.range_max | divided_by: 100.0 }}"
-                            placeholder="{{ filter.range_max | divided_by: 100.0 }}"
-                            {% if filter.max_value.value %}
-                              value="{{ filter.max_value.value | divided_by: 100.0 }}"
-                            {% endif %}
-                          >
-                        </label>
-                      </div>
-                    {% else %}
-                      {% for filter_value in filter.values %}
-                        <label class="main-collection__filter-value">
-                          <input
-                            type="checkbox"
-                            name="{{ filter_value.param_name }}"
-                            value="{{ filter_value.value }}"
-                            {% if filter_value.active %}
-                              checked
-                            {% endif %}
-                            {% if filter_value.count == 0 and filter_value.active == false %}
-                              disabled
-                            {% endif %}
-                          >
-                          {{ filter_value.label | escape }} ({{ filter_value.count }})
-                        </label>
-                      {% endfor %}
-                  {% endcase %}
-                </div>
-              </details>
-            {% endfor %}
-          {% endif %}
+    <facet-filters class="main-collection__results" data-section-id="{{ section.id }}">
+      {% if show_filters or section.settings.enable_sorting %}
+        <button
+          type="button"
+          class="button button--secondary main-collection__open"
+          aria-haspopup="dialog"
+          data-facets-open
+        >
+          {{ 'collection.filter_and_sort' | t }}
+        </button>
+        <dialog class="main-collection__drawer" aria-labelledby="FacetsTitle-{{ section.id }}">
+          <form class="main-collection__facets" action="{{ collection.url }}" method="get" data-facets-part="form">
+            <div class="main-collection__drawer-header">
+              <h2 id="FacetsTitle-{{ section.id }}" class="main-collection__drawer-title text-h4">
+                {{- 'collection.filter_and_sort' | t -}}
+              </h2>
+              <button type="button" class="main-collection__close" aria-label="{{ 'collection.close_filters' | t }}" data-facets-close>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m5 5 10 10M15 5 5 15" />
+                </svg>
+              </button>
+            </div>
 
-          {% if section.settings.enable_sorting %}
-            <label class="main-collection__sort">
-              {{ 'collection.sort_by' | t }}
-              <select name="sort_by">
-                {% for option in collection.sort_options %}
-                  <option
-                    value="{{ option.value | escape }}"
-                    {% if option.value == sort_by %}
-                      selected
-                    {% endif %}
-                  >
-                    {{- option.name | escape -}}
-                  </option>
-                {% endfor %}
-              </select>
-            </label>
-          {% endif %}
-
-          <button type="submit" class="button main-collection__apply">{{ 'collection.apply' | t }}</button>
-        </form>
-      </collection-facets>
-
-      {% if show_filters %}
-        {% capture active_filters %}
-          {% for filter in collection.filters %}
-            {% if filter.type == 'price_range' %}
-              {% if filter.min_value.value != nil or filter.max_value.value != nil %}
-                {% assign min_value = filter.min_value.value | default: 0 %}
-                {% assign max_value = filter.max_value.value | default: filter.range_max %}
-                {% capture price_label %}{{ min_value | money }} – {{ max_value | money }}{% endcapture %}
-                <li>
-                  <a href="{{ filter.url_to_remove }}">
-                    {{- 'collection.remove_filter' | t: filter: price_label -}}
-                  </a>
-                </li>
-              {% endif %}
-            {% else %}
-              {% for filter_value in filter.active_values %}
-                <li>
-                  <a href="{{ filter_value.url_to_remove }}">
-                    {{- 'collection.remove_filter' | t: filter: filter_value.label -}}
-                  </a>
-                </li>
+            {% if show_filters %}
+              {% for filter in collection.filters %}
+                <details class="main-collection__filter">
+                  <summary>{{ filter.label | escape }}</summary>
+                  <div class="main-collection__filter-values">
+                    {% case filter.type %}
+                      {% when 'price_range' %}
+                        <div class="main-collection__price-range">
+                          <label>
+                            {{ 'collection.price_from' | t }}
+                            <input
+                              type="number"
+                              name="{{ filter.min_value.param_name }}"
+                              min="0"
+                              step="any"
+                              max="{{ filter.range_max | divided_by: 100.0 }}"
+                              placeholder="0"
+                              {% if filter.min_value.value %}
+                                value="{{ filter.min_value.value | divided_by: 100.0 }}"
+                              {% endif %}
+                            >
+                          </label>
+                          <label>
+                            {{ 'collection.price_to' | t }}
+                            <input
+                              type="number"
+                              name="{{ filter.max_value.param_name }}"
+                              min="0"
+                              step="any"
+                              max="{{ filter.range_max | divided_by: 100.0 }}"
+                              placeholder="{{ filter.range_max | divided_by: 100.0 }}"
+                              {% if filter.max_value.value %}
+                                value="{{ filter.max_value.value | divided_by: 100.0 }}"
+                              {% endif %}
+                            >
+                          </label>
+                        </div>
+                      {% else %}
+                        {% for filter_value in filter.values %}
+                          <label class="main-collection__filter-value">
+                            <input
+                              type="checkbox"
+                              name="{{ filter_value.param_name }}"
+                              value="{{ filter_value.value }}"
+                              {% if filter_value.active %}
+                                checked
+                              {% endif %}
+                              {% if filter_value.count == 0 and filter_value.active == false %}
+                                disabled
+                              {% endif %}
+                            >
+                            {{ filter_value.label | escape }} ({{ filter_value.count }})
+                          </label>
+                        {% endfor %}
+                    {% endcase %}
+                  </div>
+                </details>
               {% endfor %}
             {% endif %}
-          {% endfor %}
-        {% endcapture %}
 
-        {% if active_filters != blank %}
-          <ul class="main-collection__active" role="list" aria-label="{{ 'collection.active_filters' | t }}">
-            {{ active_filters }}
-            <li>
-              <a href="{{ clear_url }}">{{ 'collection.clear_all' | t }}</a>
-            </li>
-          </ul>
+            {% if section.settings.enable_sorting %}
+              <label class="main-collection__sort">
+                {{ 'collection.sort_by' | t }}
+                <select name="sort_by">
+                  {% for option in collection.sort_options %}
+                    <option
+                      value="{{ option.value | escape }}"
+                      {% if option.value == sort_by %}
+                        selected
+                      {% endif %}
+                    >
+                      {{- option.name | escape -}}
+                    </option>
+                  {% endfor %}
+                </select>
+              </label>
+            {% endif %}
+
+            <button type="submit" class="button main-collection__apply">{{ 'collection.apply' | t }}</button>
+          </form>
+          <div class="main-collection__drawer-footer" role="status">
+            <button type="button" class="button main-collection__show" data-facets-close>
+              <span data-facets-part="show">{{ 'collection.show_results' | t: count: collection.products_count }}</span>
+            </button>
+          </div>
+        </dialog>
+      {% endif %}
+
+      <p class="main-collection__count" role="status" tabindex="-1" data-facets-part="count">
+        {%- if collection.all_products_count > 0 -%}
+          {{ 'collection.product_count' | t: count: collection.products_count }}
+        {%- endif -%}
+      </p>
+
+      <div class="main-collection__part" data-facets-part="active" data-facets-link>
+        {% if show_filters %}
+          {% capture active_filters %}
+            {% for filter in collection.filters %}
+              {% if filter.type == 'price_range' %}
+                {% if filter.min_value.value != nil or filter.max_value.value != nil %}
+                  {% assign min_value = filter.min_value.value | default: 0 %}
+                  {% assign max_value = filter.max_value.value | default: filter.range_max %}
+                  {% capture price_label %}{{ min_value | money }} – {{ max_value | money }}{% endcapture %}
+                  <li>
+                    <a href="{{ filter.url_to_remove }}">
+                      {{- 'collection.remove_filter' | t: filter: price_label -}}
+                    </a>
+                  </li>
+                {% endif %}
+              {% else %}
+                {% for filter_value in filter.active_values %}
+                  <li>
+                    <a href="{{ filter_value.url_to_remove }}">
+                      {{- 'collection.remove_filter' | t: filter: filter_value.label -}}
+                    </a>
+                  </li>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+          {% endcapture %}
+
+          {% if active_filters != blank %}
+            <ul class="main-collection__active" role="list" aria-label="{{ 'collection.active_filters' | t }}">
+              {{ active_filters }}
+              <li>
+                <a href="{{ clear_url }}">{{ 'collection.clear_all' | t }}</a>
+              </li>
+            </ul>
+          {% endif %}
         {% endif %}
-      {% endif %}
-    {% endif %}
+      </div>
 
-    {% paginate collection.products by section.settings.products_per_page %}
-      {% if collection.products.size > 0 or show_placeholders %}
-        <ul
-          class="main-collection__grid"
-          role="list"
-          data-load-more-grid
-          style="--columns: {{ section.settings.columns }};"
-        >
-          {% if show_placeholders %}
-            {% for i in (1..placeholder_count) %}
-              {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
-              <li>
-                {% render 'product-card', placeholder: placeholder, anatomy: section.settings.card_anatomy %}
-              </li>
-            {% endfor %}
+      <div class="main-collection__part" data-facets-part="results">
+        {% paginate collection.products by section.settings.products_per_page %}
+          {% if collection.products.size > 0 or show_placeholders %}
+            <ul
+              class="main-collection__grid"
+              role="list"
+              data-load-more-grid
+              style="--columns: {{ section.settings.columns }};"
+            >
+              {% if show_placeholders %}
+                {% for i in (1..placeholder_count) %}
+                  {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
+                  <li>
+                    {% render 'product-card', placeholder: placeholder, anatomy: section.settings.card_anatomy %}
+                  </li>
+                {% endfor %}
+              {% else %}
+                {% for product in collection.products %}
+                  <li>
+                    {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
+                  </li>
+                {% endfor %}
+              {% endif %}
+            </ul>
+          {% elsif collection.all_products_count == 0 %}
+            <p class="main-collection__empty">{{ 'collection.empty' | t }}</p>
           {% else %}
-            {% for product in collection.products %}
-              <li>
-                {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
-              </li>
-            {% endfor %}
+            <p class="main-collection__empty" data-facets-link>
+              {{ 'collection.no_results' | t }}
+              <a href="{{ clear_url }}">{{ 'collection.clear_all' | t }}</a>
+            </p>
           {% endif %}
-        </ul>
-      {% elsif collection.all_products_count == 0 %}
-        <p class="main-collection__empty">{{ 'collection.empty' | t }}</p>
-      {% else %}
-        <p class="main-collection__empty">
-          {{ 'collection.no_results' | t }}
-          <a href="{{ clear_url }}">{{ 'collection.clear_all' | t }}</a>
-        </p>
-      {% endif %}
 
-      {% if paginate.pages > 1 %}
-        <load-more class="main-collection__more" data-section-id="{{ section.id }}">
-          {% if paginate.next %}
-            <a class="button button--secondary main-collection__load-more" href="{{ paginate.next.url }}" data-load-more>
-              {{- 'collection.load_more' | t -}}
-            </a>
+          {% if paginate.pages > 1 %}
+            <load-more class="main-collection__more" data-section-id="{{ section.id }}">
+              {% if paginate.next %}
+                <a class="button button--secondary main-collection__load-more" href="{{ paginate.next.url }}" data-load-more>
+                  {{- 'collection.load_more' | t -}}
+                </a>
+              {% endif %}
+              <nav class="main-collection__pagination" aria-label="{{ 'collection.pagination' | t }}">
+                {{ paginate | default_pagination }}
+              </nav>
+            </load-more>
           {% endif %}
-          <nav class="main-collection__pagination" aria-label="{{ 'collection.pagination' | t }}">
-            {{ paginate | default_pagination }}
-          </nav>
-        </load-more>
-      {% endif %}
-    {% endpaginate %}
+        {% endpaginate %}
+      </div>
+    </facet-filters>
   </div>
 </div>
 
 {% javascript %}
-  class CollectionFacets extends HTMLElement {
+  class FacetFilters extends HTMLElement {
     connectedCallback() {
-      const form = this.querySelector('form');
-      form.addEventListener('change', (event) => {
-        if (event.target.type !== 'number') form.requestSubmit();
+      this.dialog = this.querySelector('dialog');
+      this.form = this.querySelector('form');
+      this.abort = new AbortController();
+      this.addEventListener('click', (event) => {
+        if (event.target.closest('[data-facets-open]')) return this.dialog.showModal();
+        if (event.target.closest('[data-facets-close]') || event.target === this.dialog) return this.dialog.close();
+        const link = event.target.closest('[data-facets-link] a');
+        if (!link) return;
+        event.preventDefault();
+        this.update(new URL(link.href));
       });
+      this.form?.addEventListener('change', () => this.update(this.formUrl()));
+      this.form?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        this.update(this.formUrl());
+      });
+      matchMedia('(min-width: 750px)').addEventListener('change', () => this.dialog?.close(), { signal: this.abort.signal });
+    }
+
+    disconnectedCallback() {
+      this.abort.abort();
+    }
+
+    formUrl() {
+      const url = new URL(this.form.action);
+      url.search = new URLSearchParams(new FormData(this.form));
+      return url;
+    }
+
+    async update(url) {
+      this.request?.abort();
+      this.request = new AbortController();
+      const fetchUrl = new URL(url);
+      fetchUrl.searchParams.set('section_id', this.dataset.sectionId);
+      try {
+        const response = await fetch(fetchUrl, { signal: this.request.signal });
+        if (!response.ok) throw new Error(response.statusText);
+        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const focused = document.activeElement;
+        const hadFocus = this.contains(focused);
+        const key = hadFocus && focused.name ? `[name="${CSS.escape(focused.name)}"]` : null;
+        const value = key && focused.type === 'checkbox' ? focused.value : null;
+        const open = [...this.querySelectorAll('form details')].map((details) => details.open);
+        for (const part of this.querySelectorAll('[data-facets-part]')) {
+          const next = html.querySelector(`[data-facets-part="${part.dataset.facetsPart}"]`);
+          if (next) part.replaceChildren(...next.childNodes);
+        }
+        this.querySelectorAll('form details').forEach((details, index) => (details.open = open[index] ?? false));
+        history.replaceState(null, '', url);
+        let target = null;
+        if (key) target = [...this.querySelectorAll(key)].find((input) => value === null || input.value === value);
+        else if (hadFocus && !focused.isConnected) target = this.querySelector('[data-facets-part="count"]');
+        target?.focus();
+      } catch (error) {
+        if (error.name !== 'AbortError') window.location.assign(url);
+      }
     }
   }
 
-  if (!customElements.get('collection-facets')) {
-    customElements.define('collection-facets', CollectionFacets);
+  if (!customElements.get('facet-filters')) {
+    customElements.define('facet-filters', FacetFilters);
   }
 
   class LoadMore extends HTMLElement {
@@ -278,6 +366,114 @@
 
   .main-collection__description {
     max-width: var(--width-prose);
+  }
+
+  .main-collection__results,
+  .main-collection__part {
+    display: contents;
+  }
+
+  .main-collection__drawer {
+    display: block;
+    position: static;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+  }
+
+  facet-filters .main-collection__open,
+  .main-collection__drawer-header,
+  .main-collection__drawer-footer {
+    display: none;
+  }
+
+  facet-filters:defined .main-collection__apply {
+    display: none;
+  }
+
+  .main-collection__drawer[open] {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    width: min(24rem, 100vw);
+    height: 100dvh;
+    margin-inline-start: auto;
+    background-color: var(--color-background);
+  }
+
+  .main-collection__drawer::backdrop {
+    background-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+
+  .main-collection__drawer[open] .main-collection__facets {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    flex: 1;
+    align-items: stretch;
+    overflow-y: auto;
+    padding: var(--space-lg);
+  }
+
+  .main-collection__drawer[open] .main-collection__drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .main-collection__drawer-title {
+    margin: 0;
+  }
+
+  .main-collection__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .main-collection__close svg {
+    width: 2rem;
+  }
+
+  .main-collection__drawer[open] .main-collection__filter-values {
+    position: static;
+    min-width: 0;
+    max-height: none;
+    padding: var(--space-sm) 0 0;
+    border: 0;
+  }
+
+  .main-collection__drawer[open] .main-collection__sort {
+    margin-inline-start: 0;
+  }
+
+  .main-collection__drawer[open] .main-collection__drawer-footer {
+    display: block;
+    padding: var(--space-md) var(--space-lg);
+    border-block-start: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .main-collection__show {
+    width: 100%;
+  }
+
+  .main-collection__count {
+    margin: 0;
+    color: var(--color-foreground-muted);
   }
 
   .main-collection__facets {
@@ -425,6 +621,14 @@
   }
 
   @media (max-width: 749px) {
+    facet-filters:defined .main-collection__open {
+      display: inline-flex;
+    }
+
+    facet-filters:defined .main-collection__drawer:not([open]) {
+      display: none;
+    }
+
     .main-collection__active {
       flex-wrap: nowrap;
       overflow-x: auto;

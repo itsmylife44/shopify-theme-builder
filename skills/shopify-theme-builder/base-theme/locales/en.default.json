@@ -60,13 +60,23 @@
     "active_filters": "Active filters",
     "apply": "Apply",
     "clear_all": "Clear all",
+    "close_filters": "Close filters",
     "empty": "This collection has no products yet.",
+    "filter_and_sort": "Filter and sort",
     "load_more": "Load more",
     "no_results": "No products match these filters.",
     "pagination": "Pagination",
     "price_from": "From",
     "price_to": "To",
+    "product_count": {
+      "one": "{{ count }} product",
+      "other": "{{ count }} products"
+    },
     "remove_filter": "Remove filter: {{ filter }}",
+    "show_results": {
+      "one": "Show {{ count }} result",
+      "other": "Show {{ count }} results"
+    },
     "sort_by": "Sort by"
   },
   "collections": {

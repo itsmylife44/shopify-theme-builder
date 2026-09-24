@@ -20,7 +20,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 ## Collection and cart
 
 - Product cards show the full title and the price, and cards in one row line up.
-- Filters and sorting are there on the collection page, and applied filters show as chips that clear.
+- Filters and sorting are there on the collection page, and applied filters show as chips that clear. The product count sits above the grid, and choosing a filter updates the results in place without reloading the page; on mobile the filters open from one "Filter and sort" button in a drawer that closes with "Show N results" (`main-collection`, `main-search`).
 - The cart shows the full cost before checkout.
 - With a free-shipping threshold, the cart shows how far the shopper is from it, or that shipping is free (`free_shipping_threshold`).
 - The cart and the product price say whether taxes (and duties) are included and what checkout adds, with shipping linked to the shipping policy (the Base Theme's `tax-note` snippet).
