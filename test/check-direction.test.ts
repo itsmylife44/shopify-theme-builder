@@ -332,6 +332,14 @@ describe('check-direction', () => {
     })
     mkdirSync(path.join(theme, 'listings/harvest-date/templates'), { recursive: true })
     writeJSON(theme, 'listings/harvest-date/templates/index.json', readJSON(theme, 'templates/index.json'))
+    const setPresets = (change: (presets: Record<string, any>) => void) => {
+      const data = readJSON(theme, 'config/settings_data.json')
+      change(data.presets)
+      writeJSON(theme, 'config/settings_data.json', data)
+    }
+    setPresets((presets) => {
+      for (const preset of Object.values(presets)) preset.card_hover = 'none'
+    })
     const movement = () => checkDirection(theme).filter((finding) => finding.check === 'movement')
     const message =
       'No section moves or responds: add a slideshow, a marquee, a testimonials or collection list carousel, or product cards with the second image on hover (card_hover).'
@@ -341,16 +349,14 @@ describe('check-direction', () => {
     ])
 
     // A carousel moves. Product cards with the second image on hover respond, with the card_hover of the Direction's
-    // own preset.
+    // own preset, which is the second image by default.
     setTemplate(theme, 'templates/index.json', (template) => {
       template.sections.ticker = { type: 'testimonials', settings: { heading: 'Chefs on the new oil', layout: 'carousel' } }
     })
-    setSettings(theme, (settings) => {
-      settings.card_hover = 'none'
+    setPresets((presets) => {
+      presets['Harvest Date'] = { ...presets['Press Cloth'] }
+      delete presets['Harvest Date'].card_hover
     })
-    const data = readJSON(theme, 'config/settings_data.json')
-    data.presets['Harvest Date'] = { ...data.presets['Press Cloth'], card_hover: 'second_image' }
-    writeJSON(theme, 'config/settings_data.json', data)
     expect(movement()).toEqual([])
   })
 

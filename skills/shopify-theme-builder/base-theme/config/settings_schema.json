@@ -522,7 +522,7 @@
             "label": "t:options.card_hover.zoom"
           }
         ],
-        "default": "none"
+        "default": "second_image"
       }
     ]
   },

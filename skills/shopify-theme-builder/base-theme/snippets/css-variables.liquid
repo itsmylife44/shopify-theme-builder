@@ -184,13 +184,13 @@
     {% comment %}
       Product cards: the shared .product-card in critical.css. A bordered card sets a border width, a card on a
       surface a background (with the color scheme, below); both pad the text, and the image fills the card's top
-      and sides. The hover zooms the image by a scale.
+      and sides. The hover zooms the image by a scale, unless the card shows a second image.
     {% endcomment %}
     --card-image-ratio: {{ settings.card_image_ratio }};
     --card-text-align: {{ settings.card_text_alignment | replace: 'left', 'start' | replace: 'right', 'end' }};
     --card-border-width: {% if settings.card_style == 'bordered' %}var(--border-width){% else %}0{% endif %};
     --card-padding: {% if settings.card_style == 'plain' %}0{% else %}var(--space-md){% endif %};
-    --card-hover-scale: {% if settings.card_hover == 'zoom' %}1.05{% else %}1{% endif %};
+    --card-hover-scale: {% if settings.card_hover == 'none' %}1{% else %}1.03{% endif %};
     {% comment %}
       Media, for product images only (product cards, the product page, featured product, quick add, predictive
       search and collection images): each sits in a box with the tint behind it. Full-bleed crops the image to fill

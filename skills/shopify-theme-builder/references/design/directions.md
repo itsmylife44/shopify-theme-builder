@@ -39,7 +39,7 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 - `marquee`, a strip of short texts or badges (`item_style` text or badge) scrolling at a `speed`
 - `testimonials` with the `carousel` layout
 - `collection-list` with the `carousel` layout
-- `card_hover`: the second image on hover (`second_image`) or an image zoom (`zoom`), on every product card
+- `card_hover`: the second image on hover (`second_image`, the default; a product with one image zooms instead) or an image zoom (`zoom`), on every product card
 - `motion`: subtle fades, or expressive rises and slow image zooms, on every section
 
 **Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy, image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
