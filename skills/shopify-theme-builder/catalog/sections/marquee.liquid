@@ -5,11 +5,6 @@
     assign animated = true
   endif
 
-  assign item_class = 'text-h3'
-  if section.settings.item_style == 'badge'
-    assign item_class = 'text-label'
-  endif
-
   # The loop moves by half the track, so each half repeats the items to at least 10, about 2000px of short texts.
   assign copies = 1
   assign duration = 0
@@ -34,7 +29,7 @@
         <ul class="marquee__list" role="list"{% unless forloop.first %} aria-hidden="true"{% endunless %}>
           {% for block in section.blocks %}
             <li
-              class="marquee__item {{ item_class }}"
+              class="marquee__item text-h3"
               {% if forloop.parentloop.first %}
                 {{ block.shopify_attributes }}
               {% endif %}
@@ -68,16 +63,17 @@
     display: grid;
     grid-template-columns: var(--content-grid);
     row-gap: var(--space-sm);
-    padding-block: var(--section-spacing);
+    padding-block: min(var(--section-spacing), var(--space-2xl));
   }
 
   .marquee--badge {
-    --marquee-gap: var(--space-sm);
+    --marquee-gap: var(--space-md);
   }
 
   .marquee__viewport {
     grid-column: 2;
-    overflow: hidden;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
   }
 
   .marquee__track {
@@ -90,10 +86,10 @@
 
   .marquee__list {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-wrap: nowrap;
+    justify-content: safe center;
     align-items: center;
-    gap: var(--space-sm) var(--marquee-gap);
+    gap: var(--marquee-gap);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -105,6 +101,7 @@
 
   .marquee__item {
     white-space: nowrap;
+    scroll-snap-align: start;
   }
 
   .marquee--text .marquee__item {
@@ -116,7 +113,10 @@
   }
 
   .marquee--badge .marquee__item {
-    padding: var(--space-2xs) var(--space-sm);
+    padding: var(--space-xs) var(--space-lg);
+    font-family: var(--font-accent--family);
+    font-style: var(--font-accent--style);
+    font-weight: var(--font-accent--weight);
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--style-border-radius-badges);
   }
@@ -148,6 +148,7 @@
   @media (prefers-reduced-motion: no-preference) {
     .marquee--animated .marquee__viewport {
       grid-column: 1 / -1;
+      overflow: hidden;
     }
 
     .marquee--animated .marquee__track {
@@ -161,7 +162,6 @@
     }
 
     .marquee--animated .marquee__list {
-      flex-wrap: nowrap;
       padding-inline-end: var(--marquee-gap);
     }
 
