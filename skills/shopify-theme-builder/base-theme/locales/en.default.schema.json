@@ -135,7 +135,9 @@
     "multicolumn_cards": "Multicolumn: cards",
     "testimonials_large_quote": "Testimonials: large quote",
     "testimonials_carousel": "Testimonials: carousel",
-    "testimonials_portraits": "Testimonials: with portraits"
+    "testimonials_portraits": "Testimonials: with portraits",
+    "rich_text_left_wide": "Rich text: left aligned, wide",
+    "rich_text_eyebrow": "Rich text: eyebrow and two buttons"
   },
   "labels": {
     "accent": "Accent",
@@ -146,6 +148,7 @@
     "border": "Border",
     "button": "Button",
     "button_label": "Button label",
+    "button_label_2": "Second button label",
     "color_scheme": "Color scheme",
     "grid_gap": "Grid spacing",
     "grid_item_width": "Grid item width",
@@ -178,10 +181,12 @@
     "image": "Image",
     "video": "Video",
     "button_link": "Button link",
+    "button_link_2": "Second button link",
     "image_position_on_desktop": "Image position on desktop",
     "logo": "Logo",
     "show_collection_description": "Show collection description",
     "enable_filtering": "Enable filtering",
+    "eyebrow": "Eyebrow",
     "enable_sorting": "Enable sorting",
     "products_per_page": "Products per page",
     "results_per_page": "Results per page",
@@ -351,7 +356,9 @@
       "grid": "Grid",
       "large_quote": "Large quote",
       "carousel": "Carousel",
-      "portraits": "With portraits"
+      "portraits": "With portraits",
+      "centered": "Centered",
+      "left_wide": "Left aligned, wide"
     },
     "cart_type": {
       "drawer": "Drawer",
