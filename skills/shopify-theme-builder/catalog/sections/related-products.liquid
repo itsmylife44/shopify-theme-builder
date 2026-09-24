@@ -6,7 +6,7 @@
   endif
 %}
 
-<div class="related-products full-width color-{{ section.settings.color_scheme }}">
+<div class="related-products full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   <product-recommendations
     class="related-products__inner"
     {% unless recommendations.performed? %}
@@ -77,7 +77,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .related-products__grid {
@@ -198,6 +198,18 @@
       "id": "show_quick_add",
       "label": "t:labels.show_quick_add",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

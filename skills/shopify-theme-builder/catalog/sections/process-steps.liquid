@@ -3,7 +3,7 @@
   assign columns = section.blocks.size | at_most: 4 | at_least: 1
   assign image_sizes = 100 | divided_by: columns | prepend: '(min-width: 750px) ' | append: 'vw, 100vw'
 %}
-<div class="process-steps full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="process-steps full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="process-steps__inner">
     {% if section.settings.heading != blank %}
       <h2 class="process-steps__heading">{{ section.settings.heading }}</h2>
@@ -47,7 +47,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .process-steps__heading {
@@ -146,6 +146,18 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "How it's made"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "blocks": [

@@ -1,5 +1,5 @@
 {% comment %}The article page: image, title, date, author, content and tags, with paginated comments and a comment form when the blog allows them.{% endcomment %}
-<article class="main-article basic-page full-width color-{{ section.settings.color_scheme }}">
+<article class="main-article basic-page full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   {% if article.image %}
     {{
       article.image
@@ -196,6 +196,18 @@
       "id": "show_author",
       "label": "t:labels.show_author",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

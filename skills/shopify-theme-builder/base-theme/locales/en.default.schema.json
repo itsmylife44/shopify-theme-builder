@@ -243,6 +243,7 @@
     "button_font_weight": "Weight",
     "content": "Content",
     "image_ratio": "Image ratio",
+    "section_spacing": "Section spacing",
     "card_style": "Style",
     "text_alignment": "Text alignment",
     "card_hover": "Image on hover",
@@ -439,6 +440,12 @@
       "square": "1:1 square",
       "landscape": "4:3 landscape",
       "natural": "Each image's own"
+    },
+    "spacing": {
+      "none": "None",
+      "tight": "Tight",
+      "theme": "Theme default",
+      "loose": "Loose"
     },
     "card_anatomy": {
       "theme": "Theme default",

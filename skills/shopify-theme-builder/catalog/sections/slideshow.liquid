@@ -7,7 +7,8 @@
 %}
 {% if section.blocks.size > 0 %}
   <slide-show
-    class="slideshow full-width slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"
+    class="slideshow full-width media-edge slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"
+    data-spacing="{{ section.settings.spacing }}"
     role="region"
     aria-roledescription="carousel"
     aria-label="{{ 'slideshow.label' | t }}"
@@ -422,6 +423,18 @@
       "step": 1,
       "unit": "s",
       "default": 5
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "blocks": [

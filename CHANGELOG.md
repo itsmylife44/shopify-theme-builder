@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Every section has a Section spacing setting (`spacing`): `none`, `tight` (half the theme's), `theme`, the default, or `loose` (one and a half), so a home can alternate dense and airy bands, or run a gallery with no gap. Two neighbours on the same color scheme share one gap instead of doubling it: the second drops its top padding, unless the first ends in media (a hero, a slideshow, a full-bleed image with text) or has no spacing. Sections pad their top with `--section-spacing-start` and their bottom with `--section-spacing`; the density's value is `--section-spacing-theme`.
+
 - Every section with images has an Image ratio setting (`image_ratio`): `card`, the default, follows the product card ratio, or `portrait` (4:5), `square`, `landscape` (4:3) and `natural` (each image's own). Collection list, editorial split, image with text, process steps, multicolumn, image gallery, blog posts, timeline, newsletter, contact form, featured product, the product page (thumbnails too) and the blog, search and collections list pages no longer hard-code their own ratio, so a page keeps to the card's by default. `check-direction.mjs`'s `image-ratios` finding names the sections to set back to `card`.
 
 - Buttons no longer snap: on hover a filled primary button mixes a little toward its label color, an outline one fills with the button color, and the secondary button takes a tint of the text color, all derived from the color scheme (`--color-button-hover*`, `--color-secondary-button-hover`) and eased over the motion setting's duration (none under reduced motion). Pressed, every button shrinks to 98%. Shopify's unbranded Buy it now does the same as the primary button.

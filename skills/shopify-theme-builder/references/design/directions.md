@@ -43,7 +43,7 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 
 `card_hover` (the second image or a zoom on hover) doesn't count: phones can't hover. `subtle` motion doesn't count either.
 
-**Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy, image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
+**Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy (each section's `spacing`: `none` for a zero-gap gallery, `tight`, `theme` or `loose`, around the Theme's density), image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
 
 **Buying stays conventional.** Navigation, the product form, cart and checkout keep what shoppers expect in every Direction. The Direction speaks through type, color fields, imagery, composition and rhythm.
 
@@ -61,30 +61,30 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 5. **Hand the choice to the Creator** in the Studio's Directions tab. Explain each in one line (its thesis), and let them switch and choose. Don't choose for them. When they want a mix ("the type of one, the colors of another"), rewrite a Direction with the mix and check it again.
 6. **Write the rules** of the chosen Direction (below).
 
-A home sketch, for "Harvest Date", a Direction built on the olive harvest's calendar; its motion is `expressive`, slow rises for a slow craft. Each band says whether it's image-led or type-led, dense or airy, and what moves:
+A home sketch, for "Harvest Date", a Direction built on the olive harvest's calendar; its motion is `expressive`, slow rises for a slow craft. Each band says whether it's image-led or type-led, dense or airy, what moves, and its `spacing` (`none`, `tight`, `theme` or `loose`, the section's setting):
 
 ```text
 +----------------------------------------------------------------+
 | slideshow, full screen, autoplay: three harvests, heading      |
-| bottom left                         image-led, airy, moves     |
+| bottom left              image-led, airy, moves, theme         |
 +----------------------------------------------------------------+
 | marquee, text, slow: grove names and press dates               |
-|                                     type-led, dense, moves     |
+|                          type-led, dense, moves, tight         |
 +----------------------------------------------------------------+
 | featured collection: four bottles on the press-cloth tint,     |
-| second image on hover               image-led, dense, responds |
+| second image on hover    image-led, dense, responds, theme     |
 +----------------------------------------------------------------+
 | timeline: from the grove to the bottle in four dates           |
-|                                     type-led, airy             |
+|                          type-led, airy, loose                 |
 +----------------------------------------------------------------+
 | editorial split: the press, the photo on the left              |
-|                                     image-led, airy            |
+|                          image-led, airy, loose                |
 +----------------------------------------------------------------+
 | testimonials, carousel: three chefs on the new oil             |
-|                                     type-led, dense, moves     |
+|                          type-led, dense, moves, tight         |
 +----------------------------------------------------------------+
 | newsletter, split: the harvest letter beside the grove at dusk |
-|                                     image-led, airy            |
+|                          image-led, airy, theme                |
 +----------------------------------------------------------------+
 ```
 

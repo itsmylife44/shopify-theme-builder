@@ -537,7 +537,7 @@ describe('Product page shipping note and collapsible content', () => {
   })
 
   it('moves the vendor and dynamic checkout settings to the title and buy buttons blocks', () => {
-    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'image_ratio', 'gallery_layout', 'image_zoom'])
+    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'image_ratio', 'gallery_layout', 'image_zoom', 'spacing'])
     expect(parse(read('base-theme/blocks/_product-title.liquid')).settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
     expect(parse(read('base-theme/blocks/_buy-buttons.liquid')).settings).toContainEqual({
       type: 'checkbox',
@@ -1239,7 +1239,7 @@ describe('Slideshow', () => {
 
   it('is a catalog section with a description, a color scheme and a preset with slides', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
-    expect(source).toContain('class="slideshow full-width slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"')
+    expect(source).toContain('class="slideshow full-width media-edge slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
     expect(schema.presets[0]).toEqual({ name: 't:general.slideshow', blocks: [{ type: 'slide' }, { type: 'slide' }] })
     expect(schema.enabled_on).toBeUndefined()
@@ -1549,7 +1549,7 @@ describe('Image with text', () => {
 
   it('lays the image and text out side by side by default, on an overlapping panel or full bleed, with the image on either side', () => {
     expect(source).toContain(
-      'class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}"',
+      'class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}{% if section.settings.layout == \'full_bleed\' %} media-edge{% endif %}"',
     )
     expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'side_by_side' })
     expect(values(settings.layout)).toEqual(['side_by_side', 'overlap', 'full_bleed'])
@@ -1685,7 +1685,7 @@ describe('Marquee', () => {
   })
 
   it('keeps its band close to one row of items, never taller than the section spacing', () => {
-    expect(css).toMatch(/\.marquee {[^}]*padding-block: min\(var\(--section-spacing\), var\(--space-2xl\)\);/)
+    expect(css).toMatch(/\.marquee {[^}]*padding-block: min\(var\(--section-spacing-start\), var\(--space-2xl\)\) min\(var\(--section-spacing\), var\(--space-2xl\)\);/)
   })
 
   it('stays one line when still, scrolling sideways with snap points instead of wrapping', () => {
@@ -2674,8 +2674,8 @@ describe('Density and page width', () => {
     expect(values('density')).toEqual(['compact', 'normal', 'airy'])
     expect(setting('density').default).toBe('normal')
     expect(variables).toMatch(/case settings\.density\s+when 'compact'\s+assign section_spacing = 48\s[\s\S]*when 'airy'\s+assign section_spacing = 112\s[\s\S]*else\s+assign section_spacing = 80\s/)
-    expect(variables).toContain('--section-spacing: {{ section_spacing | divided_by: 32.0 }}rem;')
-    expect(variables).toMatch(/@media \(min-width: 750px\) {\s*:root {[^}]*--section-spacing: {{ section_spacing \| divided_by: 16\.0 }}rem;/)
+    expect(variables).toContain('--section-spacing-theme: {{ section_spacing | divided_by: 32.0 }}rem;')
+    expect(variables).toMatch(/@media \(min-width: 750px\) {\s*:root {[^}]*--section-spacing-theme: {{ section_spacing \| divided_by: 16\.0 }}rem;/)
   })
 
   it('widens the grid gaps with the density', () => {
@@ -2687,7 +2687,7 @@ describe('Density and page width', () => {
   it.each(readdirSync(path.join(skillDir, 'catalog/sections')).filter((file) => file.endsWith('.liquid') && !unspaced.includes(file.slice(0, -7))))(
     'pads the %s section with the section spacing',
     (file) => {
-      expect(read(`catalog/sections/${file}`)).toMatch(/var\(--section-spacing\)|class="[^"]*\bbasic-page\b/)
+      expect(read(`catalog/sections/${file}`)).toMatch(/var\(--section-spacing(-start)?\)|class="[^"]*\bbasic-page\b/)
     },
   )
 
@@ -2724,6 +2724,81 @@ describe('Density and page width', () => {
       expect(key).toMatch(/^t:/)
       expect(key.slice(2).split('.').reduce((node: Record<string, unknown>, part: string) => node?.[part] as Record<string, unknown>, locale), key).toBeTypeOf('string')
     }
+  })
+})
+
+describe('Section spacing', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const variables = read('base-theme/snippets/css-variables.liquid')
+  const critical = read('base-theme/assets/critical.css')
+  const unspaced = ['announcement-bar', 'custom-liquid', 'header', 'predictive-search', 'quick-add']
+  const spaced = readdirSync(path.join(skillDir, 'catalog/sections'))
+    .filter((file) => file.endsWith('.liquid') && !unspaced.includes(file.slice(0, -7)))
+    .map((file) => file.slice(0, -7))
+  // Sections whose spacing pads their content inside the media, which reaches the section's edges.
+  const mediaEdged = ['hero', 'slideshow']
+
+  it.each(spaced)('lets the Merchant set the %s section spacing: none, tight, the theme default or loose', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+    expect(schema.settings).toContainEqual({
+      type: 'select',
+      id: 'spacing',
+      label: 't:labels.section_spacing',
+      options: ['none', 'tight', 'theme', 'loose'].map((value) => ({ value, label: `t:options.spacing.${value}` })),
+      default: 'theme',
+    })
+    expect(source).toMatch(/^\s*<[a-z-]+\s+class="[^"]*\bcolor-{{ section\.settings\.color_scheme }}[^"]*"[^>]*\sdata-spacing="{{ section\.settings\.spacing }}"/m)
+  })
+
+  it('scales the theme spacing by 0, 0.5, 1 or 1.5 on the section', () => {
+    expect(variables).toContain('--section-spacing: var(--section-spacing-theme);')
+    expect(critical).toMatch(/\[data-spacing='none'\] {\s*--section-spacing: 0px;\s*}/)
+    expect(critical).toMatch(/\[data-spacing='tight'\] {\s*--section-spacing: calc\(var\(--section-spacing-theme\) \* 0\.5\);\s*}/)
+    expect(critical).toMatch(/\[data-spacing='loose'\] {\s*--section-spacing: calc\(var\(--section-spacing-theme\) \* 1\.5\);\s*}/)
+    expect(critical).not.toContain("[data-spacing='theme']")
+    // The top padding follows the section's own spacing, computed where the section sets it.
+    expect(critical).toMatch(/\[data-spacing\] {\s*--section-spacing-start: var\(--section-spacing\);\s*}/)
+    expect(variables).toContain('--section-spacing-start: var(--section-spacing);')
+  })
+
+  it('drops the top padding of a section after one on the same color scheme, unless that one ends in media or has no spacing', () => {
+    const loop = variables.slice(variables.indexOf('{% for scheme in settings.color_schemes %}'), variables.indexOf('{% endfor %}', variables.indexOf('{% for scheme in settings.color_schemes %}')))
+    expect(loop).toContain(
+      ".shopify-section:has(> .color-{{ scheme.id }}:not(.media-edge, [data-spacing='none'])) + .shopify-section > .color-{{ scheme.id }} {\n      --section-spacing-start: 0px;\n    }",
+    )
+  })
+
+  // The main product pads its top with --space-xl, under the header.
+  it.each(spaced.filter((name) => ![...mediaEdged, 'main-product'].includes(name)))('pads the top of the %s section with the start spacing, so it can drop', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    if (/class="[^"]*\bbasic-page\b/.test(source)) return
+    expect(source).toContain('var(--section-spacing-start)')
+    // No padding starts with the full section spacing, except inside full-bleed media.
+    const css = source.match(/{% stylesheet %}([\s\S]*?){% endstylesheet %}/)![1]
+    for (const [rule, selector, body] of css.matchAll(/([^{}]+){([^{}]*)}/g)) {
+      if (/full_bleed/.test(selector)) continue
+      expect(body, rule.trim()).not.toMatch(/padding(-block)?: var\(--section-spacing\)/)
+    }
+  })
+
+  it('pads basic pages with the start spacing too', () => {
+    expect(critical).toMatch(/\.basic-page {[^}]*padding-block: var\(--section-spacing-start\) var\(--section-spacing\);/)
+  })
+
+  it.each(mediaEdged)('marks the %s section as ending in media, so the next one keeps its top padding', (name) => {
+    expect(read(`catalog/sections/${name}.liquid`)).toMatch(/^\s*<[a-z-]+\s+class="[^"]*\bmedia-edge\b/m)
+  })
+
+  it('marks image with text as ending in media when its image is full bleed', () => {
+    expect(read('catalog/sections/image-with-text.liquid')).toContain("{% if section.settings.layout == 'full_bleed' %} media-edge{% endif %}")
+  })
+
+  it('labels the setting with translation keys the schema locale has', () => {
+    const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+    expect(locale.labels.section_spacing).toBe('Section spacing')
+    expect(locale.options.spacing).toEqual({ none: 'None', tight: 'Tight', theme: 'Theme default', loose: 'Loose' })
   })
 })
 

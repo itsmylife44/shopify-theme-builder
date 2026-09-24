@@ -549,6 +549,28 @@ a.product-card__title:hover {
 }
 
 /**
+ * Section spacing: a section's spacing setting (data-spacing on its outer element) scales the theme's spacing,
+ * the density, to none, tight (half), the theme's, or loose (one and a half). The section pads its top with
+ * --section-spacing-start, recomputed here from its own spacing, which css-variables.liquid drops to 0 after a
+ * section on the same color scheme, and its bottom with --section-spacing.
+ */
+[data-spacing] {
+  --section-spacing-start: var(--section-spacing);
+}
+
+[data-spacing='none'] {
+  --section-spacing: 0px;
+}
+
+[data-spacing='tight'] {
+  --section-spacing: calc(var(--section-spacing-theme) * 0.5);
+}
+
+[data-spacing='loose'] {
+  --section-spacing: calc(var(--section-spacing-theme) * 1.5);
+}
+
+/**
  * Basic pages: the Brand-styled layout of the sections on the cart, page, blog, article,
  * search, 404, password and collections list templates. The section's color scheme class
  * sets the colors; everything else comes from the Brand's fonts and shape.
@@ -558,7 +580,7 @@ a.product-card__title:hover {
   grid-template-columns: var(--content-grid);
   align-content: start;
   row-gap: var(--space-lg);
-  padding-block: var(--section-spacing);
+  padding-block: var(--section-spacing-start) var(--section-spacing);
 }
 
 .basic-page > * {

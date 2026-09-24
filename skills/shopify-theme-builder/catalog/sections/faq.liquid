@@ -1,5 +1,5 @@
 {% comment %}Questions and answers that open one at a time.{% endcomment %}
-<div class="faq full-width color-{{ section.settings.color_scheme }}">
+<div class="faq full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   <div class="faq__inner">
     {% if section.settings.heading != blank %}
       <h2 class="faq__heading">{{ section.settings.heading }}</h2>
@@ -28,7 +28,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .faq__heading {
@@ -72,6 +72,18 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "Frequently asked questions"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "blocks": [

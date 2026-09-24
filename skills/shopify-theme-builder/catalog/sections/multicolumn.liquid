@@ -10,7 +10,7 @@
     assign list_tag = 'ol'
   endif
 %}
-<div class="multicolumn full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="multicolumn full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="multicolumn__inner">
     {% if section.settings.heading != blank %}
       <h2 class="multicolumn__heading">{{ section.settings.heading }}</h2>
@@ -68,7 +68,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .multicolumn__heading {
@@ -206,6 +206,18 @@
       "label": "t:labels.alignment",
       "visible_if": "{{ section.settings.layout != 'images' }}",
       "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "blocks": [

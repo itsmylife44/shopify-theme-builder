@@ -1,5 +1,5 @@
 {% comment %}The contact page: its title and text, the shop's contact details and a form that sends the customer's message.{% endcomment %}
-<div class="basic-page contact-form contact-form--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="basic-page contact-form contact-form--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="contact-form__inner">
     {% if section.settings.layout == 'image' %}
       <div class="contact-form__media">
@@ -188,6 +188,18 @@
       "id": "button_label",
       "label": "t:labels.button_label",
       "default": "Send"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [
