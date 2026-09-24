@@ -58,9 +58,9 @@ function sampleTheme() {
   })
   writeJSON(theme, 'templates/index.json', {
     sections: {
-      hero: { type: 'hero', settings: { heading: 'Pressed the day it was picked', text: '<p>One grove, one mill.</p>', button_label: 'Shop the oil', button_link: 'shopify://collections/oil' } },
+      hero: { type: 'hero', settings: { image: 'shopify://shop_images/grove.jpg', heading: 'Pressed the day it was picked', text: '<p>One grove, one mill.</p>', button_label: 'Shop the oil', button_link: 'shopify://collections/oil' } },
       rows: { type: 'featured-collection', settings: { heading: 'This harvest', collection: 'oil' } },
-      story: { type: 'image-with-text', settings: { heading: 'The mill', text: '<p>Stone wheels since 1921.</p>', button_label: 'Shop the oil', button_link: '/collections/oil' } },
+      story: { type: 'image-with-text', settings: { image: 'shopify://shop_images/mill.jpg', heading: 'The mill', text: '<p>Stone wheels since 1921.</p>', button_label: 'Shop the oil', button_link: '/collections/oil' } },
       note: { type: 'rich-text', settings: { heading: 'Harvest date on every tin', text: '<p>We stamp it by hand.</p>' } },
     },
     order: ['hero', 'rows', 'story', 'note'],
@@ -119,7 +119,7 @@ describe('check-direction', () => {
   it('reports a section type a page repeats', () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {
-      template.sections.story2 = { type: 'image-with-text', settings: { heading: 'The grove', text: '<p>Coratina trees.</p>' } }
+      template.sections.story2 = { type: 'image-with-text', settings: { image: 'shopify://shop_images/grove.jpg', heading: 'The grove', text: '<p>Coratina trees.</p>' } }
       template.order.push('story2')
     })
     expect(checkDirection(theme)).toEqual([
@@ -266,6 +266,56 @@ describe('check-direction', () => {
         message: '3 image ratios: 4 / 5 (rows), 4 / 3 (story), 1 / 1 (list). Keep a page to two at most, the card ratio among them.',
       },
     ])
+  })
+
+  it('reports an image setting left blank in a home section whose layout shows it, as it renders a placeholder drawing', () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.story.settings.image = ''
+      template.sections.steps = {
+        type: 'process-steps',
+        settings: { heading: 'From tree to tin' },
+        blocks: {
+          pick: { type: 'step', settings: { image: 'shopify://shop_images/pick.jpg', heading: 'Picked' } },
+          press: { type: 'step', settings: { heading: 'Pressed' } },
+          tin: { type: 'step', settings: { heading: 'Tinned' } },
+        },
+        block_order: ['pick', 'press', 'tin'],
+      }
+      // Numbered columns and a centered newsletter show no image.
+      template.sections.why = { type: 'multicolumn', settings: { heading: 'Why one grove', layout: 'numbered' }, blocks: { a: { type: 'column', settings: { heading: 'One harvest' } } } }
+      template.sections.letter = { type: 'newsletter', settings: { heading: 'Harvest letters', layout: 'centered' } }
+      template.order.push('steps', 'why', 'letter')
+    })
+    // Another page's blank image isn't the home page's.
+    setTemplate(theme, 'templates/product.json', (template) => {
+      template.sections.mill = { type: 'image-with-text', settings: { heading: 'The mill' } }
+      template.order.push('mill')
+    })
+    // The sections added bring more image ratios, which another check reports.
+    const placeholders = () => checkDirection(theme).filter((finding) => finding.check === 'placeholder')
+    expect(placeholders()).toEqual([
+      {
+        check: 'placeholder',
+        file: 'templates/index.json',
+        message: 'story, image: blank, so it shows a placeholder drawing. Set a photo (POST /api/files), or use a section or layout that needs none.',
+      },
+      {
+        check: 'placeholder',
+        file: 'templates/index.json',
+        message: 'steps, 2 step blocks, image: blank, so they show placeholder drawings. Set a photo (POST /api/files), or use a section or layout that needs none.',
+      },
+    ])
+
+    // A hero showing a video shows no image.
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.hero.settings.image = ''
+      template.sections.hero.settings.video = 'shopify://files/videos/press.mp4'
+      template.sections.story.settings.image = 'shopify://shop_images/mill.jpg'
+      delete template.sections.steps
+      template.order = template.order.filter((id: string) => id !== 'steps')
+    })
+    expect(placeholders()).toEqual([])
   })
 
   it('prints one line per finding and exits 1 when there is any, 0 when there is none', () => {

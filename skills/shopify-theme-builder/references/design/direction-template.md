@@ -7,7 +7,7 @@
 - Emotions: <three words>
 - References: <two or three from outside the category, each with what it lends>
 - Rejects: <what the brand refuses to look or sound like>
-- Photos: <cut-outs or lifestyle, how many, what quality>
+- Photos: <cut-outs or lifestyle, how many, what quality>; <each file and what it shows, or none yet>
 - Pinned: <the Brand values the Creator fixed: colors, fonts, logo; or none>
 
 ## <Direction name>

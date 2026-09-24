@@ -120,6 +120,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 - The product page shows the vendor (with a setting to hide it), pickup availability at local pickup locations for the selected variant, and the Shop Pay Installments banner.
 - The Studio places images: `PATCH /api/<page>/sections/<id>` (the header and footer too) and a Direction's home template take an image from the shop's Files, `shopify://shop_images/<filename>`, on a section or a block, and `GET` shows it under `media` as `value`. The inspector shows a set image's file name.
 
+- Brand photos in every Direction: the brief asks for the photos themselves (a folder, files or links, or "none yet"), the agent uploads them to the shop's Files and places them in each Direction and on the other pages, and without photos picks sections and layouts that need no image. `check-direction.mjs` reports a `placeholder` finding for an image left blank on the home page in a section whose layout shows one, which the storefront renders as a placeholder drawing.
+
 ### Fixed
 
 - The first image a customer sees loads first: the hero and the first slide of a slideshow at the top of the page, and the product page's main image, carry `fetchpriority="high"` and are never lazy-loaded. Every image in the Section Catalog gives the browser its `sizes` (the Base Theme's `image` snippet takes a new `sizes` parameter, `100vw` by default), and the multicolumn grid fits its images into a fixed ratio box like the other grids, so images of mixed ratios keep the rows even.
