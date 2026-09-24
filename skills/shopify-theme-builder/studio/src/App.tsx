@@ -51,7 +51,7 @@ import {
 } from '@/components/ui/combobox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
@@ -120,6 +120,17 @@ export function App() {
     }
   }, [])
 
+  // Closing or reloading the Studio asks first while the Theme has changes not saved, or an edit not written yet.
+  const unsaved = load.status === 'ready' && !load.state.saved
+  const onBeforeUnload = useEffectEvent((event: BeforeUnloadEvent) => {
+    if (unsaved || unwritten.size > 0) event.preventDefault()
+  })
+  useEffect(() => {
+    const listener = (event: BeforeUnloadEvent) => onBeforeUnload(event)
+    addEventListener('beforeunload', listener)
+    return () => removeEventListener('beforeunload', listener)
+  }, [])
+
   function openPage(next: Page) {
     setPage(next)
     setSelectedId(null)
@@ -165,6 +176,7 @@ export function App() {
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-2">
+          <SaveButton saved={state.saved} onSaved={showState} />
           <UndoRedo history={state.history} onSaved={showState} />
           <PreviewBadge preview={preview} />
           <ChecksBadge offenses={state.validation} onClick={() => setTab('checks')} />
@@ -197,12 +209,11 @@ export function App() {
             {tab === 'sections' ? (
               <SectionsPanel state={state} page={page} selectedId={selectedId} onSelect={select} onSaved={showState} />
             ) : tab === 'brand' ? (
-              // Keyed by the saved Brand, so the form restarts from what was written.
-              <BrandPanel key={JSON.stringify(state.brand)} brand={state.brand} onSaved={showState} />
+              <BrandPanel brand={state.brand} onSaved={showState} />
             ) : tab === 'directions' ? (
               <DirectionsPanel directions={state.directions} onSaved={showState} onChosen={() => setTab('style')} />
             ) : tab === 'style' ? (
-              <StylePanel key={JSON.stringify(state.style)} style={state.style} onSaved={showState} />
+              <StylePanel style={state.style} onSaved={showState} />
             ) : (
               <ThemeCheck offenses={state.validation} />
             )}
@@ -271,6 +282,26 @@ function TabButton({
   )
 }
 
+/** Whether the Theme has changes since its last commit, whoever made them, and Save, which commits them as a checkpoint. */
+function SaveButton({ saved, onSaved }: { saved: boolean; onSaved: (state: ThemeState) => void }) {
+  const { saving, error, write } = useWrite(onSaved)
+  return (
+    <>
+      {error ? (
+        <p role="alert" title={error} className="max-w-xs truncate text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+      <span role="status" className="text-sm text-muted-foreground">
+        {saved ? null : '● Unsaved changes'}
+      </span>
+      <Button size="sm" disabled={saving || saved} onClick={() => write('/api/save', { method: 'POST' })}>
+        {saving ? 'Saving…' : 'Save'}
+      </Button>
+    </>
+  )
+}
+
 /** Undo and Redo of the Studio's writes, with Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z outside text fields. */
 function UndoRedo({ history, onSaved }: { history: ThemeState['history']; onSaved: (state: ThemeState) => void }) {
   const { saving, error, write } = useWrite(onSaved)
@@ -310,6 +341,26 @@ function UndoRedo({ history, onSaved }: { history: ThemeState['history']; onSave
   )
 }
 
+type Answer = ThemeState | { error: string }
+
+// Each write waits for the one before, so the Studio records them in order and the latest answer shows last.
+let writes: Promise<unknown> = Promise.resolve()
+
+/** Sends a write to the Studio API: the Theme state it returns, or the error. */
+function send(url: string, init: RequestInit): Promise<Answer> {
+  const answer = writes.then(async (): Promise<Answer> => {
+    try {
+      const response = await fetch(url, init)
+      const body = await response.json()
+      return response.ok ? body : { error: body.error }
+    } catch (error) {
+      return { error: (error as Error).message }
+    }
+  })
+  writes = answer
+  return answer
+}
+
 /** Sends writes to the Studio API and hands the Theme state each returns to onSaved. */
 function useWrite(onSaved: (state: ThemeState) => void) {
   const [saving, setSaving] = useState(false)
@@ -319,21 +370,95 @@ function useWrite(onSaved: (state: ThemeState) => void) {
   async function write(url: string, init: RequestInit): Promise<ThemeState | null> {
     setSaving(true)
     setError(null)
-    try {
-      const response = await fetch(url, init)
-      const body = await response.json()
-      if (!response.ok) throw new Error(body.error)
-      onSaved(body)
-      return body
-    } catch (error) {
-      setError((error as Error).message)
+    const answer = await send(url, init)
+    setSaving(false)
+    if ('error' in answer) {
+      setError(answer.error)
       return null
-    } finally {
-      setSaving(false)
     }
+    onSaved(answer)
+    return answer
   }
 
   return { saving, error, write }
+}
+
+// How long typing pauses before a text field writes.
+const typing = 600
+/** The fields whose live edit waits to be written, or for its answer: closing the Studio then asks first. */
+const unwritten = new Set<string>()
+
+/**
+ * Writes each field as it changes: at once, or `delay` ms after its latest change, and at once on flush (on blur).
+ * Until then, and when the Studio refuses it, the field shows its edit; the refusal shows under it. Each write
+ * names its field, so the Studio makes a burst of edits to it one undo step. A pending write goes out on unmount.
+ * @param settleOnSave Drops an edit once its write succeeds, for a panel whose values come with the Theme state;
+ *   one that reads them after calls settle() then.
+ */
+function useLiveEdits(onSaved: (state: ThemeState) => void, settleOnSave = true) {
+  const [edits, setEdits] = useState<Record<string, unknown>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const failed = useRef(new Set<string>())
+  // Counts each field's edits, so an answer knows whether a newer edit follows it.
+  const versions = useRef(new Map<string, number>())
+  const timers = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>())
+
+  function change<T>(field: string, value: T, request: (value: T) => [string, RequestInit], delay = 0) {
+    setEdits((current) => ({ ...current, [field]: value }))
+    const version = (versions.current.get(field) ?? 0) + 1
+    versions.current.set(field, version)
+    unwritten.add(field)
+    clearTimeout(timers.current.get(field)?.timer)
+    async function run() {
+      timers.current.delete(field)
+      const [url, init] = request(value)
+      const answer = await send(url, { ...init, headers: { ...init.headers, 'X-Studio-Field': field } })
+      const newest = versions.current.get(field) === version
+      if ('error' in answer) {
+        if (!newest) return
+        failed.current.add(field)
+        setErrors((current) => ({ ...current, [field]: answer.error }))
+      } else {
+        failed.current.delete(field)
+        setErrors(({ [field]: _, ...rest }) => rest)
+        onSaved(answer)
+        if (newest && settleOnSave) setEdits(({ [field]: _, ...rest }) => rest)
+      }
+      if (newest) unwritten.delete(field)
+    }
+    if (delay > 0) timers.current.set(field, { timer: setTimeout(run, delay), run })
+    else void run()
+  }
+
+  function flush(field: string) {
+    const pending = timers.current.get(field)
+    clearTimeout(pending?.timer)
+    pending?.run()
+  }
+
+  /** Drops the edits already written, once the values they changed are read again. */
+  function settle() {
+    setEdits((current) => Object.fromEntries(Object.entries(current).filter(([field]) => unwritten.has(field) || failed.current.has(field))))
+  }
+
+  useEffect(() => {
+    const pending = timers.current
+    return () => {
+      for (const { timer, run } of pending.values()) {
+        clearTimeout(timer)
+        run()
+      }
+    }
+  }, [])
+
+  return {
+    /** The field's edit, else its value in the Theme. */
+    value: <T,>(field: string, value: T) => (field in edits ? (edits[field] as T) : value),
+    error: (field: string): string | undefined => errors[field],
+    change,
+    flush,
+    settle,
+  }
 }
 
 function jsonRequest(method: string, body: unknown): RequestInit {
@@ -733,10 +858,11 @@ function Inspector({
   onSaved: (state: ThemeState) => void
 }) {
   const [details, setDetails] = useState<SectionDetails | { error: string } | null>(null)
-  // Edited values, by setting ("heading") or block and setting ("<block id>/quote").
-  const [edits, setEdits] = useState<Record<string, Value>>({})
   const [addingBlock, setAddingBlock] = useState<string | null>(null)
   const { saving, error, write } = useWrite(onSaved)
+  // Its edits show until the section is read again after their write.
+  const live = useLiveEdits(onSaved, false)
+  const { settle } = live
   const scope = scopeOf(state, page, sectionId)
   // The header and footer groups' sections are edited here, but not moved or removed.
   const inGroup = scope === 'header' || scope === 'footer'
@@ -752,6 +878,7 @@ function Inspector({
       .then(async (response) => {
         const body = await response.json()
         setDetails(response.ok ? body : { error: body.error })
+        settle()
       })
       .catch((error: Error) => {
         if (!controller.signal.aborted) setDetails({ error: error.message })
@@ -783,7 +910,6 @@ function Inspector({
   }
 
   const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
-  const changed = Object.keys(edits).length > 0
 
   function move(offset: number) {
     const order = sections.map((section) => section.id)
@@ -805,41 +931,31 @@ function Inspector({
 
   async function removeBlock(blockId: string, name: string) {
     if (!confirm(`Remove ${name} from this section? Its settings are deleted too.`)) return
-    if (!(await write(`${url}/blocks/${encodeURIComponent(blockId)}`, { method: 'DELETE' }))) return
-    // Drop the removed block's unsaved edits, keyed "<block id>/<setting id>".
-    setEdits((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(`${blockId}/`))))
+    await write(`${url}/blocks/${encodeURIComponent(blockId)}`, { method: 'DELETE' })
   }
 
   async function addBlock() {
     if (await write(`${url}/blocks`, jsonRequest('POST', { type: addingBlock }))) setAddingBlock(null)
   }
 
-  async function saveSettings(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (details === null || 'error' in details) return
-    const settings: Record<string, Value> = {}
-    const blocks: Record<string, Record<string, Value>> = {}
-    for (const setting of details.settings) {
-      if (setting.id in edits) settings[setting.id] = stored(setting, edits[setting.id])
+  /** A section's setting, or a block's when blockId is given, written as it changes. */
+  function settingField(setting: Setting, blockId?: string) {
+    const key = blockId ? `${blockId}/${setting.id}` : setting.id
+    const field = `${url}/${key}`
+    const patch = (value: Value) => {
+      const values = { [setting.id]: stored(setting, value) }
+      return jsonRequest('PATCH', blockId ? { blocks: { [blockId]: values } } : { settings: values })
     }
-    for (const block of details.blocks) {
-      for (const setting of block.settings) {
-        const key = `${block.id}/${setting.id}`
-        if (key in edits) (blocks[block.id] ??= {})[setting.id] = stored(setting, edits[key])
-      }
-    }
-    if (await write(url, jsonRequest('PATCH', { settings, blocks }))) setEdits({})
-  }
-
-  function settingField(setting: Setting, key: string) {
     return (
       <SettingField
         key={key}
         id={`setting-${key}`}
         setting={setting}
-        value={edits[key] ?? editable(setting)}
+        value={live.value(field, editable(setting))}
         store={store}
-        onChange={(next) => setEdits((current) => ({ ...current, [key]: next }))}
+        error={live.error(field)}
+        onChange={(next, delay) => live.change(field, next, (value) => [url, patch(value)], delay)}
+        onFlush={() => live.flush(field)}
       />
     )
   }
@@ -876,7 +992,7 @@ function Inspector({
         <MediaSettings media={details.media} editor={editor} />
       </FieldGroup>
       {details.settings.length > 0 || details.blocks.length > 0 ? (
-        <form onSubmit={saveSettings} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <Separator />
           {store && 'error' in store ? (
             <Alert>
@@ -885,7 +1001,7 @@ function Inspector({
             </Alert>
           ) : null}
           <FieldGroup className="gap-4">
-            {details.settings.map((setting) => settingField(setting, setting.id))}
+            {details.settings.map((setting) => settingField(setting))}
             {details.blocks.map((block, blockIndex) => {
               const name = `${block.name} ${blockIndex + 1}`
               return (
@@ -916,23 +1032,13 @@ function Inspector({
                       <Trash2Icon />
                     </Button>
                   </FieldLegend>
-                  {block.settings.map((setting) => settingField(setting, `${block.id}/${setting.id}`))}
+                  {block.settings.map((setting) => settingField(setting, block.id))}
                   <MediaSettings media={block.media} editor={editor} />
                 </FieldSet>
               )
             })}
           </FieldGroup>
-          <div className="flex gap-2">
-            <Button type="submit" disabled={saving || !changed}>
-              {saving ? 'Saving…' : 'Save'}
-            </Button>
-            {changed ? (
-              <Button type="button" variant="ghost" onClick={() => setEdits({})}>
-                Discard
-              </Button>
-            ) : null}
-          </div>
-        </form>
+        </div>
       ) : null}
       {details.blockTypes.length > 0 ? (
         <Field>
@@ -1003,30 +1109,42 @@ function Inspector({
   )
 }
 
-/** The control for one setting: a switch, slider, select, color, store picker or text field. */
+/**
+ * The control for one setting: a switch, slider, select, color, store picker or text field. A typed value, a dragged
+ * slider or color changes with a delay, the others at once; onFlush (on blur, or releasing the slider) ends the delay.
+ */
 function SettingField({
   id,
   setting,
   value,
   store,
-  onChange: change,
+  error,
+  onChange,
+  onFlush,
 }: {
   id: string
   setting: Setting
   value: Value
   /** The store's resources, for a setting that picks one. */
   store?: StoreResources | { error: string } | null
-  onChange: (value: Value) => void
+  /** Why the Studio refused the latest edit. */
+  error?: string
+  onChange: (value: Value, delay?: number) => void
+  onFlush: () => void
 }) {
   const kind = storeKinds[setting.type]
+  const change = (next: Value) => onChange(next)
+  const type = (next: Value) => onChange(next, typing)
+  const refused = error ? <FieldError>{error}</FieldError> : null
   let control: React.ReactNode
   if (kind && store && !('error' in store)) {
     control = <StorePicker id={id} value={value as string | string[]} options={store[kind]} onChange={change} />
   } else if (setting.type === 'checkbox') {
     return (
-      <Field orientation="horizontal">
+      <Field orientation="horizontal" data-invalid={error ? true : undefined}>
         <Switch id={id} checked={value === true} onCheckedChange={change} />
         <FieldLabel htmlFor={id}>{setting.label}</FieldLabel>
+        {refused}
       </Field>
     )
   } else if (setting.type === 'range') {
@@ -1038,7 +1156,8 @@ function SettingField({
           min={setting.min}
           max={setting.max}
           step={setting.step}
-          onValueChange={(next) => change(next as number)}
+          onValueChange={(next) => type(next as number)}
+          onValueCommitted={onFlush}
         />
         <span className="shrink-0 text-muted-foreground tabular-nums">
           {String(value)}
@@ -1072,7 +1191,8 @@ function SettingField({
           type="color"
           className="h-7 w-9 shrink-0 p-0.5"
           value={(value as string) || '#ffffff'}
-          onChange={(event) => change(event.target.value)}
+          onChange={(event) => type(event.target.value)}
+          onBlur={onFlush}
         />
         <span className="text-muted-foreground">{(value as string) || 'None'}</span>
         {value ? (
@@ -1084,23 +1204,32 @@ function SettingField({
     )
   } else if (setting.type === 'number') {
     const number = value === null ? '' : String(value)
-    control = <Input id={id} type="number" value={number} onChange={(event) => change(event.target.value === '' ? null : event.target.valueAsNumber)} />
+    control = (
+      <Input
+        id={id}
+        type="number"
+        value={number}
+        onChange={(event) => type(event.target.value === '' ? null : event.target.valueAsNumber)}
+        onBlur={onFlush}
+      />
+    )
   } else if (Array.isArray(setting.value)) {
     // Without the store's list, handles are typed, separated by commas.
     const text = Array.isArray(value) ? value.join(', ') : (value as string)
-    control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => change(event.target.value)} />
+    control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => type(event.target.value)} onBlur={onFlush} />
   } else if (setting.type === 'richtext') {
-    control = <Textarea id={id} value={value as string} rows={3} onChange={(event) => change(event.target.value)} />
+    control = <Textarea id={id} value={value as string} rows={3} onChange={(event) => type(event.target.value)} onBlur={onFlush} />
   } else {
     const placeholder = setting.type === 'url' ? '/collections/all or https://…' : kind ? 'handle' : undefined
-    control = <Input id={id} value={value as string} placeholder={placeholder} onChange={(event) => change(event.target.value)} />
+    control = <Input id={id} value={value as string} placeholder={placeholder} onChange={(event) => type(event.target.value)} onBlur={onFlush} />
   }
   return (
-    <Field>
+    <Field data-invalid={error ? true : undefined}>
       <FieldLabel id={`${id}-label`} htmlFor={id}>
         {setting.label}
       </FieldLabel>
       {control}
+      {refused}
     </Field>
   )
 }
@@ -1248,48 +1377,45 @@ function ContrastWarning({ colors }: { colors: Record<string, string> }) {
   return failing.length > 0 ? <FieldDescription className="text-destructive">Low contrast: {failing.join('; ')}.</FieldDescription> : null
 }
 
+/** The Brand: color schemes, fonts and logo, each written as it changes. */
 function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeState) => void }) {
-  const [colorSchemes, setColorSchemes] = useState(brand.colorSchemes)
-  const [headingFont, setHeadingFont] = useState(brand.headingFont)
-  const [bodyFont, setBodyFont] = useState(brand.bodyFont)
-  const [accentFont, setAccentFont] = useState(brand.accentFont)
   // Changes on every logo upload, so the logo reloads even when the file name stays the same.
   const [logoVersion, setLogoVersion] = useState(Date.now)
   const { saving, error, write } = useWrite(onSaved)
+  const live = useLiveEdits(onSaved)
+  const fields = [...brand.colorFields, ...brand.gradientFields]
+  // The schemes as edited; a gradient the Theme lacks reads as empty.
+  const colorSchemes = Object.fromEntries(
+    Object.entries(brand.colorSchemes).map(([scheme, colors]) => [
+      scheme,
+      Object.fromEntries(fields.map((field) => [field, live.value(`brand/${scheme}/${field}`, colors[field] ?? '')])),
+    ]),
+  )
 
+  // Only the value changed is sent, so values set elsewhere (the Theme Editor, the agent) stay as they are.
   function setColor(scheme: string, field: string, value: string) {
-    setColorSchemes((schemes) => ({ ...schemes, [scheme]: { ...schemes[scheme], [field]: value } }))
+    live.change(`brand/${scheme}/${field}`, value, (color) => ['/api/brand', jsonRequest('PUT', { colorSchemes: { [scheme]: { [field]: color } } })], typing)
+  }
+
+  function fontPicker(id: string, label: string, font: 'headingFont' | 'bodyFont' | 'accentFont') {
+    const field = `brand/${font}`
+    return (
+      <FontPicker
+        id={id}
+        label={label}
+        value={live.value(field, brand[font])}
+        error={live.error(field)}
+        onChange={(handle) => live.change(field, handle, (value) => ['/api/brand', jsonRequest('PUT', { [font]: value })])}
+      />
+    )
   }
 
   function addScheme() {
-    setColorSchemes((schemes) => {
-      let n = Object.keys(schemes).length + 1
-      while (`scheme-${n}` in schemes) n++
-      // A new scheme starts as a copy of the first one.
-      return { ...schemes, [`scheme-${n}`]: { ...Object.values(schemes)[0] } }
-    })
-  }
-
-  // Only what the Creator changed is sent, so values set elsewhere (the Theme Editor, the agent) stay as they are.
-  function brandChanges() {
-    const changes: Record<string, unknown> = {}
-    const changedSchemes = Object.fromEntries(
-      Object.entries(colorSchemes).flatMap(([scheme, colors]) => {
-        // A gradient the Theme lacks reads as empty, so clearing a new one sends nothing.
-        const changed = Object.entries(colors).filter(([field, value]) => value !== (brand.colorSchemes[scheme]?.[field] ?? ''))
-        return changed.length > 0 ? [[scheme, Object.fromEntries(changed)]] : []
-      }),
-    )
-    if (Object.keys(changedSchemes).length > 0) changes.colorSchemes = changedSchemes
-    if (headingFont !== brand.headingFont) changes.headingFont = headingFont
-    if (bodyFont !== brand.bodyFont) changes.bodyFont = bodyFont
-    if (accentFont !== brand.accentFont) changes.accentFont = accentFont
-    return changes
-  }
-
-  function save(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    write('/api/brand', jsonRequest('PUT', brandChanges()))
+    const schemes = brand.colorSchemes
+    let n = Object.keys(schemes).length + 1
+    while (`scheme-${n}` in schemes) n++
+    // A new scheme starts as a copy of the first one.
+    write('/api/brand', jsonRequest('PUT', { colorSchemes: { [`scheme-${n}`]: { ...Object.values(schemes)[0] } } }))
   }
 
   async function writeLogo(init: RequestInit) {
@@ -1303,7 +1429,7 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
   }
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-4 p-3">
+    <div className="flex flex-col gap-4 p-3">
       <FieldGroup className="gap-5">
         <FieldSet>
           <FieldLegend>Color schemes</FieldLegend>
@@ -1325,8 +1451,9 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                         id={`${scheme}-${field}`}
                         type="color"
                         className="h-7 w-9 shrink-0 p-0.5"
-                        value={colors[field] ?? '#000000'}
+                        value={colors[field] || '#000000'}
                         onChange={(event) => setColor(scheme, field, event.target.value)}
+                        onBlur={() => live.flush(`brand/${scheme}/${field}`)}
                       />
                       <FieldLabel htmlFor={`${scheme}-${field}`} className="text-xs font-normal">
                         {field.replaceAll('_', ' ')}
@@ -1334,8 +1461,11 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                     </Field>
                   ))}
                 </div>
+                {brand.colorFields.map((field) =>
+                  live.error(`brand/${scheme}/${field}`) ? <FieldError key={field}>{live.error(`brand/${scheme}/${field}`)}</FieldError> : null,
+                )}
                 {brand.gradientFields.map((field) => (
-                  <Field key={field} className="gap-1">
+                  <Field key={field} className="gap-1" data-invalid={live.error(`brand/${scheme}/${field}`) ? true : undefined}>
                     <FieldLabel htmlFor={`${scheme}-${field}`} className="text-xs font-normal">
                       {field.replaceAll('_', ' ')}
                     </FieldLabel>
@@ -1343,23 +1473,25 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
                       id={`${scheme}-${field}`}
                       className="h-7 text-xs"
                       placeholder="linear-gradient(180deg, #FFFFFF, #EEEEEE)"
-                      value={colors[field] ?? ''}
+                      value={colors[field]}
                       onChange={(event) => setColor(scheme, field, event.target.value)}
+                      onBlur={() => live.flush(`brand/${scheme}/${field}`)}
                     />
+                    <FieldError>{live.error(`brand/${scheme}/${field}`)}</FieldError>
                   </Field>
                 ))}
                 <ContrastWarning colors={colors} />
               </FieldSet>
             ))}
           </FieldGroup>
-          <Button type="button" variant="outline" size="sm" className="self-start" onClick={addScheme}>
+          <Button type="button" variant="outline" size="sm" className="self-start" disabled={saving} onClick={addScheme}>
             <PlusIcon data-icon="inline-start" />
             Add color scheme
           </Button>
         </FieldSet>
-        <FontPicker id="heading-font" label="Heading font" value={headingFont} onChange={setHeadingFont} />
-        <FontPicker id="body-font" label="Body font" value={bodyFont} onChange={setBodyFont} />
-        <FontPicker id="accent-font" label="Accent font (labels, prices)" value={accentFont} onChange={setAccentFont} />
+        {fontPicker('heading-font', 'Heading font', 'headingFont')}
+        {fontPicker('body-font', 'Body font', 'bodyFont')}
+        {fontPicker('accent-font', 'Accent font (labels, prices)', 'accentFont')}
         <Field>
           <FieldLabel htmlFor="logo">Logo</FieldLabel>
           {brand.logoAsset ? (
@@ -1378,69 +1510,43 @@ function BrandPanel({ brand, onSaved }: { brand: Brand; onSaved: (state: ThemeSt
         </Field>
         {error ? (
           <Alert variant="destructive">
-            <AlertTitle>The Brand was not saved</AlertTitle>
+            <AlertTitle>The Brand was not changed</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
       </FieldGroup>
-      <div className="sticky bottom-0 -mx-3 border-t bg-background p-3">
-        <Button type="submit" className="w-full" disabled={saving}>
-          {saving ? 'Saving…' : 'Save Brand'}
-        </Button>
-      </div>
-    </form>
+    </div>
   )
 }
 
-/** The global style settings: type, shape, buttons, spacing, cards, media and motion. */
+/** The global style settings: type, shape, buttons, spacing, cards, media and motion, each written as it changes. */
 function StylePanel({ style, onSaved }: { style: StyleGroup[]; onSaved: (state: ThemeState) => void }) {
-  const [edits, setEdits] = useState<Record<string, Value>>({})
-  const { saving, error, write } = useWrite(onSaved)
-  const changed = Object.keys(edits).length > 0
-
-  // Only what the Creator changed is sent, so values set elsewhere (the Theme Editor, the agent) stay as they are.
-  function save(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    write('/api/style', jsonRequest('PUT', edits))
-  }
-
+  const live = useLiveEdits(onSaved)
   return (
-    <form onSubmit={save} className="flex flex-col gap-4 p-3">
-      <FieldGroup className="gap-5">
-        {style.map((group) => (
-          <FieldSet key={group.name}>
-            <FieldLegend>{group.name}</FieldLegend>
-            <FieldGroup className="gap-3">
-              {group.settings.map((setting) => (
+    <FieldGroup className="gap-5 p-3">
+      {style.map((group) => (
+        <FieldSet key={group.name}>
+          <FieldLegend>{group.name}</FieldLegend>
+          <FieldGroup className="gap-3">
+            {group.settings.map((setting) => {
+              const field = `style/${setting.id}`
+              return (
                 <SettingField
                   key={setting.id}
                   id={`style-${setting.id}`}
                   setting={setting}
-                  value={edits[setting.id] ?? setting.value}
-                  onChange={(next) => setEdits((current) => ({ ...current, [setting.id]: next }))}
+                  value={live.value(field, setting.value)}
+                  error={live.error(field)}
+                  // Only the setting changed is sent, so values set elsewhere (the Theme Editor, the agent) stay as they are.
+                  onChange={(next, delay) => live.change(field, next, (value) => ['/api/style', jsonRequest('PUT', { [setting.id]: value })], delay)}
+                  onFlush={() => live.flush(field)}
                 />
-              ))}
-            </FieldGroup>
-          </FieldSet>
-        ))}
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>The style was not saved</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-      </FieldGroup>
-      <div className="sticky bottom-0 -mx-3 flex gap-2 border-t bg-background p-3">
-        <Button type="submit" className="flex-1" disabled={saving || !changed}>
-          {saving ? 'Saving…' : 'Save style'}
-        </Button>
-        {changed ? (
-          <Button type="button" variant="ghost" onClick={() => setEdits({})}>
-            Discard
-          </Button>
-        ) : null}
-      </div>
-    </form>
+              )
+            })}
+          </FieldGroup>
+        </FieldSet>
+      ))}
+    </FieldGroup>
   )
 }
 
@@ -1543,11 +1649,14 @@ function FontPicker({
   id,
   label,
   value,
+  error,
   onChange,
 }: {
   id: string
   label: string
   value: string
+  /** Why the Studio refused the latest pick. */
+  error?: string
   onChange: (handle: string) => void
 }) {
   const family = familyByHandle.get(value)
@@ -1608,6 +1717,7 @@ function FontPicker({
         </Field>
       </FieldGroup>
       {family ? null : <FieldDescription>{value} is not in Shopify's current font library (it may be deprecated); pick a font.</FieldDescription>}
+      <FieldError>{error}</FieldError>
     </FieldSet>
   )
 }

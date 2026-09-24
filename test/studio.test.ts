@@ -2295,6 +2295,49 @@ describe('Studio API: undo and redo', () => {
     expect(body.history).toEqual({ undo: false, redo: true })
   })
 
+  it('records the live edits of one Studio field in a row as one step, ended by a write from another field or an undo', async () => {
+    const theme = fixtureTheme()
+    const settings = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const studio = await openStudio(theme)
+    async function edit(field: string, brand: object) {
+      const response = await fetch(new URL('api/brand', studio.url), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Studio-Field': field },
+        body: JSON.stringify(brand),
+      })
+      expect(response.status).toBe(200)
+    }
+    const text = (color: string) => ({ colorSchemes: { 'scheme-1': { text: color } } })
+    const textColor = () => readSettingsData(theme).current.color_schemes['scheme-1'].settings.text
+
+    await edit('brand/scheme-1/text', text('#111111'))
+    await edit('brand/scheme-1/text', text('#222222'))
+    const { body } = await studio.send('POST', 'api/undo')
+    expect(body.history).toEqual({ undo: false, redo: true })
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(settings)
+    await studio.send('POST', 'api/redo')
+    expect(textColor()).toBe('#222222')
+
+    await edit('brand/scheme-1/text', text('#333333'))
+    await edit('brand/body-font', { bodyFont: 'work_sans_n7' })
+    await edit('brand/scheme-1/text', text('#444444'))
+    await studio.send('POST', 'api/undo')
+    expect(textColor()).toBe('#333333')
+    await studio.send('POST', 'api/undo')
+    await studio.send('POST', 'api/undo')
+    expect(textColor()).toBe('#222222')
+
+    // An edit made outside the Studio between two live edits keeps them apart, so undo never takes it back.
+    await edit('brand/scheme-1/text', text('#555555'))
+    const data = readSettingsData(theme)
+    data.current.social_instagram = 'https://instagram.com/shop'
+    writeFileSync(path.join(theme, 'config/settings_data.json'), JSON.stringify(data, null, 2))
+    await edit('brand/scheme-1/text', text('#666666'))
+    await studio.send('POST', 'api/undo')
+    expect(textColor()).toBe('#555555')
+    expect(readSettingsData(theme).current.social_instagram).toBe('https://instagram.com/shop')
+  })
+
   it('refuses with 409 when there is nothing to undo or redo', async () => {
     const studio = await openStudio(fixtureTheme())
     const undo = await studio.send('POST', 'api/undo')
@@ -2340,6 +2383,55 @@ describe('Studio API: undo and redo', () => {
     // The step before, on other files, still undoes.
     expect((await studio.send('POST', 'api/undo')).status).toBe(200)
     expect(readTemplate(theme).order).toEqual(['main'])
+  })
+})
+
+describe('Studio API: save', () => {
+  function git(theme: string, ...args: string[]) {
+    const result = spawnSync('git', args, { cwd: theme, encoding: 'utf8' })
+    if (result.status !== 0) throw new Error(result.stderr)
+    return result.stdout
+  }
+
+  /** A fixture Theme with its own Git history, everything committed, as create-theme and the agent leave it. */
+  function committedTheme() {
+    const theme = fixtureTheme()
+    git(theme, 'init', '--quiet', '-b', 'main')
+    git(theme, 'config', 'user.name', 'Creator')
+    git(theme, 'config', 'user.email', 'creator@example.com')
+    git(theme, 'add', '-A')
+    git(theme, 'commit', '--quiet', '-m', 'Create the Theme')
+    return theme
+  }
+
+  it('reads saved while the Theme matches its last commit, and unsaved after a Studio write or an edit elsewhere', async () => {
+    const theme = committedTheme()
+    const studio = await openStudio(theme)
+    expect((await studio.readTheme()).saved).toBe(true)
+    const { body } = await studio.setBrand({ bodyFont: 'work_sans_n7' })
+    expect(body.saved).toBe(false)
+
+    git(theme, 'commit', '--quiet', '-am', 'The agent commits')
+    expect((await studio.readTheme()).saved).toBe(true)
+    writeFileSync(path.join(theme, 'sections/new.liquid'), '{% schema %}{"name": "New"}{% endschema %}\n')
+    expect((await studio.readTheme()).saved).toBe(false)
+  })
+
+  it('commits the Theme with a list of what changed, and refuses when there is nothing to save', async () => {
+    const theme = committedTheme()
+    const studio = await openStudio(theme)
+    expect((await studio.send('POST', 'api/save')).status).toBe(409)
+    await studio.addSection('hero')
+
+    const { status, body } = await studio.send('POST', 'api/save')
+    expect(status).toBe(200)
+    expect(body.saved).toBe(true)
+    expect(body.history).toEqual({ undo: true, redo: false })
+    expect(git(theme, 'status', '--porcelain')).toBe('')
+    expect(git(theme, 'log', '-1', '--format=%B').trim()).toBe('Studio: save\n\n- sections/hero.liquid\n- templates/index.json')
+    const again = await studio.send('POST', 'api/save')
+    expect(again.status).toBe(409)
+    expect(again.body.error).toBe('Nothing to save.')
   })
 })
 
