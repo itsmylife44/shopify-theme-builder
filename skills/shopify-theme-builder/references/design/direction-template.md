@@ -20,7 +20,7 @@
 - Spacing: <compact, normal or airy>; <page width>
 - Cards: <image ratio>; <plain, bordered or surface>; <text alignment>; <hover>
 - Media: <full-bleed or framed>; <tint, or none>; <what the photos show>
-- Motion: <none, subtle or expressive>, because <reason>
+- Motion: <none, subtle or expressive>, because <reason>; <what moves or responds on the home>
 - Signature: <the one memorable element, and the catalog section that carries it>
 - Rejects: <what this Direction refuses, in its own terms>
 
@@ -29,8 +29,10 @@
 ```text
 +------------------------------------------+
 | <first viewport: what sits where>        |
+| <image-led or type-led, dense or airy,   |
+| what moves>                              |
 +------------------------------------------+
-| <next section>                           |
+| <next section, 6 to 8 in all>            |
 +------------------------------------------+
 ```
 

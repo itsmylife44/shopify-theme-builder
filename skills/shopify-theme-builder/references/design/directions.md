@@ -16,8 +16,8 @@ A Direction decides each axis below. Three Directions must **differ on at least 
 | Spacing | Section rhythm and container | `density` (compact, normal, airy: about 48, 80 or 112px between sections on desktop, halved on mobile), `page_width` |
 | Cards | Product card anatomy | `card_anatomy` (minimal, detailed, editorial), `card_image_ratio` (1 / 1, 4 / 5, 2 / 3), `card_style` (plain, bordered, surface), `card_text_alignment`, `card_hover` (none, second_image, zoom) |
 | Media | How photos sit on the page | `media_treatment` (full_bleed, or framed: contained on a tint, for cut-outs), `media_tint` |
-| Motion | A character, not decoration | `motion` (none; subtle: 0.25s fades; expressive: 1s rises and slow image zooms). Always off under reduced motion |
-| Composition | The home page: which sections, in what order, on which color schemes, and how the hero sits | The Direction's `template`; a `hero` or `slideshow` takes a `height` (small, medium, large, full_screen), and the hero or each slide a `content_position` (`top_left` to `bottom_right`) and `content_style` (bare text over the media with an `overlay_opacity`, boxed, or split beside the media) |
+| Motion | A character, not decoration | `motion` (none; subtle: 0.25s fades; expressive: 1s rises and slow image zooms). Always off under reduced motion. The three Directions don't all use `subtle`: at least one uses `expressive` when its thesis allows |
+| Composition | The home page: 6 to 8 sections, which ones, in what order, on which color schemes, and how the hero sits | The Direction's `template`; a `hero` or `slideshow` takes a `height` (small, medium, large, full_screen), and the hero or each slide a `content_position` (`top_left` to `bottom_right`) and `content_style` (bare text over the media with an `overlay_opacity`, boxed, or split beside the media) |
 | Signature | The one memorable element; everything around it stays quiet | A section in the `template`, like `type-banner`, `editorial-split`, `marquee`, `spec-tiles`, `lookbook`, `timeline`, `process-steps` or `comparison-table` |
 
 `GET /api/theme` lists every style setting under `style` with its options and range. What the brief pins (colors, fonts) is the same in all three Directions; they differ on the other axes.
@@ -33,20 +33,59 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 
 **Type.** Pick the typefaces first; they carry the most character. Each font needs a reason from the brief that no other face in `<skill-dir>/studio/server/shopify-fonts.json` meets: "books earn a serif" or "tech earns a mono" is not a reason. The file's `families` is a list of `{ "family": "Archivo", "handles": ["archivo_n4", …] }`; `node -e "console.log(require('<skill-dir>/studio/server/shopify-fonts.json').families.map(f => f.family).join(', '))"` prints the family names. Build a real scale: premium themes pair a small body (14px) with a display 4 to 10 times larger; a flat scale (about 2×) reads as a catalog. Tracking follows weight and case: wide for light uppercase, tight for bold or large.
 
+**Movement.** Each Direction's home has at least one element that moves or responds, and it fits the thesis: a marquee of grove names, a carousel of models, a slideshow of harvests. Calm can be slow movement; it doesn't mean still. What the catalog offers:
+
+- `slideshow`, its slides changing on their own with `autoplay`
+- `marquee`, a strip of short texts or badges (`item_style` text or badge) scrolling at a `speed`
+- `testimonials` with the `carousel` layout
+- `collection-list` with the `carousel` layout
+- `card_hover`: the second image on hover (`second_image`) or an image zoom (`zoom`), on every product card
+- `motion`: subtle fades, or expressive rises and slow image zooms, on every section
+
+**Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy, image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
+
 **Buying stays conventional.** Navigation, the product form, cart and checkout keep what shoppers expect in every Direction. The Direction speaks through type, color fields, imagery, composition and rhythm.
 
 ## The method
 
 1. **Derive.** From the brief, list the seven things of the brand's world and name the category default and its predictable opposite (`brief.md`). Build each Direction from a different one of the seven things or references, so the three start apart.
-2. **Draft three cards**, each the `## <Direction name>` part of `direction-template.md`: a thesis naming the default it refuses, one line per axis with its reason, a home sketch, one signature element, what it rejects. The name is one or two words from the brand's world ("Press Cloth", "Harvest Date"), never a style word like "Minimal" or "Luxe".
+2. **Draft three cards**, each the `## <Direction name>` part of `direction-template.md`: a thesis naming the default it refuses, one line per axis with its reason, a home sketch of 6 to 8 sections with its moving element, one signature element, what it rejects. The name is one or two words from the brand's world ("Press Cloth", "Harvest Date"), never a style word like "Minimal" or "Luxe".
 3. **Check each card**, then revise the part that fails and say what you changed:
    - **The swap test.** Put another shop's name on it, a shop in the same category. If it still works, it isn't this shop's Direction yet: find the part that is generic and derive it again.
    - **The default test.** Work through a similar brief in your head. Where you land on the same choice, it is the default: keep it only with a reason from this brief.
    - **The tells.** Read `tells.md` against every line.
    - **Three axes.** Compare the three cards axis by axis; at least three axes differ in kind.
+   - **Movement and rhythm.** Each home sketch has a moving element, no two type-only sections next to each other and no three bands alike in a row; not all three Directions use `subtle` motion.
 4. **Write them** through the Studio (step 4 of SKILL.md), one at a time: `PUT /api/brand` with the Direction's colors and fonts, then `PUT /api/directions/<name>` with its style settings and home template. Write the brief and the three cards to `<theme>/DIRECTION.md`, in the order the Studio lists the Directions. Then `PUT /api/directions/current` to show the first.
 5. **Hand the choice to the Creator** in the Studio's Directions tab. Explain each in one line (its thesis), and let them switch and choose. Don't choose for them. When they want a mix ("the type of one, the colors of another"), rewrite a Direction with the mix and check it again.
 6. **Write the rules** of the chosen Direction (below).
+
+A home sketch, for "Harvest Date", a Direction built on the olive harvest's calendar; its motion is `expressive`, slow rises for a slow craft. Each band says whether it's image-led or type-led, dense or airy, and what moves:
+
+```text
++----------------------------------------------------------------+
+| slideshow, full screen, autoplay: three harvests, heading      |
+| bottom left                         image-led, airy, moves     |
++----------------------------------------------------------------+
+| marquee, text, slow: grove names and press dates               |
+|                                     type-led, dense, moves     |
++----------------------------------------------------------------+
+| featured collection: four bottles on the press-cloth tint,     |
+| second image on hover               image-led, dense, responds |
++----------------------------------------------------------------+
+| timeline: from the grove to the bottle in four dates           |
+|                                     type-led, airy             |
++----------------------------------------------------------------+
+| editorial split: the press, the photo on the left              |
+|                                     image-led, airy            |
++----------------------------------------------------------------+
+| testimonials, carousel: three chefs on the new oil             |
+|                                     type-led, dense, moves     |
++----------------------------------------------------------------+
+| newsletter, split: the harvest letter beside the grove at dusk |
+|                                     image-led, airy            |
++----------------------------------------------------------------+
+```
 
 ## Writing the rules
 
@@ -54,6 +93,7 @@ Once `directions` in `GET /api/theme` shows one `chosen`, add `### Rules` under 
 
 - Do: set headings in `bodoni_moda_n4` at weight 400 and tight tracking. Don't: bold them or set them in uppercase. Because: the harvest labels print the grove's name thin and tall.
 - Do: put color on whole sections, the olive green on at most one section per page. Don't: color single words, icons or borders. Because: the Direction is Committed, and scattered accents make it Restrained again.
+- Do: let one marquee of grove names and press dates scroll slowly under the hero. Don't: add a second strip or speed it up. Because: the harvest moves at its own pace, and one slow line says so.
 - Do: show products framed on the press-cloth tint. Don't: use lifestyle photos in product cards. Because: the photos are cut-outs, and the tint keeps them from floating on white.
 
 Keep the other two cards in `DIRECTION.md`: their presets stay in the Theme, and the Merchant can switch to them in the Theme Editor. When the Creator tunes the chosen Direction in the Style tab, update its card lines so the file matches the Theme.
