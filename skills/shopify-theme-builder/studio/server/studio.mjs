@@ -408,7 +408,10 @@ function history(theme) {
  * @typedef {keyof typeof groups} Group
  * @typedef {{ name: string, settings: Setting[] }} StyleGroup A group of the global style settings; a color's value is a hex color or empty.
  * @typedef {{ name: string, thesis: string, choices: string[], showing: boolean, chosen: boolean }} Direction A Direction; showing when the preview shows its preset untuned.
- * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, string[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, style: StyleGroup[], directions: Direction[], validation: Offense[] }} ThemeFiles
+ * @typedef {{ name: string, key: string, settings: Record<string, unknown>, blocks: { type: string, settings?: Record<string, unknown> }[] }} Preset
+ *   A section preset: its name in the Theme's schema language, and as its schema writes it (key), like t:general.hero_split.
+ * @typedef {{ type: string, presets: Preset[] }} CatalogSection
+ * @typedef {Record<Page | Group, TemplateSection[]> & { catalog: Record<Page, CatalogSection[]>, custom: Record<Page, string[]>, sectionInfo: Record<string, { name: string, description: string }>, brand: Brand, style: StyleGroup[], directions: Direction[], validation: Offense[] }} ThemeFiles
  * @typedef {ThemeFiles & { history: { undo: boolean, redo: boolean } }} ThemeState The Theme's files, and whether the Studio can undo or redo a write.
  * @typedef {Partial<Pick<Brand, 'colorSchemes' | 'headingFont' | 'bodyFont' | 'accentFont' | 'logo'>>} BrandChange
  */
@@ -424,7 +427,7 @@ async function readThemeState(theme, catalog, validation) {
     ...perPage((file) => readTemplate(theme, file)),
     header: readTemplate(theme, groups.header),
     footer: readTemplate(theme, groups.footer),
-    catalog: perPage((file) => listSections(catalog, file)),
+    catalog: perPage((file) => listCatalog(theme, catalog, file)),
     custom: perPage((file) => listCustomSections(theme, catalog, file)),
     sectionInfo: readSectionInfo(theme, catalog),
     brand: readBrand(theme),
@@ -827,15 +830,21 @@ const maxSections = 25
  */
 function addSection(theme, catalog, file, body) {
   // sectionFile checks the type is a section name.
-  const { type } = /** @type {{ type: string }} */ (body ?? {})
+  const { type, preset: name } = /** @type {{ type: string, preset?: unknown }} */ (body ?? {})
   const placed = sectionFile(theme, catalog, type, file)
-  const { limit, presets } = readSchema(placed) ?? {}
+  const { limit } = readSchema(placed) ?? {}
+  const presets = readPresets(placed, schemaTranslator(theme))
+  // Named as GET /api/theme lists it, or by its key, which doesn't depend on the Theme's language.
+  const preset = name === undefined ? presets[0] : presets.find((other) => other.name === name || other.key === name)
+  if (!preset && name !== undefined) {
+    throw new BadRequest(`preset must be one of the ${type} section's presets: ${presets.map((other) => other.name).join(', ') || 'none'}.`)
+  }
   updateJSON(theme, file, (template) => {
     if (template.order.length >= maxSections) throw new BadRequest(`A page holds at most ${maxSections} sections.`)
     const count = Object.values(template.sections).filter((/** @type {{ type: string }} */ section) => section.type === type).length
     if (typeof limit === 'number' && count >= limit) throw new BadRequest(`A page holds at most ${limit} ${type} section${limit === 1 ? '' : 's'}.`)
     const id = newId(type, template.sections)
-    template.sections[id] = fromPreset(type, presets?.[0])
+    template.sections[id] = fromPreset(type, preset)
     template.order.push(id)
     copySection(theme, catalog, type)
   })
@@ -1553,6 +1562,37 @@ function listSections(dir, template) {
     .filter((file) => file.endsWith('.liquid') && goesOn(path.join(dir, 'sections', file), template))
     .map((file) => file.slice(0, -'.liquid'.length))
     .sort()
+}
+
+/**
+ * The catalog sections a page can take, each with the presets of the file the Studio would place: the Theme's own, else the catalog's.
+ * @param {string} theme
+ * @param {string} catalog
+ * @param {string} template The page's JSON template.
+ * @returns {CatalogSection[]}
+ */
+function listCatalog(theme, catalog, template) {
+  const translate = schemaTranslator(theme)
+  return listSections(catalog, template).map((type) => {
+    const own = path.join(theme, 'sections', `${type}.liquid`)
+    return { type, presets: readPresets(existsSync(own) ? own : path.join(catalog, 'sections', `${type}.liquid`), translate) }
+  })
+}
+
+/**
+ * A section file's presets, named in the Theme's schema language.
+ * @param {string} file
+ * @param {(text: string) => string} translate
+ * @returns {Preset[]}
+ */
+function readPresets(file, translate) {
+  const presets = readSchema(file)?.presets
+  return (Array.isArray(presets) ? presets : []).map((preset) => ({
+    name: translate(String(preset.name)),
+    key: String(preset.name),
+    settings: preset.settings ?? {},
+    blocks: Array.isArray(preset.blocks) ? preset.blocks : [],
+  }))
 }
 
 /**

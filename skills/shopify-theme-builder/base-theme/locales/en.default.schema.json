@@ -114,7 +114,10 @@
     "buy_buttons": "Buy buttons",
     "main_product_stacked": "Product: stacked gallery",
     "main_product_thumbnails": "Product: thumbnails",
-    "main_product_carousel": "Product: carousel"
+    "main_product_carousel": "Product: carousel",
+    "image_with_text_right": "Image with text: image right",
+    "editorial_split_right": "Editorial split: image right",
+    "press_quotes_wall": "Press quotes: wall"
   },
   "labels": {
     "accent": "Accent",

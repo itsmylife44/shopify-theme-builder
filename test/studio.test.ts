@@ -185,6 +185,11 @@ function readSettingsData(theme: string) {
   return parseJSON(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8'))
 }
 
+/** The types of the catalog sections each page can take, from the Theme state. */
+function catalogTypes(state: { catalog: Record<string, { type: string }[]> }) {
+  return Object.fromEntries(Object.entries(state.catalog).map(([page, sections]) => [page, sections.map((section) => section.type)]))
+}
+
 function errors<T extends { severity: string }>(offenses: T[]) {
   return offenses.filter((offense) => offense.severity === 'error')
 }
@@ -225,7 +230,7 @@ describe('Studio API: read Theme state', () => {
     expect(state.collection).toEqual([{ id: 'main', type: 'collection' }])
     const types = { page: 'page', contact: 'page', cart: 'cart', search: 'search', blog: 'blog', article: 'article', 404: '404', collections: 'collections' }
     for (const [page, type] of Object.entries(types)) expect(state[page]).toEqual([{ id: 'main', type, colorScheme: 'scheme-1' }])
-    expect(state.catalog).toEqual(everyPage(['hero']))
+    expect(state.catalog).toEqual(everyPage([{ type: 'hero', presets: [] }]))
     expect(state.custom).toEqual(everyPage([]))
     expect(state.validation.filter((o: { severity: string }) => o.severity === 'error')).toEqual([])
   })
@@ -1249,6 +1254,70 @@ describe('Studio API: section presets', () => {
   })
 })
 
+describe('Studio API: add a section by preset', () => {
+  const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
+
+  it("lists each catalog section's presets under the page's catalog, named in the Theme's language", async () => {
+    const { catalog } = await (await openStudio(fixtureTheme(), { catalog: realCatalog })).readTheme()
+    const hero = catalog.home.find((section: { type: string }) => section.type === 'hero')
+    expect(hero.presets.map((preset: { name: string }) => preset.name)).toEqual([
+      'Hero',
+      'Hero: full screen',
+      'Hero: split',
+      'Hero: text on image',
+      'Hero: small banner',
+    ])
+    expect(hero.presets[2]).toEqual({ name: 'Hero: split', key: 't:general.hero_split', settings: { height: 'medium', content_style: 'split' }, blocks: [] })
+    const slideshow = catalog.home.find((section: { type: string }) => section.type === 'slideshow')
+    expect(slideshow.presets[0].blocks).toEqual([{ type: 'slide' }, { type: 'slide' }])
+    expect(catalog.product.map((section: { type: string }) => section.type)).toContain('main-product')
+    expect(catalog.home.map((section: { type: string }) => section.type)).not.toContain('main-product')
+  })
+
+  it("lists the presets of the Theme's own copy of a section, which the Studio adds", async () => {
+    const theme = fixtureTheme()
+    writeFileSync(
+      path.join(theme, 'sections/hero.liquid'),
+      '<div></div>\n{% schema %}{"name": "Hero", "presets": [{"name": "Hero: own"}]}{% endschema %}\n',
+    )
+    const { catalog } = await (await openStudio(theme)).readTheme()
+    expect(catalog.home).toEqual([{ type: 'hero', presets: [{ name: 'Hero: own', key: 'Hero: own', settings: {}, blocks: [] }] }])
+  })
+
+  it("adds a section with the named preset's settings and blocks, by its name or its key", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const hero = await studio.send('POST', 'api/home/sections', { type: 'hero', preset: 'Hero: split' })
+    expect(hero.status).toBe(200)
+    // By its key, as the schema writes its name.
+    const slideshow = await studio.send('POST', 'api/home/sections', { type: 'slideshow', preset: 't:general.slideshow_split' })
+    expect(slideshow.status).toBe(200)
+    const template = readTemplate(theme)
+    const [heroId, slideshowId] = template.order.slice(1)
+    expect(template.sections[heroId]).toEqual({ type: 'hero', settings: { height: 'medium', content_style: 'split' } })
+    const slides = template.sections[slideshowId]
+    expect(slides.settings).toEqual({ height: 'medium' })
+    expect(slides.block_order.map((id: string) => slides.blocks[id])).toEqual([
+      { type: 'slide', settings: { content_style: 'split' } },
+      { type: 'slide', settings: { content_style: 'split' } },
+    ])
+    expect(errors(slideshow.body.validation)).toEqual([])
+  })
+
+  it.each([
+    ['a preset the section lacks', 'Hero: upside down'],
+    ['a preset that is not a string', 3],
+  ])('refuses %s, naming the presets, and writes nothing', async (_, preset) => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, home), 'utf8')
+    const { status, body } = await (await openStudio(theme, { catalog: realCatalog })).send('POST', 'api/home/sections', { type: 'hero', preset })
+    expect(status).toBe(400)
+    expect(body.error).toContain('Hero: split')
+    expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
+    expect(existsSync(path.join(theme, 'sections/hero.liquid'))).toBe(false)
+  })
+})
+
 describe('Studio API: add, remove and reorder blocks', () => {
   const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
   const quotes = `{% for block in section.blocks %}<p {{ block.shopify_attributes }}>{{ block.settings.quote }}</p>{% endfor %}
@@ -1688,7 +1757,7 @@ describe('Studio API: home page', () => {
     )
     const before = readFileSync(path.join(theme, 'templates/index.json'), 'utf8')
     const studio = await openStudio(theme, { catalog })
-    expect((await studio.readTheme()).catalog.home).toEqual(['hero'])
+    expect(catalogTypes(await studio.readTheme()).home).toEqual(['hero'])
     const { status, body } = await studio.addSection('announcement-bar')
     expect(status).toBe(400)
     expect(body.error).toContain('announcement-bar')
@@ -1701,7 +1770,7 @@ describe('Studio API: home page', () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
     const types = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'press-quotes', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
-    expect((await studio.readTheme()).catalog.home).toEqual(types.toSorted())
+    expect(catalogTypes(await studio.readTheme()).home).toEqual(types.toSorted())
     // A template holds at most 25 sections, so the catalog goes onto two home pages.
     const halves = [types.slice(0, 12), types.slice(12)]
     for (const [index, half] of halves.entries()) {
@@ -1717,7 +1786,7 @@ describe('Studio API: home page', () => {
     const theme = fixtureTheme()
     cpSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog'), theme, { recursive: true })
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
-    const { catalog } = await studio.readTheme()
+    const catalog = catalogTypes(await studio.readTheme())
     for (const page of ['home', 'product', 'collection']) {
       expect(catalog[page]).toContain('hero')
       expect(catalog[page]).not.toContain('header')
@@ -1744,7 +1813,7 @@ describe('Studio API: product page', () => {
       '<div></div>\n{% schema %}{"name": "Gallery", "enabled_on": {"templates": ["product"]}}{% endschema %}\n',
     )
     const studio = await openStudio(theme, { catalog })
-    expect((await studio.readTheme()).catalog).toEqual(everyPage(['hero'], { product: ['gallery', 'hero'] }))
+    expect(catalogTypes(await studio.readTheme())).toEqual(everyPage(['hero'], { product: ['gallery', 'hero'] }))
     const before = readFileSync(path.join(theme, home), 'utf8')
     expect((await studio.addSection('gallery')).status).toBe(400)
     expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
@@ -1754,7 +1823,7 @@ describe('Studio API: product page', () => {
   it('composes a product page from the real catalog\'s main product and related products with a clean Theme Check', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
-    const { catalog } = await studio.readTheme()
+    const catalog = catalogTypes(await studio.readTheme())
     const types = ['main-product', 'related-products']
     expect(catalog.product).toEqual(expect.arrayContaining(types))
     for (const type of types) expect(catalog.home).not.toContain(type)
@@ -1792,7 +1861,7 @@ describe('Studio API: collection page', () => {
   it('composes a collection page from the real catalog\'s main collection with a clean Theme Check', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
-    const { catalog } = await studio.readTheme()
+    const catalog = catalogTypes(await studio.readTheme())
     expect(catalog.collection).toContain('main-collection')
     expect(catalog.home).not.toContain('main-collection')
     expect(catalog.product).not.toContain('main-collection')
@@ -1820,7 +1889,7 @@ describe('Studio API: the other pages', () => {
   }
 
   it('offers each page\'s catalog main section on that page only, and the contact form on every page template', async () => {
-    const { catalog } = await (await openStudio(fixtureTheme(), { catalog: realCatalog })).readTheme()
+    const catalog = catalogTypes(await (await openStudio(fixtureTheme(), { catalog: realCatalog })).readTheme())
     for (const [page, type] of Object.entries(mains)) {
       const on = pageNames.filter((other) => catalog[other].includes(type))
       expect(on).toEqual(type === 'contact-form' ? ['page', 'contact'] : [page])

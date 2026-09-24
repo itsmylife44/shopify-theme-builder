@@ -49,15 +49,17 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from '@/components/ui/combobox'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { layoutWireframe, wireframes, type Tone } from '@/wireframes.mjs'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
 type Frame = { url: string; paths: Record<Page, string>; editor: Record<Page, string> | null }
@@ -492,13 +494,6 @@ function SectionsPanel({
   onSelect: (id: string) => void
   onSaved: (state: ThemeState) => void
 }) {
-  const { saving, error, write } = useWrite(onSaved)
-  const groups = [
-    { label: 'Section Catalog', names: state.catalog[page] },
-    { label: 'Custom Sections', names: state.custom[page] },
-  ].filter((group) => group.names.length > 0)
-  const items = groups.flatMap((group) => group.names.map((name) => ({ value: name, label: sectionLabel(state, name) })))
-  const [adding, setAdding] = useState<string | null>(null)
   const item = (scope: Page | Group, section: TemplateSection) => (
     <li key={`${scope}/${section.id}`}>
       <button
@@ -515,13 +510,6 @@ function SectionsPanel({
     </li>
   )
 
-  async function add() {
-    const saved = await write(`/api/${page}/sections`, jsonRequest('POST', { type: adding }))
-    const added = saved?.[page].at(-1)
-    if (added) onSelect(added.id)
-    setAdding(null)
-  }
-
   return (
     <div className="flex flex-col gap-3 p-2">
       <ol className="flex flex-col gap-0.5" aria-label={`${pageNames[page]} page sections`}>
@@ -532,52 +520,128 @@ function SectionsPanel({
         <li className="px-2 py-1 text-xs text-muted-foreground">Footer</li>
         {state.footer.map((section) => item('footer', section))}
       </ol>
-      {items.length > 0 ? (
-        <FieldGroup className="gap-2">
-          <Separator />
-          <Field>
-            <FieldLabel htmlFor={`add-section-${page}`}>Add a section</FieldLabel>
-            <Select items={items} value={adding} disabled={saving} onValueChange={setAdding}>
-              <SelectTrigger id={`add-section-${page}`} className="w-full">
-                <SelectValue placeholder="Pick a section" />
-              </SelectTrigger>
-              <SelectContent className="max-w-80">
-                {groups.map((group) => (
-                  <SelectGroup key={group.label}>
-                    <SelectLabel>{group.label}</SelectLabel>
-                    {group.names.map((name) => (
-                      <SelectItem key={name} value={name} className="items-start">
-                        <span className="flex flex-col">
-                          <span>{sectionLabel(state, name)}</span>
-                          {state.sectionInfo[name]?.description ? (
-                            <span className="text-xs whitespace-normal text-muted-foreground">{state.sectionInfo[name].description}</span>
-                          ) : null}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-            {adding && state.sectionInfo[adding]?.description ? (
-              <FieldDescription>{state.sectionInfo[adding].description}</FieldDescription>
-            ) : null}
-          </Field>
-          <Button disabled={saving || !adding} onClick={add}>
-            <PlusIcon data-icon="inline-start" />
-            Add to the {pageNames[page].toLowerCase()} page
-          </Button>
-        </FieldGroup>
+      <Separator />
+      {state.catalog[page].length + state.custom[page].length > 0 ? (
+        <SectionPicker state={state} page={page} onAdded={onSelect} onSaved={onSaved} />
       ) : (
         <p className="px-2 text-muted-foreground">The Section Catalog has no sections for this page.</p>
       )}
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>The section was not added</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
     </div>
+  )
+}
+
+// A section without a wireframe, like a Custom Section, shows a plain heading and text.
+const plainWireframe = 'center heading text'
+const toneClasses: Record<Tone, string> = {
+  image: 'fill-current opacity-15',
+  strong: 'fill-current opacity-50',
+  text: 'fill-current opacity-25',
+  outline: 'fill-none stroke-current opacity-40',
+  panel: 'fill-background',
+}
+
+/** A preset's layout drawn in greys, from its wireframe description. */
+function Wireframe({ description, className }: { description: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 160 100" aria-hidden="true" className={`rounded-md bg-muted text-muted-foreground ${className ?? ''}`}>
+      {layoutWireframe(description).map((shape, index) => (
+        <rect key={index} x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={1} className={toneClasses[shape.tone]} />
+      ))}
+    </svg>
+  )
+}
+
+/**
+ * The page's catalog sections, each with its presets as wireframe thumbnails (a list on narrow screens), and its
+ * Custom Sections. Picking one adds it at the end of the page.
+ */
+function SectionPicker({
+  state,
+  page,
+  onAdded,
+  onSaved,
+}: {
+  state: ThemeState
+  page: Page
+  onAdded: (id: string) => void
+  onSaved: (state: ThemeState) => void
+}) {
+  const { saving, error, write } = useWrite(onSaved)
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const search = query.trim().toLowerCase()
+  const sections = [
+    ...state.catalog[page],
+    // A Custom Section is added with its first preset, drawn plain.
+    ...state.custom[page].map((type) => ({ type, presets: [] })),
+  ].filter(
+    ({ type, presets }) =>
+      !search || [type, sectionLabel(state, type), ...presets.map((preset) => preset.name)].some((text) => text.toLowerCase().includes(search)),
+  )
+
+  async function add(type: string, preset?: string) {
+    const saved = await write(`/api/${page}/sections`, jsonRequest('POST', { type, preset }))
+    const added = saved?.[page].at(-1)
+    if (!added) return
+    setOpen(false)
+    onAdded(added.id)
+  }
+
+  const choice = (key: string, label: string, description: string, onPick: () => void) => (
+    <li key={key} className="sm:w-40">
+      <button
+        type="button"
+        disabled={saving}
+        onClick={onPick}
+        className="flex w-full items-center gap-3 rounded-lg border p-2 text-left outline-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 sm:flex-col sm:items-stretch"
+      >
+        <Wireframe description={description} className="w-20 shrink-0 sm:w-full" />
+        <span className="text-sm">{label}</span>
+      </button>
+    </li>
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button />}>
+        <PlusIcon data-icon="inline-start" />
+        Add a section
+      </DialogTrigger>
+      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>Add a section to the {pageNames[page].toLowerCase()} page</DialogTitle>
+          <DialogDescription>Pick a layout. It starts with its settings and blocks, which you then change in the inspector.</DialogDescription>
+        </DialogHeader>
+        <Input type="search" aria-label="Filter sections" placeholder="Filter sections" value={query} onChange={(event) => setQuery(event.target.value)} />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>The section was not added</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {/* On a wide screen the sections flow side by side, each as wide as its row of thumbnails. */}
+        <div className="-mx-4 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-1 sm:flex-row sm:flex-wrap sm:content-start sm:gap-x-8">
+          {sections.map(({ type, presets }) => (
+            <section key={type} aria-labelledby={`picker-${type}`} className="flex max-w-full flex-col gap-2">
+              <div>
+                <h3 id={`picker-${type}`} className="font-medium">
+                  {sectionLabel(state, type)}
+                </h3>
+                {state.sectionInfo[type]?.description ? <p className="text-xs text-muted-foreground sm:w-0 sm:min-w-full">{state.sectionInfo[type].description}</p> : null}
+              </div>
+              <ul className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {presets.length > 0
+                  ? presets.map((preset) =>
+                      choice(preset.key, preset.name, wireframes[type]?.[preset.key] ?? plainWireframe, () => add(type, preset.name)),
+                    )
+                  : choice(type, sectionLabel(state, type), plainWireframe, () => add(type))}
+              </ul>
+            </section>
+          ))}
+          {sections.length === 0 ? <p className="text-muted-foreground">No section matches “{query}”.</p> : null}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 

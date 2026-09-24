@@ -1238,7 +1238,7 @@ describe('Editorial split', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
     expect(source).toMatch(/class="editorial-split full-width editorial-split--image-{{ section\.settings\.image_position }} color-{{ section\.settings\.color_scheme }}"/)
     expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.editorial_split' }])
+    expect(schema.presets).toEqual([{ name: 't:general.editorial_split' }, { name: 't:general.editorial_split_right', settings: { image_position: 'right' } }])
     expect(schema.enabled_on).toBeUndefined()
   })
 
