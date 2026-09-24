@@ -1097,6 +1097,13 @@ describe('Footer', () => {
     expect(schema.presets[0].blocks.map((block: { type: string }) => block.type)).toEqual(['text', 'menu', 'social'])
   })
 
+  it("shows Shop's own Follow on Shop button behind a setting that starts on, never restyled (Theme Store requirement)", () => {
+    expect(schema.settings).toContainEqual(expect.objectContaining({ type: 'checkbox', id: 'show_follow_on_shop', default: true }))
+    expect(source).toMatch(/{% if section\.settings\.show_follow_on_shop %}\s*<div class="footer__follow">\s*{{ shop \| login_button: action: 'follow' }}\s*<\/div>\s*{% endif %}/)
+    const styles = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    expect(styles).not.toMatch(/\.footer__follow\s+[^{,]+{|shop-login-button|shop-follow/)
+  })
+
   it('sets the blocks in columns on desktop and stacks them on mobile', () => {
     expect(source).toMatch(/\.footer__columns {[^}]*grid-template-columns: 1fr;/)
     expect(source).toMatch(/@media \(min-width: 750px\) {\s*\.footer__columns {[^}]*grid-template-columns: repeat\(auto-fit, minmax\(/)
