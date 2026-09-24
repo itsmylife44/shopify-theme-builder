@@ -160,6 +160,11 @@ h6,
   font-weight: var(--font-accent--weight);
 }
 
+/* Prices take tabular, lining figures, so prices in a row of cards line up digit for digit. */
+.price {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
 /* A price on sale takes the color scheme's accent color; the price it replaces stays in the text color. */
 .price__sale {
   color: var(--color-accent);
@@ -399,8 +404,8 @@ a.product-card__title:hover {
   display: contents;
 }
 
-/* The detailed card: a sold out or sale badge, the vendor, a rating and color swatches. The badge sits over the
-   image's top start corner, out of the text's flow, so titles line up whether a card has one or not. The image
+/* A sold out badge, or the saving of a sale, on every card; the detailed card adds the vendor, a rating and color
+   swatches. The badge sits over the image's top start corner, out of the text's flow, so titles line up whether a card has one or not. The image
    always meets the card's top start corner (a plain card has no padding, the others fill their top edge), so the
    badge is placed from the card. It stays outside the image link, which is aria-hidden. */
 .product-card__badge {

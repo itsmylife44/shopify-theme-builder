@@ -118,7 +118,7 @@
   },
   "product_card": {
     "product_title": "Example product",
-    "sale": "Sale",
+    "from_price": "From {{ price }}",
     "rating": "Rated {{ rating }} out of {{ max }}",
     "review_count": {
       "one": "{{ count }} review",
@@ -138,6 +138,8 @@
     "quantity": "Quantity",
     "regular_price": "Regular price",
     "sale_price": "Sale price",
+    "save_amount": "Save {{ amount }}",
+    "save_percent": "−{{ percent }}%",
     "show_media": "Show media {{ index }} of {{ count }}",
     "sold_out": "Sold out",
     "unavailable": "Unavailable",

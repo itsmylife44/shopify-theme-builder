@@ -1,6 +1,7 @@
 {% doc %}
   Renders the price of the selected variant, or of its selected selling plan,
-  with the per delivery price, the plan's description and the unit price.
+  with the price it replaces and the saving when on sale, the per delivery price,
+  the plan's description and the unit price.
 
   @example
   {% content_for 'block', type: '_product-price', id: 'product-price' %}
@@ -28,6 +29,9 @@
       <span class="price__sale">{{ price | money }}</span>
       <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
       <s class="product-price__compare-at">{{ compare_at_price | money }}</s>
+      <span class="product-price__saving text-label">
+        {%- render 'price-saving', price: price, compare_at_price: compare_at_price -%}
+      </span>
     {% else %}
       {{ price | money }}
     {% endif %}
@@ -60,9 +64,17 @@
     margin: 0;
   }
 
-  .product-price__compare-at {
+  .product-price__compare-at,
+  .product-price__saving {
     margin-inline-start: var(--space-xs);
+  }
+
+  .product-price__compare-at {
     opacity: var(--opacity-muted);
+  }
+
+  .product-price__saving {
+    color: var(--color-accent);
   }
 
   .product-price__note {

@@ -1,9 +1,11 @@
 {% doc %}
   Renders a product card: image, title, price, unit price and an optional quick add. Without a product it
-  renders an example card with one of Shopify's product placeholders. Its anatomy is minimal (image, title,
-  price), detailed (adds the vendor, color swatches, a rating from the reviews metafield and a sale or sold out
-  badge over the image's corner) or editorial (a large title with the price under it and no button); the
-  card_anatomy theme setting picks it, unless a section passes its own. The card_text_style theme setting styles the title and price of a
+  renders an example card with one of Shopify's product placeholders. Every card shows a sold out badge, or on
+  sale the saving (the price-saving snippet) in a badge over the image's corner and the price it replaces crossed
+  out, and "From" before the lowest price when the variants' prices vary. Its anatomy only changes the look:
+  minimal (image, title, price), detailed (adds the vendor, color swatches and a rating from the reviews
+  metafield) or editorial (a large title with the price under it and no button); the card_anatomy theme setting
+  picks it, unless a section passes its own. The card_text_style theme setting styles the title and price of a
   minimal or detailed card (quiet, caps or bold); an editorial card keeps its large title. The .product-card
   classes in assets/critical.css style it from the --card-* and --media-* variables in
   snippets/css-variables.liquid; when the card hover setting shows the second image, the card stacks the
@@ -44,28 +46,34 @@
         {{ 'product-' | append: placeholder | placeholder_svg_tag: 'placeholder product-card__placeholder' }}
       {% endif %}
     </a>
-    {% if anatomy == 'detailed' %}
-      {% if product.available == false %}
-        <p class="product-card__badge text-label">{{ 'product.sold_out' | t }}</p>
-      {% elsif product.compare_at_price > product.price %}
-        <p class="product-card__badge product-card__badge--sale text-label">{{ 'product_card.sale' | t }}</p>
-      {% endif %}
-      {% if product.vendor != blank %}
-        <p class="product-card__vendor text-small">{{ product.vendor | escape }}</p>
-      {% endif %}
+    {% if product.available == false %}
+      <p class="product-card__badge text-label">{{ 'product.sold_out' | t }}</p>
+    {% elsif product.compare_at_price > product.price %}
+      <p class="product-card__badge product-card__badge--sale text-label">
+        {%- render 'price-saving', price: product.price, compare_at_price: product.compare_at_price -%}
+      </p>
+    {% endif %}
+    {% if anatomy == 'detailed' and product.vendor != blank %}
+      <p class="product-card__vendor text-small">{{ product.vendor | escape }}</p>
     {% endif %}
     <a class="product-card__title{% if anatomy == 'editorial' %} text-h4{% endif %}" href="{{ product.url }}">
       {{- product.title | escape -}}
     </a>
-    {% if anatomy == 'detailed' and product.compare_at_price > product.price %}
+    {% liquid
+      assign price = product.price | money
+      if product.price_varies
+        assign price = 'product_card.from_price' | t: price: price
+      endif
+    %}
+    {% if product.compare_at_price > product.price %}
       <p class="price">
         <span class="visually-hidden">{{ 'product.sale_price' | t }}</span>
-        <span class="price__sale">{{ product.price | money }}</span>
+        <span class="price__sale">{{ price }}</span>
         <span class="visually-hidden">{{ 'product.regular_price' | t }}</span>
         <s class="product-card__compare-at">{{ product.compare_at_price | money }}</s>
       </p>
     {% else %}
-      <p class="price">{{ product.price | money }}</p>
+      <p class="price">{{ price }}</p>
     {% endif %}
     {% if anatomy == 'detailed' %}
       {% assign review_rating = product.metafields.reviews.rating.value %}
