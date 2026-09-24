@@ -2015,17 +2015,17 @@ describe('Studio API: header and footer', () => {
     expect(footer).toEqual([{ id: 'footer', type: 'footer', colorScheme: 'scheme-1' }])
   })
 
-  it("reads and writes the footer's settings and menu blocks in sections/footer-group.json, with a clean Theme Check", async () => {
+  it("reads and writes the footer's settings, text and menu blocks in sections/footer-group.json, with a clean Theme Check", async () => {
     const { theme, studio } = await withGroups()
     const read = await studio.send('GET', 'api/footer/sections/footer')
     expect(read.status).toBe(200)
     expect(read.body.settings).toContainEqual({ id: 'show_newsletter', type: 'checkbox', label: 'Show newsletter signup', value: true })
-    expect(read.body.blocks).toEqual([expect.objectContaining({ id: 'menu', type: 'menu' })])
+    expect(read.body.blocks).toEqual(['text', 'menu', 'social'].map((type) => expect.objectContaining({ id: type, type })))
 
     const { status, body } = await studio.send('PATCH', 'api/footer/sections/footer', {
       colorScheme: 'scheme-2',
       settings: { show_newsletter: false },
-      blocks: { menu: { menu: 'main-menu' } },
+      blocks: { menu: { menu: 'main-menu' }, text: { text: '<p>Hand-thrown mugs from Lisbon.</p>' } },
     })
     expect(status).toBe(200)
     expect(errors(body.validation)).toEqual([])
@@ -2033,9 +2033,10 @@ describe('Studio API: header and footer', () => {
     const footer = readTemplate(theme, 'sections/footer-group.json').sections.footer
     expect(footer.settings).toEqual({ color_scheme: 'scheme-2', show_newsletter: false })
     expect(footer.blocks.menu.settings).toEqual({ menu: 'main-menu' })
+    expect(footer.blocks.text.settings).toEqual({ text: '<p>Hand-thrown mugs from Lisbon.</p>' })
 
     expect((await studio.send('POST', 'api/footer/sections/footer/blocks', { type: 'menu' })).status).toBe(200)
-    expect(readTemplate(theme, 'sections/footer-group.json').sections.footer.block_order).toHaveLength(2)
+    expect(readTemplate(theme, 'sections/footer-group.json').sections.footer.block_order).toHaveLength(4)
   })
 
   it("writes the header's menu into sections/header-group.json, keeping Shopify's comment header", async () => {

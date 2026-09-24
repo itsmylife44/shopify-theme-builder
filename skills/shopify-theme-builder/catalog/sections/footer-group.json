@@ -5,12 +5,20 @@
     "footer": {
       "type": "footer",
       "blocks": {
+        "text": {
+          "type": "text",
+          "settings": {}
+        },
         "menu": {
           "type": "menu",
           "settings": {}
+        },
+        "social": {
+          "type": "social",
+          "settings": {}
         }
       },
-      "block_order": ["menu"],
+      "block_order": ["text", "menu", "social"],
       "settings": {}
     }
   },
