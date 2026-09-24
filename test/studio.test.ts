@@ -558,7 +558,45 @@ describe('Studio API: style settings', () => {
     expect(undone.history).toEqual({ undo: false, redo: true })
   })
 
+  it("writes and clears the social media links the footer's social block shows, one undo step each (SKILL.md step 4.6)", async () => {
+    const theme = fixtureTheme()
+    const before = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+    const studio = await openStudio(theme)
+    const { status, body } = await studio.setStyle({ social_instagram: 'https://instagram.com/acme', social_tiktok: 'https://www.tiktok.com/@acme' })
+    expect(status).toBe(200)
+    expect(readSettingsData(theme).current).toMatchObject({ social_instagram: 'https://instagram.com/acme', social_tiktok: 'https://www.tiktok.com/@acme' })
+    expect(errors(body.validation)).toEqual([])
+    const written = readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')
+
+    await studio.setStyle({ social_tiktok: '' })
+    expect(readSettingsData(theme).current).not.toHaveProperty('social_tiktok')
+    expect(readSettingsData(theme).current.social_instagram).toBe('https://instagram.com/acme')
+
+    await studio.send('POST', 'api/undo')
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(written)
+    const { body: undone } = await studio.send('POST', 'api/undo')
+    expect(readFileSync(path.join(theme, 'config/settings_data.json'), 'utf8')).toBe(before)
+    expect(undone.history).toEqual({ undo: false, redo: true })
+  })
+
+  it('writes the social media links into the current Direction, which keeps them when the preview switches Directions', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    const template = { sections: { main: { type: 'hello-world' } }, order: ['main'] }
+    await studio.send('PUT', 'api/directions/Quiet', { template })
+    await studio.send('PUT', 'api/directions/Loud', { template })
+    await studio.send('PUT', 'api/directions/chosen', { name: 'Quiet' })
+    await studio.setStyle({ social_instagram: 'https://instagram.com/acme' })
+    await studio.send('PUT', 'api/directions/current', { name: 'Loud' })
+    const data = readSettingsData(theme)
+    expect(data.current).toBe('Loud')
+    expect(data.presets.Loud.social_instagram).toBe('https://instagram.com/acme')
+  })
+
   it.each([
+    ['a social link that is not https', { social_instagram: 'http://instagram.com/acme' }],
+    ['a social link that is a store path', { social_facebook: '/pages/about' }],
+    ['a social link that is not a string', { social_x: null }],
     ['a range value off its step', { type_scale_ratio: 132 }],
     ['a range value out of bounds', { type_body_size: 20 }],
     ['an option the setting does not have', { shape_family: 'blob' }],

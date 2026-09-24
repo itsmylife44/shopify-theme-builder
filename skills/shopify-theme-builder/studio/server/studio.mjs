@@ -613,13 +613,21 @@ function readStyle(theme) {
 }
 
 /**
- * Writes style settings into config/settings_data.json, checked against their schema. An empty color clears it.
+ * Writes style settings, and the social media links (social_instagram …) the footer's social block shows, into
+ * config/settings_data.json, checked against their schema. An empty color or link clears it.
  * @param {string} theme
  * @param {unknown} change The values by setting id, like { "shape_family": "round" }.
  */
 function setStyle(theme, change) {
   if (!isObject(change)) throw new BadRequest('The style must be an object of settings by id, like { "shape_family": "round" }.')
-  const settings = readStyleSchema(theme).flatMap((group) => group.settings)
+  const social = Object.values(readGlobalSchema(theme)).filter((setting) => setting.id.startsWith('social_') && setting.type === 'url')
+  for (const { id } of social) {
+    const value = /** @type {Record<string, unknown>} */ (change)[id]
+    if (value !== undefined && value !== '' && !(typeof value === 'string' && /^https:\/\/\S+$/.test(value))) {
+      throw new BadRequest(`${id} must be a full https:// link, like https://instagram.com/<account>, or "" to clear it.`)
+    }
+  }
+  const settings = [...readStyleSchema(theme).flatMap((group) => group.settings), ...social]
   updateSettings(theme, (current) => {
     setValues({ settings: current }, /** @type {object} */ (change), settings, 'the style settings', styleTypes)
   })
