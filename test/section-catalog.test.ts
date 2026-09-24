@@ -2694,6 +2694,33 @@ describe('Buttons', () => {
     expect(critical).toMatch(/\.button--secondary {[^}]*background-color: var\(--color-secondary-button\)/)
   })
 
+  it("styles Shopify's unbranded Buy it now as the primary button, hover included, and makes Add to cart secondary beside it", () => {
+    const critical = read('base-theme/assets/critical.css')
+    // Shopify's own rules are .shopify-payment-button__button--unbranded and its :hover:not([disabled]): the theme's must outrank both.
+    const [, body] = critical.match(
+      /\.shopify-payment-button \.shopify-payment-button__button--unbranded,\s*\.shopify-payment-button \.shopify-payment-button__button--unbranded:hover:not\(\[disabled\]\) {([^}]*)}/,
+    )!
+    for (const declaration of [
+      'padding: var(--button-padding-block) var(--button-padding-inline)',
+      'border: var(--button-border-width) solid var(--color-button-border)',
+      'border-radius: var(--button-radius)',
+      'background-color: var(--color-primary-button)',
+      'color: var(--color-primary-button-label)',
+      'font: inherit',
+      'font-weight: var(--button-font-weight)',
+      'text-transform: var(--button-text-transform)',
+      'min-block-size: var(--target-size)',
+    ]) {
+      expect(body).toContain(`${declaration};`)
+    }
+    expect(read('base-theme/blocks/_buy-buttons.liquid')).toMatch(
+      /class="{% if block\.settings\.show_dynamic_checkout %}button--secondary{% else %}button{% endif %} buy-buttons__add"/,
+    )
+    expect(read('catalog/sections/featured-product.liquid')).toMatch(
+      /class="{% if section\.settings\.show_dynamic_checkout %}button--secondary{% else %}button{% endif %} featured-product__add"/,
+    )
+  })
+
   it('gives every button with a text label, and every submit input, the shared button class', () => {
     for (const file of files) {
       for (const [, tag, content] of read(file).matchAll(/(<button\b[^>]*>)([\s\S]*?)<\/button>/g)) {

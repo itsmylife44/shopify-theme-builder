@@ -234,7 +234,27 @@ h6,
   color: var(--color-secondary-button-label);
 }
 
-:is(.button, .button--secondary):disabled {
+/* Shopify's unbranded dynamic checkout button (Buy it now) is the primary button, hover
+   included; Add to cart turns secondary beside it. Branded ones keep their brand colors. */
+.shopify-payment-button .shopify-payment-button__button--unbranded,
+.shopify-payment-button .shopify-payment-button__button--unbranded:hover:not([disabled]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--target-size);
+  padding: var(--button-padding-block) var(--button-padding-inline);
+  border: var(--button-border-width) solid var(--color-button-border);
+  border-radius: var(--button-radius);
+  box-shadow: none;
+  background-color: var(--color-primary-button);
+  color: var(--color-primary-button-label);
+  font: inherit;
+  font-weight: var(--button-font-weight);
+  letter-spacing: inherit;
+  text-transform: var(--button-text-transform);
+}
+
+:is(.button, .button--secondary, .shopify-payment-button__button--unbranded):disabled {
   opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }

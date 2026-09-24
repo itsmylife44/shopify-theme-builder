@@ -74,7 +74,7 @@
           </label>
           <button
             type="submit"
-            class="button featured-product__add"
+            class="{% if section.settings.show_dynamic_checkout %}button--secondary{% else %}button{% endif %} featured-product__add"
             {% unless current_variant.available %}
               disabled
             {% endunless %}
