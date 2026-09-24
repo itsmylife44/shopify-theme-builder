@@ -220,7 +220,20 @@ export const wireframes = {
     },
   },
   'comparison-table': { 't:general.comparison_table': { wireframe: 'center heading / line x3 / rule / line x3 / rule / line x3' } },
-  'contact-form': { 't:general.contact_form': { wireframe: 'heading / input | input / 2* input button' } },
+  'contact-form': {
+    't:general.contact_form': {
+      wireframe: 'center heading line / input / 2* input button',
+      description: 'Title, text and form centered in one column',
+    },
+    't:general.contact_form_split': {
+      wireframe: 'heading text line line | input input input button',
+      description: 'Contact details on one side, the form on the other',
+    },
+    't:general.contact_form_image': {
+      wireframe: 'image | heading input input button',
+      description: 'An image beside the title and the form',
+    },
+  },
   'custom-liquid': { 't:general.custom_liquid': { wireframe: 'panel line text line' } },
   'editorial-split': {
     't:general.editorial_split': {

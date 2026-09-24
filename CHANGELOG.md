@@ -133,6 +133,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - The dynamic checkout "Buy it now" button no longer shows in Shopify's default blue. The unbranded one takes the theme's primary button style (filled or outline, with its radius, case and weight, and no color change on hover), and "Add to cart" becomes the secondary button above it on the product page and in the featured product. Branded buttons, like Shop Pay and PayPal, keep their brand colors.
 
+- The contact page no longer shows two titles with a gap between them and a narrow form stuck to the left. Its template holds the contact form alone, titled with the page's title (the heading setting now overrides it) and with the page's content as an intro. It lays out centered in a narrow column (the default), split with the shop's contact details (a new details setting: email, phone number, address, opening hours) beside the form, or with an image beside the form (Shopify's placeholder when blank), stacked on mobile; each layout is also a named preset, like "Contact form: split". Other pages set their title and content in one centered column of running text, and links in a basic page's text take the accent color.
+
 ## [0.1.0] - 2026-09-23
 
 The first release.

@@ -1,40 +1,134 @@
-{% comment %}A contact form that sends the customer's name, email, phone and message to the shop.{% endcomment %}
-<div class="basic-page full-width color-{{ section.settings.color_scheme }}">
-  {% if section.settings.heading != blank %}
-    <h2>{{ section.settings.heading }}</h2>
-  {% endif %}
-
-  {% assign form_id = 'ContactForm-' | append: section.id %}
-  {% form 'contact', id: form_id, class: 'basic-page__form' %}
-    {% if form.posted_successfully? %}
-      <p role="status">{{ 'contact.success' | t }}</p>
-    {% elsif form.errors %}
-      <div role="alert">{{ form.errors | default_errors }}</div>
+{% comment %}The contact page: its title and text, the shop's contact details and a form that sends the customer's message.{% endcomment %}
+<div class="basic-page contact-form contact-form--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}">
+  <div class="contact-form__inner">
+    {% if section.settings.layout == 'image' %}
+      <div class="contact-form__media">
+        {% if section.settings.image != blank %}
+          {% liquid
+            assign loading = 'lazy'
+            assign fetchpriority = 'auto'
+            if section.index == 1
+              assign loading = 'eager'
+              assign fetchpriority = 'high'
+            endif
+          %}
+          {{
+            section.settings.image
+            | image_url: width: 1500
+            | image_tag:
+              widths: '375, 550, 750, 1100, 1500',
+              sizes: '(min-width: 750px) 50vw, 100vw',
+              loading: loading,
+              fetchpriority: fetchpriority
+          }}
+        {% else %}
+          {{ 'image' | placeholder_svg_tag: 'placeholder contact-form__placeholder' }}
+        {% endif %}
+      </div>
     {% endif %}
 
-    <div class="basic-page__field">
-      <label for="{{ form_id }}-name">{{ 'contact.name' | t }}</label>
-      <input type="text" name="contact[name]" id="{{ form_id }}-name" value="{{ form.name }}" autocomplete="name">
+    <div class="contact-form__intro">
+      <h1>{{ section.settings.heading | default: page.title }}</h1>
+      {% if page.content != blank %}
+        <div class="contact-form__intro-text rte">{{ page.content }}</div>
+      {% endif %}
+      {% if section.settings.details != blank %}
+        <div class="contact-form__details rte">{{ section.settings.details }}</div>
+      {% endif %}
     </div>
 
-    <div class="basic-page__field">
-      <label for="{{ form_id }}-email">{{ 'contact.email' | t }}</label>
-      <input type="email" name="contact[email]" id="{{ form_id }}-email" value="{{ form.email }}" autocomplete="email" required>
-    </div>
+    {% assign form_id = 'ContactForm-' | append: section.id %}
+    {% form 'contact', id: form_id, class: 'contact-form__form' %}
+      {% if form.posted_successfully? %}
+        <p role="status">{{ 'contact.success' | t }}</p>
+      {% elsif form.errors %}
+        <div role="alert">{{ form.errors | default_errors }}</div>
+      {% endif %}
 
-    <div class="basic-page__field">
-      <label for="{{ form_id }}-phone">{{ 'contact.phone' | t }}</label>
-      <input type="tel" name="contact[phone]" id="{{ form_id }}-phone" value="{{ form.phone }}" autocomplete="tel">
-    </div>
+      <div class="basic-page__field">
+        <label for="{{ form_id }}-name">{{ 'contact.name' | t }}</label>
+        <input type="text" name="contact[name]" id="{{ form_id }}-name" value="{{ form.name }}" autocomplete="name">
+      </div>
 
-    <div class="basic-page__field">
-      <label for="{{ form_id }}-message">{{ 'contact.message' | t }}</label>
-      <textarea name="contact[body]" id="{{ form_id }}-message" rows="6" autocomplete="off" required>{{ form.body }}</textarea>
-    </div>
+      <div class="basic-page__field">
+        <label for="{{ form_id }}-email">{{ 'contact.email' | t }}</label>
+        <input type="email" name="contact[email]" id="{{ form_id }}-email" value="{{ form.email }}" autocomplete="email" required>
+      </div>
 
-    <button type="submit" class="button">{{ section.settings.button_label | escape }}</button>
-  {% endform %}
+      <div class="basic-page__field">
+        <label for="{{ form_id }}-phone">{{ 'contact.phone' | t }}</label>
+        <input type="tel" name="contact[phone]" id="{{ form_id }}-phone" value="{{ form.phone }}" autocomplete="tel">
+      </div>
+
+      <div class="basic-page__field">
+        <label for="{{ form_id }}-message">{{ 'contact.message' | t }}</label>
+        <textarea name="contact[body]" id="{{ form_id }}-message" rows="6" autocomplete="off" required>{{ form.body }}</textarea>
+      </div>
+
+      <button type="submit" class="button">{{ section.settings.button_label | escape }}</button>
+    {% endform %}
+  </div>
 </div>
+
+{% stylesheet %}
+  .contact-form__inner {
+    display: grid;
+    align-items: start;
+    gap: var(--space-xl);
+  }
+
+  .contact-form--centered .contact-form__inner {
+    justify-self: center;
+    width: 100%;
+    max-width: var(--width-narrow);
+  }
+
+  .contact-form--centered .contact-form__intro {
+    text-align: center;
+  }
+
+  .contact-form__intro,
+  .contact-form__form {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .contact-form__intro > * {
+    margin-block: 0;
+  }
+
+  .contact-form__media {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background-color: var(--media-background);
+    border-radius: var(--style-border-radius-media);
+  }
+
+  .contact-form__media img,
+  .contact-form__placeholder {
+    width: 100%;
+    height: 100%;
+    padding: var(--media-inset);
+    object-fit: var(--media-fit);
+    mix-blend-mode: var(--media-blend);
+  }
+
+  @media (min-width: 750px) {
+    .contact-form--details .contact-form__inner,
+    .contact-form--image .contact-form__inner {
+      grid-template-columns: 1fr 1fr;
+      column-gap: var(--space-2xl);
+    }
+
+    .contact-form--image .contact-form__inner {
+      grid-template-rows: auto 1fr;
+    }
+
+    .contact-form--image .contact-form__media {
+      grid-row: span 2;
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {
@@ -52,10 +146,32 @@
       "default": "scheme-1"
     },
     {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "centered", "label": "t:options.layout.centered" },
+        { "value": "details", "label": "t:options.layout.details" },
+        { "value": "image", "label": "t:options.layout.image" }
+      ],
+      "default": "centered"
+    },
+    {
       "type": "inline_richtext",
       "id": "heading",
       "label": "t:labels.heading",
-      "default": "Get in touch"
+      "info": "t:info.contact_form_heading"
+    },
+    {
+      "type": "richtext",
+      "id": "details",
+      "label": "t:labels.contact_details",
+      "info": "t:info.contact_form_details"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image"
     },
     {
       "type": "text",
@@ -67,6 +183,18 @@
   "presets": [
     {
       "name": "t:general.contact_form"
+    },
+    {
+      "name": "t:general.contact_form_split",
+      "settings": {
+        "layout": "details"
+      }
+    },
+    {
+      "name": "t:general.contact_form_image",
+      "settings": {
+        "layout": "image"
+      }
     }
   ]
 }
