@@ -72,6 +72,11 @@ describe('Studio section picker wireframes', () => {
     ])
   })
 
+  it('bleeds a column to the edges of the frame it borders', () => {
+    expect(layoutWireframe('bleed image | heading')[0]).toEqual({ tone: 'image', x: 0, y: 0, width: 77, height: 100 })
+    expect(layoutWireframe('heading | bleed image')[1]).toEqual({ tone: 'image', x: 83, y: 0, width: 77, height: 100 })
+  })
+
   it('names a part it does not know', () => {
     expect(() => layoutWireframe('image | haeding')).toThrow('haeding')
   })
