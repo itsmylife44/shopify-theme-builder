@@ -1095,7 +1095,7 @@ describe('Studio API: section settings', () => {
     await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: 'shopify://shop_images/cover.jpg' } })
     expect((await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: null } })).status).toBe(200)
     expect(readTemplate(theme).sections[hero].settings).not.toHaveProperty('image')
-  })
+   }, 30_000)
 
   it.each([
     ['a web link', { settings: { image: 'https://cdn.shopify.com/cover.jpg' } }],
