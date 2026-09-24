@@ -822,6 +822,54 @@ describe('Studio API: Directions', () => {
     expect(readSettingsData(theme).current).toMatchObject({ shape_family: 'round' })
   }, 30_000)
 
+  it("keeps the chosen Direction's listing identical to the home page through every home edit, in the same undo step", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+    await studio.send('PUT', 'api/directions/Loud', { template: heroHome })
+    const listing = path.join(theme, 'listings/quiet/templates/index.json')
+    const read = (file: string) => readFileSync(file, 'utf8')
+    const inSync = () => expect(read(listing)).toBe(read(path.join(theme, home)))
+
+    // Before the choice, a home edit leaves the listings alone.
+    await studio.send('PUT', 'api/directions/current', { name: 'Quiet' })
+    await studio.setColorScheme('hero', 'scheme-1')
+    expect(readTemplate(theme, 'listings/quiet/templates/index.json')).toEqual(heroHome)
+
+    await studio.send('PUT', 'api/directions/chosen', { name: 'Quiet' })
+    inSync()
+    const chosen = read(listing)
+    await studio.setColorScheme('hero', 'scheme-2')
+    inSync()
+    expect(readTemplate(theme, 'listings/quiet/templates/index.json').sections.hero.settings.color_scheme).toBe('scheme-2')
+    const { body: added } = await studio.addSection('hello-world')
+    inSync()
+    const id = added.home.at(-1).id
+    await studio.reorderSections([id, 'hero'])
+    inSync()
+    // Tuned after the choice, the preview still shows its home.
+    await studio.setStyle({ shape_family: 'round' })
+    await studio.removeSection(id)
+    inSync()
+
+    // Undo reverts both files in each step.
+    await studio.send('POST', 'api/undo')
+    await studio.send('POST', 'api/undo')
+    inSync()
+    await studio.send('POST', 'api/undo')
+    await studio.send('POST', 'api/undo')
+    inSync()
+    await studio.send('POST', 'api/undo')
+    expect(read(listing)).toBe(chosen)
+    inSync()
+
+    // With another Direction in the preview, its home isn't the chosen one's.
+    await studio.send('PUT', 'api/directions/current', { name: 'Loud' })
+    await studio.setColorScheme('hero', 'scheme-1')
+    expect(read(listing)).toBe(chosen)
+    expect(readTemplate(theme, 'listings/loud/templates/index.json')).toEqual(heroHome)
+  }, 60_000)
+
   it('writes DIRECTION.md when the Theme has none, and chooses only a Direction it has', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme)

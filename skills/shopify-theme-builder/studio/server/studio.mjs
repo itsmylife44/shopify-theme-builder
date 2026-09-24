@@ -756,6 +756,7 @@ function updateJSON(theme, name, change) {
   // Keep the comment header Shopify writes at the top of the file.
   const header = raw.match(/^\s*\/\*[\s\S]*?\*\/\s*/)?.[0] ?? ''
   writeFile(file, header + JSON.stringify(data, null, 2) + '\n')
+  if (name === pages.home) syncChosenListing(theme)
 }
 
 // The Studio's logo lives in the Theme's assets, since only the Admin API can add images to the
@@ -1133,6 +1134,22 @@ function chooseDirection(theme, body) {
   const text = readIfExists(file)?.toString('utf8') ?? ''
   const line = `Chosen: ${name}`
   writeFile(file, chosenLine.test(text) ? text.replace(chosenLine, () => line) : text.replace(/^(# .*\n+)?/, (title) => `${title}${line}\n${text ? '\n' : ''}`))
+  // Chosen as the preview shows it, home edits made before included.
+  syncChosenListing(theme)
+}
+
+/**
+ * Copies templates/index.json into the chosen Direction's listing while the preview shows that Direction, as its preset or
+ * tuned since (current then holds the values, not a name), so the listing the Theme Store preset installs stays the Theme's home.
+ * @param {string} theme
+ */
+function syncChosenListing(theme) {
+  const chosen = readDirections(theme).find((direction) => direction.chosen)
+  const { current } = readJSON(theme, settingsData)
+  // ponytail: tuning another Direction's preview after the choice would sync its home too; nothing records which preset a tuned current came from.
+  if (!chosen || (typeof current === 'string' && current !== chosen.name)) return
+  const listing = path.join(theme, listingHome(chosen.name))
+  if (existsSync(listing)) writeFile(listing, readFileSync(path.join(theme, pages.home)))
 }
 
 /**

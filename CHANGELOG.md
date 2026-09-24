@@ -147,6 +147,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- Once a Direction is chosen, and while the preview shows it, tuned or not, every home edit in the Studio (adding, removing, moving or editing a section or its blocks) also writes the chosen Direction's `listings/<name>/templates/index.json`, in the same undo step, so the home the Theme Store preset installs, and `check-direction` reads, stays the Theme's. Choosing the Direction the preview shows keeps the home edits made before.
+
 - The agent reads the brief back to the Creator and has them confirm it every time, even when their first message gave all six items: the read-back checks how it read the brief (the brand's world, the category default and its opposite, what each reference lends), in one question with the brief in a preview. Only a Creator who says to just build it skips it.
 
 - The Studio's errors that quote the Shopify CLI, like the 409 asking for `shopify store auth`, quote only the CLI's error: without its escape codes and without the lines it printed before, like its progress.
