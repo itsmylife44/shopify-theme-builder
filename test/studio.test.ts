@@ -1889,6 +1889,35 @@ describe('Studio API: product page', () => {
     for (const block of block_order) expect(block).not.toMatch(/^_/)
   })
 
+  it("reads and writes the settings of the main product's theme blocks, from their blocks/ schema, in one undo step", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const { body: added } = await studio.addSection('main-product', 'product')
+    const id = added.product.find((section: { type: string }) => section.type === 'main-product').id
+    const read = async () => (await studio.send('GET', `api/product/sections/${id}`)).body
+    const details = (await read()).blocks.find((block: { type: string }) => block.type === 'collapsible-content')
+    expect(details).toMatchObject({
+      name: 'Collapsible content',
+      settings: [
+        { id: 'heading', type: 'text', label: 'Heading', value: 'Description' },
+        { id: 'source', type: 'select', value: 'description' },
+        { id: 'text', type: 'richtext', value: '' },
+      ],
+    })
+
+    const { status, body } = await studio.send('PATCH', `api/product/sections/${id}`, {
+      blocks: { [details.id]: { heading: 'Descrizione', text: '<p>Fatta a mano.</p>' } },
+    })
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(readTemplate(theme, 'templates/product.json').sections[id].blocks[details.id].settings).toMatchObject({ heading: 'Descrizione', text: '<p>Fatta a mano.</p>' })
+    const bad = await studio.send('PATCH', `api/product/sections/${id}`, { blocks: { [details.id]: { text: 'Not paragraphs' } } })
+    expect(bad.status).toBe(400)
+
+    await studio.send('POST', 'api/undo')
+    expect((await read()).blocks.find((block: { id: string }) => block.id === details.id).settings[0].value).toBe('Description')
+  })
+
   it('copies the Base Theme snippets a catalog section renders into a Theme that lacks them', async () => {
     const theme = fixtureTheme()
     rmSync(path.join(theme, 'snippets/product-card.liquid'), { force: true })
