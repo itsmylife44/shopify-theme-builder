@@ -5,5 +5,5 @@ The Brand lives in native theme settings, but a logo picked with Shopify's `imag
 ## Considered Options
 
 - **Type the file name of an image already in the shop's Files**: what #5 shipped; rejected because it sends the Creator to the Shopify admin for a basic step.
-- **Upload through the Admin API**: rejected; needs an app, a token and an account, which the Studio avoids.
+- **Upload through the Admin API**: rejected; needs an app, a token and an account, which the Studio avoids. Superseded by ADR-0008: `shopify store execute` (ADR-0006) reaches the Admin API without them, and the Studio now uploads images to the shop's Files that way.
 - **Asset without a setting**: rejected; Liquid can't tell whether an asset exists, so the header needs the setting to know.
