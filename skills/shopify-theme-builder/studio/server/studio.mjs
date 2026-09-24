@@ -596,6 +596,7 @@ const cssGradient = /^(repeating-)?(linear|radial|conic)-gradient\([^;{}<>]*\)$/
 /** @type {{ families: { family: string, handles: string[] }[] }} */
 const fontLibrary = JSON.parse(readFileSync(new URL('shopify-fonts.json', import.meta.url), 'utf8'))
 const fontHandles = new Set(fontLibrary.families.flatMap((family) => family.handles))
+// The value of an image_picker setting or the logo: an image in the shop's Files, by its file name.
 const shopImage = /^shopify:\/\/shop_images\/[^/\s]+$/
 const schemeId = /^[a-z0-9_-]+$/i
 
@@ -961,10 +962,26 @@ function checkTemplate(theme, catalog, template) {
     throw new BadRequest(`Shopify rejects an id starting with _, like ${underscored}; use ${underscored.replace(/^_+/, '')}.`)
   }
   checkOrder({ order }, ids, 'each section id of the template')
-  return Object.values(/** @type {Record<string, { type?: unknown }>} */ (sections)).map(({ type }) => {
-    sectionFile(theme, catalog, type, pages.home)
-    return /** @type {string} */ (type)
+  return Object.values(/** @type {Record<string, { type?: unknown, settings?: unknown, blocks?: unknown }>} */ (sections)).map((section) => {
+    const schema = readSchema(sectionFile(theme, catalog, section.type, pages.home)) ?? {}
+    checkImages(section.settings, schema.settings, `the ${section.type} section`)
+    for (const block of isObject(section.blocks) ? Object.values(/** @type {object} */ (section.blocks)) : []) {
+      if (isObject(block)) checkImages(block.settings, readBlockSchema(theme, schema, block.type)?.settings, `the ${block.type} block`)
+    }
+    return /** @type {string} */ (section.type)
   })
+}
+
+/**
+ * Checks the image settings among a template's values as a PATCH does; the other values are the template's own.
+ * @param {unknown} values
+ * @param {SchemaSetting[] | undefined} schemaSettings
+ * @param {string} owner
+ */
+function checkImages(values, schemaSettings, owner) {
+  if (!isObject(values)) return
+  const images = Object.entries(/** @type {object} */ (values)).filter(([key]) => schemaSettings?.some((setting) => setting.id === key && setting.type === 'image_picker'))
+  setValues({}, Object.fromEntries(images), schemaSettings, owner, new Set(['image_picker']))
 }
 
 /**
@@ -1303,12 +1320,12 @@ function updateSection(theme, file, id, body) {
       if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
       section.settings = { ...section.settings, [setting.id]: colorScheme }
     }
-    if (settings) setValues(section, settings, schema.settings, `the ${section.type} section`)
+    if (settings) setValues(section, settings, schema.settings, `the ${section.type} section`, sectionTypes)
     for (const [blockId, values] of Object.entries(/** @type {Record<string, object>} */ (blocks ?? {}))) {
       const block = section.blocks?.[blockId]
       if (!Object.hasOwn(section.blocks ?? {}, blockId)) throw new BadRequest(`The ${id} section has no block ${blockId}.`)
       const blockSchema = readBlockSchema(theme, schema, block.type)
-      setValues(block, values, blockSchema?.settings, `the ${block.type} block`)
+      setValues(block, values, blockSchema?.settings, `the ${block.type} block`, sectionTypes)
     }
   })
 }
@@ -1323,8 +1340,11 @@ const optionTypes = new Set(['select', 'radio'])
 const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, ...optionTypes, 'url', 'checkbox', 'range', 'number'])
 // Besides a section's setting types, the style settings hold a color, hex or empty for none.
 const styleTypes = new Set([...editableTypes, 'color'])
-// Image and video settings, which the Studio only lists: they are picked in the Theme Editor (no Admin API, ADR-0004).
+// Image and video settings, listed apart from the others. The Studio writes an image the shop's Files hold (POST /api/files);
+// a video is picked in the Theme Editor.
 const mediaTypes = new Set(['image_picker', 'video', 'video_url'])
+// The setting types a section's or block's PATCH writes.
+const sectionTypes = new Set([...editableTypes, 'image_picker'])
 const handle = /^[^\s/]+$/
 // The links a url setting takes: a store path, a web or mail link, or a shopify:// link to a store resource.
 const link = /^(\/|https?:\/\/|mailto:|tel:|shopify:\/\/)\S*$/
@@ -1344,7 +1364,11 @@ function setValues(target, values, schemaSettings, owner, types = editableTypes)
   for (const [key, value] of Object.entries(values)) {
     const setting = schemaSettings?.find((candidate) => candidate.id === key)
     if (!setting || !types.has(setting.type)) throw new BadRequest(`${key} is not a setting the Studio edits in ${owner}.`)
-    if (setting.type === 'checkbox') {
+    if (setting.type === 'image_picker') {
+      if (value !== null && value !== '' && !(typeof value === 'string' && shopImage.test(value))) {
+        throw new BadRequest(`${key} must be an image in the shop's Files, like shopify://shop_images/cover.jpg (POST /api/files puts one there), or "" or null to clear it.`)
+      }
+    } else if (setting.type === 'checkbox') {
       if (typeof value !== 'boolean') throw new BadRequest(`${key} must be true or false.`)
     } else if (setting.type === 'number') {
       if (value !== null && typeof value !== 'number') throw new BadRequest(`${key} must be a number, or null to clear it.`)
@@ -1385,7 +1409,8 @@ function setValues(target, values, schemaSettings, owner, types = editableTypes)
  * @typedef {{ id: string, type: string, label: string, value: string | string[] | boolean | number | null, min?: number, max?: number, step?: number, unit?: string, options?: { value: string, label: string }[] }} Setting
  *   A list setting's value is a list of handles, a checkbox's a boolean, a range's a number, a number's a number or null. A range
  *   has its bounds and step, a select or radio its options.
- * @typedef {{ id: string, type: string, label: string, set: boolean }} MediaSetting An image or video setting, and whether it holds one.
+ * @typedef {{ id: string, type: string, label: string, set: boolean, value: string | null }} MediaSetting An image or video setting, whether
+ *   it holds one, and its value, like shopify://shop_images/cover.jpg.
  * @typedef {{
  *   id: string, type: string, name: string, colorScheme?: string | null, settings: Setting[], media: MediaSetting[],
  *   blocks: { id: string, type: string, name: string, settings: Setting[], media: MediaSetting[] }[], blockTypes: { type: string, name: string }[], maxBlocks: number,
@@ -1409,7 +1434,8 @@ function readSection(theme, file, id) {
       .filter((setting) => setting.id && mediaTypes.has(setting.type))
       .map((setting) => {
         const id = /** @type {string} */ (setting.id)
-        return { id, type: setting.type, label: translate(setting.label ?? id), set: Boolean(values?.[id] ?? setting.default) }
+        const value = values?.[id] ?? setting.default
+        return { id, type: setting.type, label: translate(setting.label ?? id), set: Boolean(value), value: value ? String(value) : null }
       })
   const color = colorSchemeSetting(theme, section.type)
   const blocks = section.blocks ?? {}

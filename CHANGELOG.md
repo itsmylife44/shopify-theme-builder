@@ -118,6 +118,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 - The product page's variant picker shows an option value's color or image swatch, with the value's name as its accessible label, and the text pill when it has none.
 - The product page offers a product's subscriptions (selling plans) next to one-time purchase, prices it with the chosen plan and adds it to the cart with that plan; the cart shows each line's plan.
 - The product page shows the vendor (with a setting to hide it), pickup availability at local pickup locations for the selected variant, and the Shop Pay Installments banner.
+- The Studio places images: `PATCH /api/<page>/sections/<id>` (the header and footer too) and a Direction's home template take an image from the shop's Files, `shopify://shop_images/<filename>`, on a section or a block, and `GET` shows it under `media` as `value`. The inspector shows a set image's file name.
 
 ### Fixed
 

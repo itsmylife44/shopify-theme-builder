@@ -646,6 +646,29 @@ describe('Studio API: Directions', () => {
     expect(existsSync(path.join(theme, 'sections/hero.liquid'))).toBe(false)
   })
 
+  it("takes images from the shop's Files in its home template's sections and blocks, and refuses other image values", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const home = (image: unknown, tile: unknown) => ({
+      sections: {
+        hero: { type: 'hero', settings: { image } },
+        gallery: { type: 'image-gallery', blocks: { tile: { type: 'image', settings: { image: tile } } }, block_order: ['tile'] },
+      },
+      order: ['hero', 'gallery'],
+    })
+    const placed = home('shopify://shop_images/cover.jpg', 'shopify://shop_images/tile.png')
+    expect((await studio.send('PUT', 'api/directions/Quiet', { template: placed })).status).toBe(200)
+    expect(readTemplate(theme, 'listings/quiet/templates/index.json')).toEqual(placed)
+
+    const before = readFileSync(path.join(theme, 'listings/quiet/templates/index.json'), 'utf8')
+    for (const template of [home('https://cdn.shopify.com/cover.jpg', ''), home('', '/Users/me/tile.png')]) {
+      const { status, body } = await studio.send('PUT', 'api/directions/Quiet', { template })
+      expect(status).toBe(400)
+      expect(body.error).toContain('shopify://shop_images/')
+    }
+    expect(readFileSync(path.join(theme, 'listings/quiet/templates/index.json'), 'utf8')).toBe(before)
+  })
+
   it('holds at most three Directions, refuses a name whose folder another has, and switches only to one it has', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme)
@@ -943,7 +966,7 @@ describe('Studio API: section settings', () => {
         { id: 'author', type: 'text', label: 'Author', value: 'Customer name' },
         { id: 'author_detail', type: 'text', label: 'Author detail', value: '' },
       ],
-      media: [{ id: 'image', type: 'image_picker', label: 'Image', set: false }],
+      media: [{ id: 'image', type: 'image_picker', label: 'Image', set: false, value: null }],
     })
   })
 
@@ -1028,7 +1051,7 @@ describe('Studio API: section settings', () => {
     expect((await studio.send('GET', 'api/home/sections/nope')).status).toBe(404)
   })
 
-  it("lists a section's and its blocks' image and video settings, whether set, without making them writable", async () => {
+  it("lists a section's and its blocks' image and video settings with their values", async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: realCatalog })
     const hero = (await studio.addSection('hero')).body.home.at(-1).id
@@ -1040,17 +1063,55 @@ describe('Studio API: section settings', () => {
 
     const read = (await studio.send('GET', `api/home/sections/${hero}`)).body
     expect(read.media).toEqual([
-      { id: 'image', type: 'image_picker', label: 'Image', set: true },
-      { id: 'video', type: 'video', label: 'Video', set: false },
+      { id: 'image', type: 'image_picker', label: 'Image', set: true, value: 'shopify://shop_images/cover.jpg' },
+      { id: 'video', type: 'video', label: 'Video', set: false, value: null },
     ])
     expect(read.settings.map((setting: { id: string }) => setting.id)).not.toContain('image')
     const { blocks } = (await studio.send('GET', `api/home/sections/${gallery}`)).body
-    expect(blocks[0].media).toEqual([{ id: 'image', type: 'image_picker', label: 'Image', set: false }])
+    expect(blocks[0].media).toEqual([{ id: 'image', type: 'image_picker', label: 'Image', set: false, value: null }])
+  })
 
+  it("writes and clears a section's and a block's image in one undo step each", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const hero = (await studio.addSection('hero')).body.home.at(-1).id
+    const gallery = (await studio.addSection('image-gallery')).body.home.at(-1).id
+    const block = readTemplate(theme).sections[gallery].block_order[0]
+
+    const placed = await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: 'shopify://shop_images/cover.jpg' } })
+    expect(placed.status).toBe(200)
+    expect(readTemplate(theme).sections[hero].settings.image).toBe('shopify://shop_images/cover.jpg')
+    const { body } = await studio.send('GET', `api/home/sections/${hero}`)
+    expect(body.media[0]).toMatchObject({ id: 'image', set: true, value: 'shopify://shop_images/cover.jpg' })
+
+    await studio.send('PATCH', `api/home/sections/${gallery}`, { blocks: { [block]: { image: 'shopify://shop_images/tile_1.webp' } } })
+    expect(readTemplate(theme).sections[gallery].blocks[block].settings.image).toBe('shopify://shop_images/tile_1.webp')
+    await studio.send('POST', 'api/undo')
+    expect(readTemplate(theme).sections[gallery].blocks[block].settings).not.toHaveProperty('image')
+    expect(readTemplate(theme).sections[hero].settings.image).toBe('shopify://shop_images/cover.jpg')
+
+    expect((await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: '' } })).status).toBe(200)
+    expect(readTemplate(theme).sections[hero].settings).not.toHaveProperty('image')
+    await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: 'shopify://shop_images/cover.jpg' } })
+    expect((await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: null } })).status).toBe(200)
+    expect(readTemplate(theme).sections[hero].settings).not.toHaveProperty('image')
+  })
+
+  it.each([
+    ['a web link', { settings: { image: 'https://cdn.shopify.com/cover.jpg' } }],
+    ['a local path', { settings: { image: '/Users/me/cover.jpg' } }],
+    ['another shopify:// link', { settings: { image: 'shopify://files/videos/cover.mp4' } }],
+    ['a shop image in a folder', { settings: { image: 'shopify://shop_images/a/cover.jpg' } }],
+    ['a number', { settings: { image: 3 } }],
+    ['a video', { settings: { video: 'shopify://shop_images/cover.jpg' } }],
+  ])('refuses %s as an image and writes nothing', async (_, change) => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const hero = (await studio.addSection('hero')).body.home.at(-1).id
     const before = readFileSync(path.join(theme, home), 'utf8')
-    const { status, body } = await studio.send('PATCH', `api/home/sections/${hero}`, { settings: { image: 'shopify://shop_images/other.jpg' } })
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${hero}`, change)
     expect(status).toBe(400)
-    expect(body.error).toContain('image')
+    expect(body.error).toMatch(/image|video/)
     expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
   })
 

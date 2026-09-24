@@ -1153,7 +1153,7 @@ function StorePicker({
   )
 }
 
-/** Image and video settings, which the Studio doesn't upload: it shows whether each is set and links to the Theme Editor. */
+/** Image and video settings, picked in the Theme Editor: it shows whether each is set, an image's file name, and links to the Theme Editor. */
 function MediaSettings({ media, editor }: { media: MediaSetting[]; editor: string | null }) {
   return media.map((setting) => (
     <div key={setting.id} className="flex flex-col items-start gap-1.5">
@@ -1161,6 +1161,9 @@ function MediaSettings({ media, editor }: { media: MediaSetting[]; editor: strin
         <span className="font-medium">{setting.label}</span>
         <Badge variant={setting.set ? 'secondary' : 'outline'}>{setting.set ? 'Set' : 'Empty'}</Badge>
       </div>
+      {setting.type === 'image_picker' && setting.value ? (
+        <p className="max-w-full truncate text-muted-foreground">{setting.value.replace('shopify://shop_images/', '')}</p>
+      ) : null}
       {editor ? (
         <a
           href={editor}
