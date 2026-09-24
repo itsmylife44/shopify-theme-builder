@@ -119,8 +119,7 @@
   },
   "localization": {
     "country": "Country/region",
-    "language": "Language",
-    "update": "Update"
+    "language": "Language"
   },
   "password": {
     "title": "This shop is private",

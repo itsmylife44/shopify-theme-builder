@@ -1004,18 +1004,54 @@ describe('Country and language selector', () => {
   const header = readFileSync(path.join(catalog, 'header.liquid'), 'utf8')
   const headerSchema = JSON.parse(header.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
 
-  it.each(['footer', 'header'])('lets customers pick a country and a language in the %s, without JavaScript', (name) => {
+  it.each(['footer', 'header'])('lets customers pick a country and a language in the %s from a disclosure list, without JavaScript', (name) => {
     const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
     const form = source.slice(source.indexOf("{% form 'localization'"), source.indexOf('{% endform %}', source.indexOf("{% form 'localization'")))
-    expect(form).toMatch(/{%-? if localization\.available_countries\.size > 1 -?%}\s*<label[^>]*>[^<]*<\/label>\s*<select[^>]*name="country_code"/)
+    // A select that submits on change navigates away on an arrow key (WCAG F37): each choice is its own submit button instead.
+    expect(form).not.toMatch(/<select/)
+    expect(form).toMatch(
+      /{%-? if localization\.available_countries\.size > 1 -?%}\s*<details class="[\w-]+__disclosure"[^>]*>\s*<summary[^>]*>[\s\S]*?{{ 'localization\.country' \| t }}[\s\S]*?{{ localization\.country\.name }} \({{ localization\.country\.currency\.iso_code }} {{ localization\.country\.currency\.symbol }}\)[\s\S]*?<\/summary>/,
+    )
+    expect(form).toMatch(/{% for country in localization\.available_countries %}\s*<li>\s*<button\s+type="submit"\s+name="country_code"\s+value="{{ country\.iso_code }}"/)
     expect(form).toContain('{{ country.name }} ({{ country.currency.iso_code }} {{ country.currency.symbol }})')
-    expect(form).toMatch(/{%-? if localization\.available_languages\.size > 1 -?%}\s*<label[^>]*>[^<]*<\/label>\s*<select[^>]*name="language_code"/)
-    expect(form).toContain('lang="{{ language.iso_code }}"')
+    expect(form).toMatch(
+      /{%-? if localization\.available_languages\.size > 1 -?%}\s*<details class="[\w-]+__disclosure"[^>]*>\s*<summary[^>]*>[\s\S]*?{{ 'localization\.language' \| t }}[\s\S]*?{{ localization\.language\.endonym_name \| capitalize }}[\s\S]*?<\/summary>/,
+    )
+    expect(form).toMatch(/{% for language in localization\.available_languages %}\s*<li>\s*<button\s+type="submit"\s+name="language_code"\s+value="{{ language\.iso_code }}"\s+lang="{{ language\.iso_code }}"/)
     expect(form).toContain('{{ language.endonym_name | capitalize }}')
-    expect(form).toMatch(/<button type="submit"/)
+    // The current choice is marked for screen readers, not only visually.
+    expect(form.match(/aria-current="true"/g)).toHaveLength(2)
+    // Opening one list closes the other.
+    expect(form.match(new RegExp(`<details class="${name}__disclosure" name="${name}-localization"`, 'g'))).toHaveLength(2)
     // Both sections can render the form on one page, so each needs its own id instead of the default localization_form.
     expect(source).toContain(`{% form 'localization', id: '${name[0].toUpperCase()}${name.slice(1)}Localization'`)
     expect(form).not.toMatch(/<script|\son[a-z]+=/)
+  })
+
+  it.each(['footer', 'header'])('shows nothing in the %s that a script hides once it loads, so nothing shifts', (name) => {
+    const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
+    expect(source).not.toMatch(/requestSubmit/)
+    expect(source).not.toMatch(/:defined \.[\w-]+__localization button/)
+    expect(source).not.toContain("'localization.update'")
+  })
+
+  it.each(['footer', 'header'])('styles the %s lists from the style system, with 24px targets and the current choice underlined', (name) => {
+    const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
+    const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    expect(css).toMatch(new RegExp(`\\.${name}__disclosure-list {[^}]*position: absolute;[^}]*max-height: [^;]+;[^}]*overflow-y: auto;[^}]*border: var\\(--border-width\\) solid var\\(--color-border-subtle\\);[^}]*background-color: var\\(--color-background\\);`))
+    expect(css).toMatch(new RegExp(`\\.${name}__disclosure-option {[^}]*min-block-size: var\\(--target-size-min\\);`))
+    expect(css).toMatch(new RegExp(`\\.${name}__disclosure-option\\[aria-current='true'\\][^{]*{[^}]*text-decoration: underline;`))
+  })
+
+  it.each([
+    ['footer', 'footer-localization'],
+    ['header', 'header-menu'],
+  ])('closes the open %s list with Escape and puts focus back on its button', (name, element) => {
+    const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
+    const script = source.match(/{% javascript %}([\s\S]*){% endjavascript %}/)![1]
+    expect(source).toContain(`<${element}`)
+    expect(script).toMatch(new RegExp(`event\\.key === 'Escape'[^\\n]*\\.${name}__disclosure\\[open\\]`))
+    expect(script).toMatch(/\.querySelector\('summary'\)\.focus\(\)/)
   })
 
   it('shows the selector in the header only when the Merchant turns it on', () => {
@@ -1027,15 +1063,6 @@ describe('Country and language selector', () => {
     const drawer = header.slice(header.indexOf('<dialog id="HeaderDrawer"'), header.indexOf('</dialog>', header.indexOf('<dialog id="HeaderDrawer"')))
     expect(drawer).toContain("{{ header_localization | replace: 'Header', 'HeaderDrawer' }}")
     expect(header).toMatch(/\.header__menu-button ~ \.header__icons \.header__localization {\s*display: none;/)
-  })
-
-  it.each([
-    ['footer', 'footer-localization'],
-    ['header', 'header-menu'],
-  ])('submits the %s selector on change with JavaScript and shows its Update button only without it', (name, element) => {
-    const source = readFileSync(path.join(catalog, `${name}.liquid`), 'utf8')
-    expect(source).toMatch(/\.form\??\.requestSubmit\(\)/)
-    expect(source).toMatch(new RegExp(`${element}:defined \\.${name}__localization button {\\s*display: none;`))
   })
 })
 
@@ -3203,6 +3230,8 @@ describe('Buttons', () => {
       for (const [, tag, content] of read(file).matchAll(/(<button\b[^>]*>)([\s\S]*?)<\/button>/g)) {
         // Icon controls (close, menu, arrows, a video cover, a product image to zoom) hold only an SVG or an image; Liquid tags show no text.
         if (!content.replace(/<svg[\s\S]*?<\/svg>|{{[\s\S]*?image_tag[\s\S]*?}}|{%[\s\S]*?%}|<[^>]+>/g, '').trim()) continue
+        // A country or language is an option of a disclosure list, styled as a list item, not a button.
+        if (/class="[\w-]+__disclosure-option"/.test(tag)) continue
         expect(tag, file).toMatch(/class="[^"]*\bbutton(--secondary)?\b/)
       }
       for (const [tag] of read(file).matchAll(/<input\b[^>]*type="submit"[^>]*>/g)) {
