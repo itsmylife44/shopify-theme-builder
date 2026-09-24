@@ -1260,7 +1260,7 @@ describe('Studio API: store resource settings', () => {
     const studio = await openStudio(fixtureTheme())
     const { status, body } = await studio.send('GET', 'api/store')
     expect(status).toBe(409)
-    expect(body.error).toContain('shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation,write_files`')
+    expect(body.error).toContain('shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales`')
   })
 })
 
@@ -1359,7 +1359,7 @@ describe("Studio API: images in the shop's Files", () => {
     const studio = await openStudio(fixtureTheme())
     const { status, body } = await studio.send('POST', 'api/files', { path: localImage() })
     expect(status).toBe(409)
-    expect(body.error).toContain('`shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation,write_files`')
+    expect(body.error).toContain('`shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales`')
   })
 
   it("answers Shopify's error when it can't process the image", async () => {
