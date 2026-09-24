@@ -15,7 +15,7 @@
     assign carousel = true
   endif
 %}
-<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="collection-list__inner">
     {% if section.settings.heading != blank %}
       <h2 class="collection-list__heading">{{ section.settings.heading }}</h2>
@@ -118,7 +118,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .collection-list__grid {
@@ -341,6 +341,18 @@
         { "value": "text_list", "label": "t:options.layout.text_list" }
       ],
       "default": "grid"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

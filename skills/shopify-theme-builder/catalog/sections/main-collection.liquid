@@ -13,7 +13,7 @@
   endif
 %}
 
-<div class="main-collection full-width color-{{ section.settings.color_scheme }}">
+<div class="main-collection full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   <div class="main-collection__inner">
     <div class="main-collection__header">
       <h1 class="main-collection__title">{{ collection.title }}</h1>
@@ -263,7 +263,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .main-collection__header {
@@ -528,6 +528,18 @@
       "id": "show_quick_add",
       "label": "t:labels.show_quick_add",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

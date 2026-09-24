@@ -1,5 +1,5 @@
 {% comment %}The 404 page: a heading and text, a search form and a link back to the shop.{% endcomment %}
-<div class="basic-page basic-page--center full-width color-{{ section.settings.color_scheme }}">
+<div class="basic-page basic-page--center full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   {% if section.settings.heading != blank %}
     <h1>{{ section.settings.heading }}</h1>
   {% endif %}
@@ -72,6 +72,18 @@
       "id": "button_label",
       "label": "t:labels.button_label",
       "default": "Continue shopping"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

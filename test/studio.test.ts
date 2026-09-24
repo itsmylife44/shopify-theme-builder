@@ -1134,6 +1134,18 @@ describe('Studio API: section settings', () => {
           { value: 'portraits', label: 'With portraits' },
         ],
       },
+      {
+        id: 'spacing',
+        type: 'select',
+        label: 'Section spacing',
+        value: 'theme',
+        options: [
+          { value: 'none', label: 'None' },
+          { value: 'tight', label: 'Tight' },
+          { value: 'theme', label: 'Theme default' },
+          { value: 'loose', label: 'Loose' },
+        ],
+      },
     ])
     expect(body.blocks).toHaveLength(3)
     expect(body.blocks[0]).toEqual({
@@ -1188,6 +1200,15 @@ describe('Studio API: section settings', () => {
     const read = (await studio.send('GET', `api/home/sections/${id}`)).body
     expect(read.settings[0].value).toBe('Dicono di noi')
     expect(read.blocks[1].settings[1].value).toBe('Giulia')
+  })
+
+  it("writes a section's spacing like any other option, and refuses one off its options", async () => {
+    const { theme, studio, id } = await withTestimonials()
+    expect((await studio.send('PATCH', `api/home/sections/${id}`, { settings: { spacing: 'tight' } })).status).toBe(200)
+    expect(readTemplate(theme).sections[id].settings.spacing).toBe('tight')
+    const { status, body } = await studio.send('PATCH', `api/home/sections/${id}`, { settings: { spacing: 'huge' } })
+    expect(status).toBe(400)
+    expect(body.error).toContain('spacing')
   })
 
   it.each([

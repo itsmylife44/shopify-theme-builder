@@ -1,6 +1,6 @@
 {% comment %}A grid of tiles, each a big value and a label, for technical or material facts.{% endcomment %}
 {% assign text_alignment = section.settings.text_alignment | replace: 'left', 'start' | replace: 'right', 'end' %}
-<div class="spec-tiles full-width spec-tiles--{{ section.settings.tile_style }} color-{{ section.settings.color_scheme }}">
+<div class="spec-tiles full-width spec-tiles--{{ section.settings.tile_style }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
   <div class="spec-tiles__inner" style="--text-alignment: {{ text_alignment }};">
     {% if section.settings.heading != blank %}
       <h2 class="spec-tiles__heading">{{ section.settings.heading }}</h2>
@@ -28,7 +28,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
     text-align: var(--text-alignment);
   }
 
@@ -125,6 +125,18 @@
       "id": "text_alignment",
       "label": "t:labels.alignment",
       "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "blocks": [

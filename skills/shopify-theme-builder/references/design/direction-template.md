@@ -30,9 +30,11 @@
 +------------------------------------------+
 | <first viewport: what sits where>        |
 | <image-led or type-led, dense or airy,   |
-| what moves>                              |
+| what moves; spacing: none, tight, theme  |
+| or loose>                                |
 +------------------------------------------+
-| <next section, 6 to 8 in all>            |
+| <next section, 6 to 8 in all, its        |
+| spacing too>                             |
 +------------------------------------------+
 ```
 

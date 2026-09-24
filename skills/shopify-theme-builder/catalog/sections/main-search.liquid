@@ -15,7 +15,7 @@
   assign terms = search.terms | escape
 %}
 
-<div class="main-search full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="main-search full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="main-search__inner">
     <div class="main-search__header">
       <h1 class="main-search__title">{{ 'search.title' | t }}</h1>
@@ -309,7 +309,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .main-search__header {
@@ -634,6 +634,18 @@
       "id": "show_quick_add",
       "label": "t:labels.show_quick_add",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

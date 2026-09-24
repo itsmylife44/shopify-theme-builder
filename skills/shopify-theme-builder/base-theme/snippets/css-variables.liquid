@@ -143,9 +143,11 @@
     --line-height-heading: 1.2;
     --line-height-body: 1.5;
     {% comment %}
-      Spacing: padding, margins and gaps take a step of this scale. Sections pad their top and bottom with
-      --section-spacing, and grids of items space them with --grid-gap (--grid-row-gap between rows of cards with
-      text): both follow the density, halved (the gaps three quarters) on mobile.
+      Spacing: padding, margins and gaps take a step of this scale. Sections pad their top with
+      --section-spacing-start and their bottom with --section-spacing, and grids of items space them with --grid-gap
+      (--grid-row-gap between rows of cards with text): both follow the density, halved (the gaps three quarters) on
+      mobile. A section's spacing setting scales --section-spacing-theme on the section (critical.css), and the top
+      drops after a section on the same color scheme (below).
     {% endcomment %}
     --space-2xs: 0.25rem;
     --space-xs: 0.5rem;
@@ -154,7 +156,9 @@
     --space-lg: 1.5rem;
     --space-xl: 2rem;
     --space-2xl: 3rem;
-    --section-spacing: {{ section_spacing | divided_by: 32.0 }}rem;
+    --section-spacing-theme: {{ section_spacing | divided_by: 32.0 }}rem;
+    --section-spacing: var(--section-spacing-theme);
+    --section-spacing-start: var(--section-spacing);
     --grid-gap: {{ grid_gap | times: 0.75 | divided_by: 16 }}rem;
     --grid-row-gap: calc(var(--grid-gap) * 1.5);
     {% # Content widths: forms, a text column beside media, a column of running text (about 70 characters a line). %}
@@ -221,7 +225,7 @@
 
   @media (min-width: 750px) {
     :root {
-      --section-spacing: {{ section_spacing | divided_by: 16.0 }}rem;
+      --section-spacing-theme: {{ section_spacing | divided_by: 16.0 }}rem;
       --grid-gap: {{ grid_gap | divided_by: 16.0 }}rem;
     }
   }
@@ -283,6 +287,13 @@
         background-image: {{ scheme.settings.background_gradient }};
       {% endif %}
       color: var(--color-foreground);
+    }
+    {% comment %}
+      Two neighbours on one scheme share one gap: a section after one on the same scheme drops its top padding,
+      unless that one ends in media (media-edge) or has no spacing, where the top padding is the only gap.
+    {% endcomment %}
+    .shopify-section:has(> .color-{{ scheme.id }}:not(.media-edge, [data-spacing='none'])) + .shopify-section > .color-{{ scheme.id }} {
+      --section-spacing-start: 0px;
     }
   {% endfor %}
 {% endstyle %}

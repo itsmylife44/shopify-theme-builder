@@ -1,5 +1,5 @@
 {% comment %}The blog page: its articles as cards with image, title, date and excerpt, with tag links and pagination.{% endcomment %}
-<div class="main-blog full-width color-{{ section.settings.color_scheme }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="main-blog full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="main-blog__inner">
     <h1 class="main-blog__title">{{ blog.title | escape }}</h1>
 
@@ -89,7 +89,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .main-blog__title {
@@ -244,6 +244,18 @@
       "id": "show_author",
       "label": "t:labels.show_author",
       "default": true
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [

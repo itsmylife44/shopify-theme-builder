@@ -22,7 +22,7 @@
   endif
 %}
 
-<div class="marquee full-width marquee--{{ section.settings.item_style }} color-{{ section.settings.color_scheme }}{% if animated %} marquee--animated{% endif %}">
+<div class="marquee full-width marquee--{{ section.settings.item_style }} color-{{ section.settings.color_scheme }}{% if animated %} marquee--animated{% endif %}" data-spacing="{{ section.settings.spacing }}">
   <div class="marquee__viewport">
     <div class="marquee__track" style="--marquee-duration: {{ duration }}s;">
       {% for copy in (1..copies) %}
@@ -63,7 +63,7 @@
     display: grid;
     grid-template-columns: var(--content-grid);
     row-gap: var(--space-sm);
-    padding-block: min(var(--section-spacing), var(--space-2xl));
+    padding-block: min(var(--section-spacing-start), var(--space-2xl)) min(var(--section-spacing), var(--space-2xl));
   }
 
   .marquee--badge {
@@ -229,6 +229,18 @@
         }
       ],
       "default": "medium"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "blocks": [

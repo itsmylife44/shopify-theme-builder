@@ -8,6 +8,7 @@
 
 <div
   class="type-banner full-width color-{{ section.settings.color_scheme }}"
+  data-spacing="{{ section.settings.spacing }}"
   style="--text-align: {{ section.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }};"
 >
   <div class="type-banner__inner">
@@ -42,7 +43,7 @@
     display: grid;
     justify-items: var(--text-align);
     gap: var(--space-xl);
-    padding-block: var(--section-spacing);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
     text-align: var(--text-align);
   }
 
@@ -131,6 +132,18 @@
       "type": "url",
       "id": "link",
       "label": "t:labels.link"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
     }
   ],
   "presets": [
