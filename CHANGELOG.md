@@ -130,6 +130,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - The media treatment and tint are for product images only: the product card, the product page gallery, featured product, product results in search and predictive search, quick add, and collection images. Every other image (image with text, editorial split, lookbook, multicolumn, image gallery, blog posts and the blog page, article results in search, video poster, newsletter, contact form, process steps, timeline) always fills its box, with no inset, no tint behind it and no multiply blend, so a lifestyle photo never shrinks into a grey frame.
 - Bordered and surface product cards are one field instead of a box in a box: the image fills the card's top edge and both sides, with the card's radius as its only corner, and only the text is padded, by 1rem (was 0.75rem, also for multicolumn cards). A surface card, product or multicolumn, sits on the media tint when one is set and the color scheme's text reads on it at 4.5:1, so the image and text share one tint; otherwise it keeps 5% of the text color. Plain cards don't change.
+- A detailed product card's sold out or sale badge sits over the image's top start corner instead of in the text, so the titles of cards with and without a badge line up. Screen readers still read it.
 
 ### Fixed
 

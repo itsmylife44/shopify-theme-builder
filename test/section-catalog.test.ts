@@ -2971,6 +2971,11 @@ describe('Card anatomies', () => {
     expect(card).toContain("'product_card.rating' | t:")
     expect(card).toMatch(/{% if product\.available == false %}[\s\S]*'product\.sold_out' \| t[\s\S]*{% elsif product\.compare_at_price > product\.price %}[\s\S]*'product_card\.sale' \| t/)
     expect(critical).toMatch(/\.product-card__badge {[^}]*border-radius: var\(--style-border-radius-badges\)/)
+    // The badge sits over the image's top start corner, out of the text's flow so titles line up, and outside
+    // the aria-hidden image link so screen readers still read it.
+    expect(card).toMatch(/<\/a>\s*{% if anatomy == 'detailed' %}\s*{% if product\.available == false %}\s*<p class="product-card__badge/)
+    expect(critical).toMatch(/\.product-card {[^}]*position: relative/)
+    expect(critical).toMatch(/\.product-card__badge {[^}]*position: absolute;[^}]*inset-block-start: var\(--space-xs\);[^}]*inset-inline-start: var\(--space-xs\)/)
     // A sale shows the price it replaces, crossed out, beside the sale price.
     expect(card).toMatch(/{% if anatomy == 'detailed' and product\.compare_at_price > product\.price %}[\s\S]*<span class="price__sale">{{ product\.price \| money }}<\/span>[\s\S]*<s class="product-card__compare-at">/)
     expect(card).toContain("'product_card.review_count' | t: count: review_count")
