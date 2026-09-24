@@ -173,7 +173,13 @@
     "previous": "Previous announcement"
   },
   "collection_list": {
-    "collection_title": "Example collection"
+    "collection_title": "Example collection",
+    "previous": "Previous collections",
+    "next": "Next collections",
+    "product_count": {
+      "one": "{{ count }} product",
+      "other": "{{ count }} products"
+    }
   },
   "slideshow": {
     "label": "Slideshow",

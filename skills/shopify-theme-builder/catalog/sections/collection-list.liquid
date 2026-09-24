@@ -1,32 +1,64 @@
-{% comment %}A grid of collections, each with its image and title.{% endcomment %}
-<div class="collection-list full-width color-{{ section.settings.color_scheme }}">
+{% comment %}Collections with their image and title in a grid, a large first tile or a carousel, or as a text list.{% endcomment %}
+{% liquid
+  assign count = section.settings.collections.size
+  if section.settings.collections == blank
+    assign count = section.settings.columns
+  endif
+  assign text_list = false
+  assign title_class = 'text-h5'
+  if section.settings.layout == 'text_list'
+    assign text_list = true
+    assign title_class = 'text-h3'
+  endif
+  assign carousel = false
+  if section.settings.layout == 'carousel' and count > 1
+    assign carousel = true
+  endif
+%}
+<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}">
   <div class="collection-list__inner">
     {% if section.settings.heading != blank %}
       <h2 class="collection-list__heading">{{ section.settings.heading }}</h2>
     {% endif %}
 
+    {% if carousel %}<collection-list-carousel class="collection-list__carousel">{% endif %}
     <ul
+      id="CollectionList-{{ section.id }}"
       class="collection-list__grid"
       role="list"
       style="--columns: {{ section.settings.columns }};"
+      {% if carousel %}tabindex="0"{% endif %}
     >
       {% if section.settings.collections != blank %}
         {% for collection in section.settings.collections %}
+          {% liquid
+            assign sizes = '(min-width: 750px) 33vw, 50vw'
+            if section.settings.layout == 'large_first' and forloop.first
+              assign sizes = '(min-width: 750px) 66vw, 100vw'
+            endif
+          %}
           <li>
             <a class="collection-list__card" href="{{ collection.url }}">
-              <span class="collection-list__image">
-                {% if collection.featured_image %}
-                  {{
-                    collection.featured_image
-                    | image_url: width: 1200
-                    | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 33vw, 50vw', loading: 'lazy', alt: ''
-                  }}
-                {% else %}
-                  {% assign placeholder = forloop.index0 | modulo: 6 | plus: 1 %}
-                  {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'placeholder collection-list__placeholder' }}
-                {% endif %}
-              </span>
-              <span class="collection-list__title text-h5">{{ collection.title | escape }}</span>
+              {% unless text_list %}
+                <span class="collection-list__image">
+                  {% if collection.featured_image %}
+                    {{
+                      collection.featured_image
+                      | image_url: width: 1200
+                      | image_tag: widths: '300, 450, 600, 900, 1200', sizes: sizes, loading: 'lazy', alt: ''
+                    }}
+                  {% else %}
+                    {% assign placeholder = forloop.index0 | modulo: 6 | plus: 1 %}
+                    {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'placeholder collection-list__placeholder' }}
+                  {% endif %}
+                </span>
+              {% endunless %}
+              <span class="collection-list__title {{ title_class }}">{{ collection.title | escape }}</span>
+              {% if text_list %}
+                <span class="collection-list__count">
+                  {{- 'collection_list.product_count' | t: count: collection.products_count -}}
+                </span>
+              {% endif %}
             </a>
           </li>
         {% endfor %}
@@ -34,14 +66,43 @@
         {% for i in (1..section.settings.columns) %}
           {% assign placeholder = i | minus: 1 | modulo: 6 | plus: 1 %}
           <li class="collection-list__card">
-            <span class="collection-list__image">
-              {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'placeholder collection-list__placeholder' }}
-            </span>
-            <span class="collection-list__title text-h5">{{ 'collection_list.collection_title' | t }}</span>
+            {% unless text_list %}
+              <span class="collection-list__image">
+                {{ 'collection-' | append: placeholder | placeholder_svg_tag: 'placeholder collection-list__placeholder' }}
+              </span>
+            {% endunless %}
+            <span class="collection-list__title {{ title_class }}">{{ 'collection_list.collection_title' | t }}</span>
           </li>
         {% endfor %}
       {% endif %}
     </ul>
+    {% if carousel %}
+      <div class="collection-list__controls">
+        <button
+          type="button"
+          class="collection-list__control"
+          data-step="-1"
+          aria-controls="CollectionList-{{ section.id }}"
+          aria-label="{{ 'collection_list.previous' | t }}"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="collection-list__control"
+          data-step="1"
+          aria-controls="CollectionList-{{ section.id }}"
+          aria-label="{{ 'collection_list.next' | t }}"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
+      </div>
+      </collection-list-carousel>
+    {% endif %}
   </div>
 </div>
 
@@ -70,9 +131,19 @@
     list-style: none;
   }
 
+  /* Large first tile: the first collection across the row on mobile, two rows and two columns on desktop. */
+  .collection-list--large_first .collection-list__grid > :first-child {
+    grid-column: 1 / -1;
+  }
+
   @media (min-width: 750px) {
     .collection-list__grid {
       grid-template-columns: repeat(var(--columns), 1fr);
+    }
+
+    .collection-list--large_first .collection-list__grid > :first-child {
+      grid-column: span 2;
+      grid-row: span 2;
     }
   }
 
@@ -105,7 +176,114 @@
     text-decoration: underline;
     text-underline-offset: 0.3em;
   }
+
+  /* Text list: the titles large, one per row, each with its product count, a divider between them. */
+  .collection-list--text_list .collection-list__grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .collection-list--text_list .collection-list__grid > * + * {
+    border-block-start: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .collection-list--text_list .collection-list__card {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+    padding-block: var(--space-md);
+  }
+
+  .collection-list__count {
+    opacity: var(--opacity-muted);
+  }
+
+  /* Carousel: two cards at a time on mobile, as many as the columns on desktop, snapped as customers scroll or step. */
+  .collection-list__carousel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+
+  .collection-list--carousel .collection-list__grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - var(--grid-gap)) / 2);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .collection-list--carousel .collection-list__grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .collection-list--carousel .collection-list__grid > * {
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 750px) {
+    .collection-list--carousel .collection-list__grid {
+      grid-auto-columns: calc((100% - (var(--columns) - 1) * var(--grid-gap)) / var(--columns));
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .collection-list--carousel .collection-list__grid {
+      scroll-behavior: smooth;
+    }
+  }
+
+  .collection-list__controls {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xs);
+  }
+
+  .collection-list__control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: var(--space-xs);
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .collection-list__control svg {
+    width: 1.5rem;
+  }
+
+  .collection-list__control svg:dir(rtl) {
+    scale: -1 1;
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  class CollectionListCarousel extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('.collection-list__grid');
+      this.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-step]');
+        if (!button) return;
+        // One card's width and its gap; right to left, forward scrolls toward negative scrollLeft.
+        const [first, second] = this.list.children;
+        const distance = Math.abs(second.offsetLeft - first.offsetLeft);
+        const direction = getComputedStyle(this).direction === 'rtl' ? -1 : 1;
+        this.list.scrollBy(Number(button.dataset.step) * distance * direction, 0);
+      });
+    }
+  }
+
+  if (!customElements.get('collection-list-carousel')) customElements.define('collection-list-carousel', CollectionListCarousel);
+{% endjavascript %}
 
 {% schema %}
 {
@@ -138,11 +316,35 @@
       "max": 5,
       "step": 1,
       "default": 3
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "grid", "label": "t:options.layout.grid" },
+        { "value": "large_first", "label": "t:options.layout.large_first" },
+        { "value": "carousel", "label": "t:options.layout.carousel" },
+        { "value": "text_list", "label": "t:options.layout.text_list" }
+      ],
+      "default": "grid"
     }
   ],
   "presets": [
     {
       "name": "t:general.collection_list"
+    },
+    {
+      "name": "t:general.collection_list_large_first",
+      "settings": { "layout": "large_first" }
+    },
+    {
+      "name": "t:general.collection_list_carousel",
+      "settings": { "layout": "carousel" }
+    },
+    {
+      "name": "t:general.collection_list_text_list",
+      "settings": { "layout": "text_list" }
     }
   ]
 }

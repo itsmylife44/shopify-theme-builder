@@ -141,7 +141,10 @@
     "image_with_text_overlap": "Image with text: overlapping panel",
     "image_with_text_full_bleed": "Image with text: full bleed",
     "newsletter_split": "Newsletter: split with an image",
-    "newsletter_inline": "Newsletter: inline"
+    "newsletter_inline": "Newsletter: inline",
+    "collection_list_large_first": "Collection list: large first tile",
+    "collection_list_carousel": "Collection list: carousel",
+    "collection_list_text_list": "Collection list: text list"
   },
   "labels": {
     "accent": "Accent",
@@ -367,7 +370,9 @@
       "overlap": "Overlapping panel",
       "full_bleed": "Full bleed",
       "split": "Split with an image",
-      "inline": "Inline"
+      "inline": "Inline",
+      "large_first": "Large first tile",
+      "text_list": "Text list"
     },
     "cart_type": {
       "drawer": "Drawer",

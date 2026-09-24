@@ -10,6 +10,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 - Newsletter layouts: a centered heading, text and signup form (the default, as before), split with an image on one side (a new optional image, Shopify's placeholder when blank) and the signup on the other, stacked on mobile, or inline, the heading and text beside the form in one slim row on desktop. Each layout is also a named preset, like "Newsletter: inline".
 
+- Collection list layouts: a grid of collection cards (the default, as before), the first collection as a large tile spanning two rows and two columns on desktop, a carousel with previous and next buttons (never moving on its own, mirrored in right-to-left shops), or a text list of the collection names in large type with their product counts and no images. Each layout is also a named preset, like "Collection list: large first tile".
+
 - Image with text layouts: the image and text side by side (the default, as before), the text on a panel in the color scheme's background overlapping the image's edge (stacked under the image on mobile), or the image full bleed to the edge of the page with the text in a narrow column beside it. Each works with the image on either side and is also a named preset, like "Image with text: overlapping panel".
 
 - Testimonials layouts: a grid of quotes (the default, as before), one large quote centered in the heading style above the others, a carousel with previous and next buttons (one quote at a time on mobile, two on larger screens, never moving on its own, mirrored in right-to-left shops), or with a small portrait beside each author, from a new optional image on each testimonial. Each layout is also a named preset, like "Testimonials: large quote".
