@@ -878,9 +878,61 @@ describe('Collection list', () => {
 
   it('is a catalog section with a description, a color scheme and a preset', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
-    expect(source).toContain('class="collection-list full-width color-{{ section.settings.color_scheme }}"')
+    expect(source).toContain(
+      'class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}"',
+    )
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.collection_list' }])
+    // A Theme made before the layouts keeps its grid: the first preset sets no layout.
+    expect(schema.presets[0]).toEqual({ name: 't:general.collection_list' })
+  })
+
+  it('lays the collections out as a grid by default, a large first tile, a carousel or a text list', () => {
+    const layout = schema.settings.find((setting: { id?: string }) => setting.id === 'layout')
+    expect(layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'grid' })
+    expect(values(layout)).toEqual(['grid', 'large_first', 'carousel', 'text_list'])
+  })
+
+  it('offers each other layout as a named preset with the same blocks as the first', () => {
+    expect(schema.presets.slice(1)).toEqual([
+      { name: 't:general.collection_list_large_first', settings: { layout: 'large_first' } },
+      { name: 't:general.collection_list_carousel', settings: { layout: 'carousel' } },
+      { name: 't:general.collection_list_text_list', settings: { layout: 'text_list' } },
+    ])
+  })
+
+  it('spans the first collection two rows and two columns on desktop in the large first tile layout, across the row on mobile', () => {
+    const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    expect(css).toMatch(/\.collection-list--large_first \.collection-list__grid > :first-child {\s*grid-column: 1 \/ -1;/)
+    const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+    expect(desktop).toMatch(/\.collection-list--large_first \.collection-list__grid > :first-child {\s*grid-column: span 2;\s*grid-row: span 2;/)
+    // The large tile asks for a larger image.
+    expect(source).toMatch(/sizes = '\(min-width: 750px\) 66vw, 100vw'/)
+  })
+
+  it('scrolls the collections in the carousel layout, with previous and next buttons, never on its own, mirrored right to left', () => {
+    const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    expect(source).toMatch(/<collection-list-carousel/)
+    expect(css).toMatch(/\.collection-list--carousel \.collection-list__grid {[^}]*scroll-snap-type: x mandatory;/)
+    expect(source).toContain('tabindex="0"')
+    expect(source).toContain(`aria-label="{{ 'collection_list.previous' | t }}"`)
+    expect(source).toContain(`aria-label="{{ 'collection_list.next' | t }}"`)
+    expect(css).toMatch(/\.collection-list__control svg:dir\(rtl\) {\s*scale: -1 1;/)
+    expect(source).toContain("getComputedStyle(this).direction === 'rtl'")
+    expect(source).not.toMatch(/setInterval|autoplay/)
+    // Smooth scrolling is motion: only when the customer has not asked for less.
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) {\s*\.collection-list--carousel \.collection-list__grid {\s*scroll-behavior: smooth;/)
+    const locale = JSON.parse(readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.collection_list).toMatchObject({ previous: expect.any(String), next: expect.any(String) })
+  })
+
+  it('lists the collection titles large with their product count and no images in the text list layout, a divider between them', () => {
+    const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+    expect(source).toMatch(/{% unless text_list %}\s*<span class="collection-list__image">/)
+    expect(source).toContain("'collection_list.product_count' | t: count: collection.products_count")
+    expect(css).toMatch(/\.collection-list--text_list \.collection-list__grid {[^}]*grid-template-columns: 1fr;/)
+    expect(css).toMatch(/\.collection-list--text_list \.collection-list__grid > \* \+ \* {\s*border-block-start: var\(--border-width\) solid var\(--color-border-subtle\);/)
+    const locale = JSON.parse(readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.collection_list.product_count).toEqual({ one: '{{ count }} product', other: '{{ count }} products' })
   })
 
   it('shows the picked collections with their image and title, and native placeholders when there are none', () => {

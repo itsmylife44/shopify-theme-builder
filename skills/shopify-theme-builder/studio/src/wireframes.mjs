@@ -201,7 +201,24 @@ function layoutStack(stack, x, y, width, height, center, padding) {
  */
 export const wireframes = {
   'blog-posts': { 't:general.blog_posts': { wireframe: 'heading / 3* image title text x3' } },
-  'collection-list': { 't:general.collection_list': { wireframe: 'heading / 3* image title x3' } },
+  'collection-list': {
+    't:general.collection_list': {
+      wireframe: 'heading / 3* image title x3',
+      description: 'Collection images with their titles in a grid',
+    },
+    't:general.collection_list_large_first': {
+      wireframe: 'heading / 4* image title | image title image title',
+      description: 'The first collection large, the others beside it',
+    },
+    't:general.collection_list_carousel': {
+      wireframe: 'heading / 3* image title x3 / center dots',
+      description: 'Collections in a row, with arrows to step through',
+    },
+    't:general.collection_list_text_list': {
+      wireframe: 'heading / 4* heading rule heading rule heading',
+      description: 'Collection names in large type with product counts',
+    },
+  },
   'comparison-table': { 't:general.comparison_table': { wireframe: 'center heading / line x3 / rule / line x3 / rule / line x3' } },
   'contact-form': { 't:general.contact_form': { wireframe: 'heading / input | input / 2* input button' } },
   'custom-liquid': { 't:general.custom_liquid': { wireframe: 'panel line text line' } },
