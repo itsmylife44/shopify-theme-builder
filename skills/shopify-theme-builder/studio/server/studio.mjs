@@ -181,6 +181,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       })
       const storeResources = storeReader(cli, store)
       route('/api/store', 'GET', storeResources)
+      route('/api/files', 'POST', async (req) => uploadImage(cli, store, await readBody(req)))
       route('/api/brand', 'PUT', async (req) => {
         const change = await readBody(req)
         return write(() => setBrand(theme, change))
@@ -287,6 +288,9 @@ class NotFound extends HttpError {
 }
 class Conflict extends HttpError {
   status = 409
+}
+class BadGateway extends HttpError {
+  status = 502
 }
 
 /** @type {Map<string, Buffer | null> | null} While a Studio write runs: each file it touched, as it was before (null: absent). */
@@ -1631,13 +1635,43 @@ function listCustomSections(theme, catalog, template) {
   )
 }
 
-// Needs read_products for collections and products, read_online_store_navigation for menus.
-const storeScopes = 'read_products,read_online_store_navigation'
+// Needs read_products for collections and products, read_online_store_navigation for menus, write_files for images.
+const storeScopes = 'read_products,read_online_store_navigation,write_files'
 const storeQuery = `{
   collections(first: 250, sortKey: TITLE) { nodes { handle title productsCount { count } } }
   products(first: 250, sortKey: TITLE) { nodes { handle title } }
   menus(first: 250) { nodes { handle title } }
 }`
+
+/**
+ * Runs an Admin API query, or a mutation with `mutate`, through `shopify store execute` and the auth
+ * `shopify store auth` stored (ADR-0006, ADR-0008), and answers its data.
+ * @param {string} cli
+ * @param {string} store
+ * @param {string} query
+ * @param {{ variables?: object, mutate?: boolean }} [options]
+ * @returns {Promise<any>}
+ */
+async function storeExecute(cli, store, query, { variables, mutate = false } = {}) {
+  const args = ['store', 'execute', '--store', store, '--query', query, '--json']
+  if (variables) args.push('--variables', JSON.stringify(variables))
+  // Without --allow-mutations the CLI refuses anything but a query.
+  if (mutate) args.push('--allow-mutations')
+  /** @type {string} */
+  let output
+  try {
+    output = (await promisify(execFile)(cli, args, { timeout: 60_000 })).stdout
+  } catch (error) {
+    // No stored auth, or auth without a scope the call needs.
+    const { stderr, message } = /** @type {{ stderr?: string, message: string }} */ (error)
+    throw new Conflict(
+      `The Studio reaches the store through the Shopify CLI. ` +
+        `Run \`shopify store auth --store ${store} --scopes ${storeScopes}\` in a terminal, then try again. ` +
+        `The CLI said: ${(stderr || message).replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-300)}`,
+    )
+  }
+  return JSON.parse(output.slice(output.indexOf('{')))
+}
 
 /**
  * @typedef {{ handle: string, title: string }} StoreResource
@@ -1646,8 +1680,8 @@ const storeQuery = `{
  */
 
 /**
- * Reads the store's collections, products and menus with the Admin API, through `shopify store execute` and the
- * auth `shopify store auth` stored (ADR-0006). The answer is kept a minute, so the inspector opens fast.
+ * Reads the store's collections, products and menus with the Admin API (ADR-0006). The answer is kept a minute,
+ * so the inspector opens fast.
  * @param {string} cli
  * @param {string} store
  * @returns {() => Promise<StoreResources>}
@@ -1673,21 +1707,8 @@ function storeReader(cli, store) {
  * @returns {Promise<StoreResources>}
  */
 async function readStore(cli, store) {
-  /** @type {string} */
-  let output
-  try {
-    // ponytail: the first 250 of each; a search field querying the store is the upgrade for bigger shops.
-    // No --allow-mutations: the CLI refuses anything but a query.
-    output = (await promisify(execFile)(cli, ['store', 'execute', '--store', store, '--query', storeQuery, '--json'], { timeout: 60_000 })).stdout
-  } catch (error) {
-    const { stderr, message } = /** @type {{ stderr?: string, message: string }} */ (error)
-    throw new Conflict(
-      `The Studio lists the store's collections, products and menus through the Shopify CLI. ` +
-        `Run \`shopify store auth --store ${store} --scopes ${storeScopes}\` in a terminal, then try again. ` +
-        `The CLI said: ${(stderr || message).replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ').trim().slice(-300)}`,
-    )
-  }
-  const data = JSON.parse(output.slice(output.indexOf('{')))
+  // ponytail: the first 250 of each; a search field querying the store is the upgrade for bigger shops.
+  const data = await storeExecute(cli, store, storeQuery)
   /** @param {{ nodes?: StoreResource[] } | undefined} connection */
   const list = (connection) => (connection?.nodes ?? []).map(({ handle, title }) => ({ handle, title }))
   /** @type {{ nodes?: (StoreResource & { productsCount?: { count: number } })[] } | undefined} */
@@ -1701,6 +1722,91 @@ async function readStore(cli, store) {
     products: list(data.products),
     menus: list(data.menus),
   }
+}
+
+/** The images Shopify's Files take, by extension. */
+const imageTypes = /** @type {Record<string, string>} */ ({
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+})
+const maxImageBytes = 20 * 1024 * 1024
+const stageMutation = `mutation ($input: [StagedUploadInput!]!) {
+  stagedUploadsCreate(input: $input) {
+    stagedTargets { url resourceUrl parameters { name value } }
+    userErrors { message }
+  }
+}`
+const fileCreateMutation = `mutation ($files: [FileCreateInput!]!) {
+  fileCreate(files: $files) {
+    files { id }
+    userErrors { message }
+  }
+}`
+const fileQuery = `query ($id: ID!) {
+  node(id: $id) { ... on MediaImage { fileStatus fileErrors { message } image { url } } }
+}`
+
+/**
+ * Puts a local image into the shop's Files (ADR-0008): stages an upload, posts the file to it, creates the file
+ * from it and waits until Shopify has processed it.
+ * @param {string} cli
+ * @param {string} store
+ * @param {unknown} body `{"path": "<absolute local path>"}`
+ * @returns {Promise<{ image: string, url: string }>} `image` is the value an image_picker setting takes.
+ */
+async function uploadImage(cli, store, body) {
+  const file = isObject(body) ? /** @type {{ path?: unknown }} */ (body).path : undefined
+  if (typeof file !== 'string' || !path.isAbsolute(file)) throw new BadRequest('Give `path`, the absolute path of a local image.')
+  const filename = path.basename(file)
+  const mimeType = imageTypes[path.extname(file).toLowerCase()]
+  if (!mimeType) throw new BadRequest(`${filename} is not an image Shopify's Files take: jpg, png, webp or gif.`)
+  const stat = statSync(file, { throwIfNoEntry: false })
+  if (!stat?.isFile()) throw new BadRequest(`No file at ${file}.`)
+  if (stat.size > maxImageBytes) throw new BadRequest(`${filename} is over 20 MB, the most Shopify's Files take for an image.`)
+
+  const input = [{ resource: 'IMAGE', filename, mimeType, fileSize: String(stat.size), httpMethod: 'POST' }]
+  const { stagedUploadsCreate: staged } = await storeExecute(cli, store, stageMutation, { variables: { input }, mutate: true })
+  refuseUserErrors(staged)
+  /** @type {{ url: string, resourceUrl: string, parameters: { name: string, value: string }[] }} */
+  const target = staged.stagedTargets[0]
+  const form = new FormData()
+  for (const { name, value } of target.parameters) form.append(name, value)
+  // The file goes last: the storage behind the target reads the fields before it.
+  form.append('file', new Blob([readFileSync(file)], { type: mimeType }), filename)
+  const upload = await fetch(target.url, { method: 'POST', body: form }).catch((/** @type {Error} */ error) => {
+    throw new BadGateway(`Shopify's upload of ${filename} failed: ${error.message}`)
+  })
+  if (!upload.ok) throw new BadGateway(`Shopify's upload of ${filename} failed (HTTP ${upload.status}): ${(await upload.text()).slice(0, 300)}`)
+
+  const files = [{ originalSource: target.resourceUrl, contentType: 'IMAGE' }]
+  const { fileCreate: created } = await storeExecute(cli, store, fileCreateMutation, { variables: { files }, mutate: true })
+  refuseUserErrors(created)
+  /** @type {string} */
+  const id = created.files[0].id
+  const deadline = Date.now() + 120_000
+  for (;;) {
+    /** @type {{ node: { fileStatus?: string, fileErrors?: { message: string }[], image?: { url: string } | null } | null }} */
+    const { node } = await storeExecute(cli, store, fileQuery, { variables: { id } })
+    const url = node?.image?.url
+    if (node?.fileStatus === 'READY' && url) {
+      // Shopify renames a file whose name is taken, so the name comes from its CDN URL.
+      return { image: `shopify://shop_images/${decodeURIComponent(path.posix.basename(new URL(url).pathname))}`, url }
+    }
+    if (node?.fileStatus === 'FAILED') {
+      throw new BadGateway(`Shopify could not process ${filename}: ${(node.fileErrors ?? []).map((error) => error.message).join(' ')}`)
+    }
+    if (Date.now() > deadline) throw new BadGateway(`Shopify was still processing ${filename} after two minutes; it shows in the shop's Files once done.`)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  }
+}
+
+/** @param {{ userErrors?: { message: string }[] }} payload A mutation's answer. */
+function refuseUserErrors(payload) {
+  const errors = payload.userErrors ?? []
+  if (errors.length) throw new BadGateway(`Shopify refused the image: ${errors.map((error) => error.message).join(' ')}`)
 }
 
 /**

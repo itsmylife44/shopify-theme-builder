@@ -53,8 +53,9 @@ function fixtureCatalog() {
 }
 
 /**
- * A stand-in for the Shopify CLI: `version` prints the given version; `store execute` records its arguments
- * in store.json and prints `store` as JSON, or fails like the CLI without stored auth; `theme dev` records its
+ * A stand-in for the Shopify CLI: `version` prints the given version; `store execute` adds its arguments to
+ * the list in store.json and prints `store` as JSON (given a list, the nth call prints the nth answer, and the
+ * last one after that), or fails like the CLI without stored auth; `theme dev` records its
  * arguments and pid in run.json, prints the given output (and `later` half a second on), then runs until
  * killed or exits with exitCode.
  */
@@ -64,7 +65,7 @@ function fakeShopify({
   later = '',
   exitCode,
   store,
-}: { version?: string; output?: string; later?: string; exitCode?: number; store?: object } = {}) {
+}: { version?: string; output?: string; later?: string; exitCode?: number; store?: object | object[] } = {}) {
   const dir = tempDir('shopify-')
   const cli = path.join(dir, 'shopify')
   writeFileSync(
@@ -75,10 +76,15 @@ if (process.argv[2] === 'version') {
   process.exit(0)
 }
 if (process.argv[2] === 'store') {
-  require('node:fs').writeFileSync(${JSON.stringify(path.join(dir, 'store.json'))}, JSON.stringify(process.argv.slice(2)))
+  const fs = require('node:fs')
+  const log = ${JSON.stringify(path.join(dir, 'store.json'))}
+  const calls = fs.existsSync(log) ? JSON.parse(fs.readFileSync(log, 'utf8')) : []
+  calls.push(process.argv.slice(2))
+  fs.writeFileSync(log, JSON.stringify(calls))
   ${
     store
-      ? `console.log(${JSON.stringify(JSON.stringify(store, null, 2))})`
+      ? `const answers = ${JSON.stringify([store].flat())}
+  console.log(JSON.stringify(answers[Math.min(calls.length, answers.length) - 1], null, 2))`
       : `console.error('No stored app authentication found for example.myshopify.com.'); process.exit(1)`
   }
   process.exit(0)
@@ -1174,7 +1180,7 @@ describe('Studio API: store resource settings', () => {
       products: [{ handle: 'mug', title: 'Mug' }],
       menus: [{ handle: 'main-menu', title: 'Main menu' }],
     })
-    const args: string[] = JSON.parse(readFileSync(path.join(path.dirname(cli), 'store.json'), 'utf8'))
+    const [args]: string[][] = JSON.parse(readFileSync(path.join(path.dirname(cli), 'store.json'), 'utf8'))
     expect(args.slice(0, 4)).toEqual(['store', 'execute', '--store', 'example.myshopify.com'])
     expect(args).toContain('--json')
     expect(args).not.toContain('--allow-mutations')
@@ -1185,7 +1191,117 @@ describe('Studio API: store resource settings', () => {
     const studio = await openStudio(fixtureTheme())
     const { status, body } = await studio.send('GET', 'api/store')
     expect(status).toBe(409)
-    expect(body.error).toContain('shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation')
+    expect(body.error).toContain('shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation,write_files`')
+  })
+})
+
+describe("Studio API: images in the shop's Files", () => {
+  /** A stand-in for Shopify's staged upload target: it keeps each multipart form posted to it. */
+  async function uploadTarget() {
+    const forms: FormData[] = []
+    const server = createHttpServer(async (req, res) => {
+      const chunks: Buffer[] = []
+      for await (const chunk of req) chunks.push(chunk)
+      forms.push(await new Response(Buffer.concat(chunks), { headers: { 'Content-Type': req.headers['content-type'] ?? '' } }).formData())
+      res.statusCode = 201
+      res.end()
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    cleanup.push(() => new Promise((resolve) => server.close(() => resolve())))
+    return { url: `http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}/upload`, forms }
+  }
+
+  const resourceUrl = 'https://shopify-staged-uploads.storage.googleapis.com/tmp/1/hero.png'
+  const staged = (url: string) => ({
+    stagedUploadsCreate: {
+      stagedTargets: [{ url, resourceUrl, parameters: [{ name: 'key', value: 'tmp/1/hero.png' }, { name: 'policy', value: 'signed' }] }],
+      userErrors: [],
+    },
+  })
+  const created = { fileCreate: { files: [{ id: 'gid://shopify/MediaImage/7', fileStatus: 'UPLOADED' }], userErrors: [] } }
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3])
+
+  function localImage(name = 'hero.png', bytes: Uint8Array = png) {
+    const file = path.join(tempDir('image-'), name)
+    writeFileSync(file, bytes)
+    return file
+  }
+
+  function storeCalls(cli: string): string[][] {
+    const log = path.join(path.dirname(cli), 'store.json')
+    return existsSync(log) ? JSON.parse(readFileSync(log, 'utf8')) : []
+  }
+
+  const variables = (args: string[]) => JSON.parse(args[args.indexOf('--variables') + 1])
+
+  it("puts a local image into the shop's Files and answers the value an image_picker setting takes", async () => {
+    const target = await uploadTarget()
+    const cdn = 'https://cdn.shopify.com/s/files/1/0001/files/hero_4f2a.png?v=1727180000'
+    const cli = fakeShopify({
+      store: [
+        staged(target.url),
+        created,
+        { node: { fileStatus: 'PROCESSING', fileErrors: [], image: null } },
+        { node: { fileStatus: 'READY', fileErrors: [], image: { url: cdn } } },
+      ],
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const { status, body } = await studio.send('POST', 'api/files', { path: localImage() })
+    expect(status).toBe(200)
+    expect(body).toEqual({ image: 'shopify://shop_images/hero_4f2a.png', url: cdn })
+
+    expect(target.forms).toHaveLength(1)
+    const [form] = target.forms
+    expect(form.get('key')).toBe('tmp/1/hero.png')
+    expect(form.get('policy')).toBe('signed')
+    expect(new Uint8Array(await (form.get('file') as File).arrayBuffer())).toEqual(png)
+
+    const [stage, create, ...polls] = storeCalls(cli)
+    for (const args of [stage, create, ...polls]) expect(args.slice(0, 4)).toEqual(['store', 'execute', '--store', 'example.myshopify.com'])
+    expect(stage).toContain('--allow-mutations')
+    expect(variables(stage)).toEqual({
+      input: [{ resource: 'IMAGE', filename: 'hero.png', mimeType: 'image/png', fileSize: String(png.length), httpMethod: 'POST' }],
+    })
+    expect(create).toContain('--allow-mutations')
+    expect(variables(create)).toEqual({ files: [{ originalSource: resourceUrl, contentType: 'IMAGE' }] })
+    expect(polls).toHaveLength(2)
+    for (const args of polls) {
+      expect(args).not.toContain('--allow-mutations')
+      expect(variables(args)).toEqual({ id: 'gid://shopify/MediaImage/7' })
+    }
+  })
+
+  it.each([
+    ['a type Shopify images are not', () => ({ path: localImage('hero.svg') }), 'jpg'],
+    ['a file over 20 MB', () => ({ path: localImage('hero.png', new Uint8Array(20 * 1024 * 1024 + 1)) }), '20 MB'],
+    ['a missing file', () => ({ path: path.join(tempDir('image-'), 'gone.png') }), 'gone.png'],
+    ['a relative path', () => ({ path: 'hero.png' }), 'absolute'],
+    ['no path', () => ({}), 'absolute'],
+  ])('refuses %s with a 400, without calling the store', async (_, body, named) => {
+    const cli = fakeShopify({ store: {} })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const answer = await studio.send('POST', 'api/files', body())
+    expect(answer.status).toBe(400)
+    expect(answer.body.error).toContain(named)
+    expect(storeCalls(cli)).toEqual([])
+  })
+
+  it('tells the command that grants write_files when the CLI has no stored auth or scope for it', async () => {
+    const studio = await openStudio(fixtureTheme())
+    const { status, body } = await studio.send('POST', 'api/files', { path: localImage() })
+    expect(status).toBe(409)
+    expect(body.error).toContain('`shopify store auth --store example.myshopify.com --scopes read_products,read_online_store_navigation,write_files`')
+  })
+
+  it("answers Shopify's error when it can't process the image", async () => {
+    const target = await uploadTarget()
+    const cli = fakeShopify({
+      store: [staged(target.url), created, { node: { fileStatus: 'FAILED', fileErrors: [{ message: 'Image is corrupt.' }], image: null } }],
+    })
+    const studio = await openStudio(fixtureTheme(), { cli })
+    const { status, body } = await studio.send('POST', 'api/files', { path: localImage() })
+    expect(status).toBe(502)
+    expect(body.error).toContain('Image is corrupt.')
   })
 })
 
