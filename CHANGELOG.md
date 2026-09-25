@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- FAQ layouts: an accordion (the default, as before), each question and its answer on a card in two columns, on cards in three columns for short answers, or as plain text in three columns with no cards. Each layout is also a named preset, like "FAQ: two-column cards", and stacks on mobile.
+
 - Eight footer layouts, each also a named preset: Columns (the default, now sized to their content: the brand text and newsletter take the room the menus leave, and one to three social links sit under the last menu instead of in a column of their own), Big wordmark (the shop's name or logo large across the bottom), Split (the brand and newsletter on one side, the menus on the other), Menus in a grid (2 × 2), Newsletter band (the signup across the full width on its own color scheme, `newsletter_color_scheme`), Top bar (the name and social links above a line), One row and Centered minimal. The footer's social block takes up to three other links (`link_1` to `link_3`, each with a label), shown as text, like Strava or a blog, or as the network's icon when the link goes to Instagram, Facebook, TikTok, X, YouTube or Pinterest. Each Direction's card names its footer layout, set once one is chosen.
 
 - The empty cart page suggests four products under a heading, from its new `empty_collection` setting or the shop's first products, and `create-theme` takes `--documentation-url` and `--support-url` for the Theme info links the Merchant sees in the Theme Editor (without them the Theme keeps Shopify's help). Article pages output Shopify's `article` structured data.

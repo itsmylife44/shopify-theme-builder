@@ -1,18 +1,29 @@
-{% comment %}Questions and answers that open one at a time.{% endcomment %}
-<div class="faq full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
+{% comment %}Questions and answers, in an accordion, on cards or in a plain list.{% endcomment %}
+<div class="faq full-width faq--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
   <div class="faq__inner">
     {% if section.settings.heading != blank %}
       <h2 class="faq__heading">{{ section.settings.heading }}</h2>
     {% endif %}
 
-    <div class="faq__list">
-      {% for block in section.blocks %}
-        <details class="faq__item" {{ block.shopify_attributes }}>
-          <summary class="faq__question">{{ block.settings.question | escape }}</summary>
-          <div class="faq__answer rte">{{ block.settings.answer }}</div>
-        </details>
-      {% endfor %}
-    </div>
+    {% if section.settings.layout == 'accordion' %}
+      <div class="faq__list">
+        {% for block in section.blocks %}
+          <details class="faq__item" {{ block.shopify_attributes }}>
+            <summary class="faq__question">{{ block.settings.question | escape }}</summary>
+            <div class="faq__answer rte">{{ block.settings.answer }}</div>
+          </details>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="faq__list" data-reveal-stagger>
+        {% for block in section.blocks %}
+          <div class="faq__item" {{ block.shopify_attributes }}>
+            <h3 class="faq__question text-h5">{{ block.settings.question | escape }}</h3>
+            <div class="faq__answer rte">{{ block.settings.answer }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
   </div>
 </div>
 
@@ -53,6 +64,56 @@
   .faq__answer {
     padding-block-end: var(--space-md);
   }
+
+  .faq:not(.faq--accordion) .faq__list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--grid-gap);
+    max-width: none;
+  }
+
+  .faq:not(.faq--accordion) .faq__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    border-bottom: 0;
+  }
+
+  .faq:not(.faq--accordion) .faq__question,
+  .faq:not(.faq--accordion) .faq__answer {
+    padding-block: 0;
+  }
+
+  .faq--two_column_cards .faq__item,
+  .faq--three_column_cards .faq__item {
+    padding: var(--card-padding);
+    border: var(--card-border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-cards);
+    background-color: var(--card-background);
+  }
+
+  .faq--three_column_list .faq__list {
+    row-gap: var(--grid-row-gap);
+  }
+
+  .faq--three_column_list .faq__answer {
+    color: var(--color-foreground-muted);
+  }
+
+  .faq--two_column_cards {
+    --faq-columns: 2;
+  }
+
+  .faq--three_column_cards,
+  .faq--three_column_list {
+    --faq-columns: 3;
+  }
+
+  @media (min-width: 750px) {
+    .faq:not(.faq--accordion) .faq__list {
+      grid-template-columns: repeat(var(--faq-columns), 1fr);
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -72,6 +133,18 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "Frequently asked questions"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "accordion", "label": "t:options.layout.accordion" },
+        { "value": "two_column_cards", "label": "t:options.layout.two_column_cards" },
+        { "value": "three_column_cards", "label": "t:options.layout.three_column_cards" },
+        { "value": "three_column_list", "label": "t:options.layout.three_column_list" }
+      ],
+      "default": "accordion"
     },
     {
       "type": "select",
@@ -116,6 +189,40 @@
     {
       "name": "t:general.faq",
       "blocks": [
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" }
+      ]
+    },
+    {
+      "name": "t:general.faq_two_column_cards",
+      "settings": { "layout": "two_column_cards" },
+      "blocks": [
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" }
+      ]
+    },
+    {
+      "name": "t:general.faq_three_column_cards",
+      "settings": { "layout": "three_column_cards" },
+      "blocks": [
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" }
+      ]
+    },
+    {
+      "name": "t:general.faq_three_column_list",
+      "settings": { "layout": "three_column_list" },
+      "blocks": [
+        { "type": "question" },
+        { "type": "question" },
+        { "type": "question" },
         { "type": "question" },
         { "type": "question" },
         { "type": "question" }

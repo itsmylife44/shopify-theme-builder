@@ -2067,6 +2067,50 @@ describe('Newsletter', () => {
   })
 })
 
+describe('FAQ', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/faq.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+  const questions = (count: number) => Array.from({ length: count }, () => ({ type: 'question' }))
+
+  it('lays the questions out as an accordion by default, on cards in two or three columns, or as a three-column list', () => {
+    expect(source).toContain('class="faq full-width faq--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'accordion' })
+    expect(values(settings.layout)).toEqual(['accordion', 'two_column_cards', 'three_column_cards', 'three_column_list'])
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets[0]).toEqual({ name: 't:general.faq', blocks: questions(3) })
+  })
+
+  it('opens one answer at a time only in the accordion, and shows every other answer under its question', () => {
+    expect(source).toContain("{% if section.settings.layout == 'accordion' %}")
+    expect(source).toMatch(/<details class="faq__item"[\s\S]*<summary class="faq__question">/)
+    expect(source).toMatch(/<h3 class="faq__question text-h5">/)
+  })
+
+  it('puts each question on a card only in the card layouts, in two or three columns on desktop, stacked on mobile', () => {
+    for (const variable of ['--card-padding', '--card-border-width', '--card-background', '--style-border-radius-cards']) {
+      expect(css).toContain(`var(${variable})`)
+    }
+    expect(css).toMatch(/\.faq--two_column_cards \.faq__item,\s*\.faq--three_column_cards \.faq__item {[^}]*padding: var\(--card-padding\);/)
+    expect(css).toMatch(/\.faq:not\(\.faq--accordion\) \.faq__list {[^}]*display: grid;[^}]*grid-template-columns: 1fr;/)
+    expect(css).toMatch(/\.faq--two_column_cards {\s*--faq-columns: 2;/)
+    expect(css).toMatch(/\.faq--three_column_cards,\s*\.faq--three_column_list {\s*--faq-columns: 3;/)
+    // As specific as the mobile rule, so it wins over it.
+    expect(desktop).toMatch(/\.faq:not\(\.faq--accordion\) \.faq__list {[^}]*grid-template-columns: repeat\(var\(--faq-columns\), 1fr\);/)
+    expect(source).toContain('data-reveal-stagger')
+  })
+
+  it('offers each other layout as a named preset, with a question for each of its cells', () => {
+    expect(schema.presets.slice(1)).toEqual([
+      { name: 't:general.faq_two_column_cards', settings: { layout: 'two_column_cards' }, blocks: questions(4) },
+      { name: 't:general.faq_three_column_cards', settings: { layout: 'three_column_cards' }, blocks: questions(6) },
+      { name: 't:general.faq_three_column_list', settings: { layout: 'three_column_list' }, blocks: questions(6) },
+    ])
+  })
+})
+
 describe('Editorial split', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
