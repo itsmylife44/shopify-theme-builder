@@ -2327,6 +2327,11 @@ describe('Structured data', () => {
     const all = settings.flatMap((group: { settings?: object[] }) => group.settings ?? [])
     expect(all).toContainEqual(expect.objectContaining({ id: 'show_breadcrumbs', type: 'checkbox', default: true }))
   })
+
+  it('gives breadcrumb links the minimum target size', () => {
+    const snippet = readFileSync(path.join(baseTheme, 'snippets/breadcrumbs.liquid'), 'utf8')
+    expect(snippet).toMatch(/\.breadcrumbs a {[^}]*display: inline-flex;[^}]*align-items: center;[^}]*min-inline-size: var\(--target-size-min\);[^}]*min-block-size: var\(--target-size-min\);/)
+  })
 })
 
 describe('Right-to-left languages', () => {
