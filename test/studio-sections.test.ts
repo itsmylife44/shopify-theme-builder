@@ -114,12 +114,13 @@ describe('Studio API: add, remove and reorder blocks', () => {
       { type: '_product-title', name: 'Title' },
       { type: '_product-price', name: 'Price' },
       { type: '_variant-picker', name: 'Variant picker' },
+      { type: 'size-guide', name: 'Size guide' },
       { type: '_buy-buttons', name: 'Buy buttons' },
       { type: 'custom-liquid', name: 'Custom Liquid' },
       { type: 'shipping-note', name: 'Shipping note' },
       { type: 'collapsible-content', name: 'Collapsible content' },
     ])
-    for (const type of ['custom-liquid', 'shipping-note', 'collapsible-content']) {
+    for (const type of ['custom-liquid', 'shipping-note', 'collapsible-content', 'size-guide']) {
       const { status, body } = await studio.send('POST', `${url}/blocks`, { type })
       expect(status, type).toBe(200)
       expect(errors(body.validation)).toEqual([])

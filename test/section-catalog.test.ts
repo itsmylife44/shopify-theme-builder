@@ -630,6 +630,46 @@ describe('Product page shipping note and collapsible content', () => {
   })
 })
 
+describe('Product page size guide', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const parse = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const source = read('base-theme/blocks/size-guide.liquid')
+  const schema = parse(source)
+  const dialog = source.slice(source.indexOf('<dialog'), source.indexOf('</dialog>'))
+
+  it('is a theme block the main product lists after the variant picker, added only for sized products', () => {
+    const mainProduct = parse(read('catalog/sections/main-product.liquid'))
+    const types = mainProduct.blocks.map((block: { type: string }) => block.type)
+    expect(types.indexOf('size-guide')).toBe(types.indexOf('_variant-picker') + 1)
+    for (const preset of mainProduct.presets) expect(preset.blocks.map((block: { type: string }) => block.type)).not.toContain('size-guide')
+    expect(source).toContain('{{ block.shopify_attributes }}')
+    expect(schema.presets).toEqual([{ name: 't:general.size_guide' }])
+  })
+
+  it("shows the shop page picked in its settings, and nothing until one is picked", () => {
+    expect(schema.settings).toContainEqual({ type: 'page', id: 'page', label: 't:labels.page', info: 't:info.size_guide_page' })
+    expect(schema.settings).toContainEqual({ type: 'text', id: 'label', label: 't:labels.label', default: 'Size guide' })
+    expect(source).toMatch(/{% if guide != blank or request\.design_mode %}/)
+    expect(dialog).toContain('{{ guide.title | escape }}')
+    expect(dialog).toMatch(/<div class="size-guide__content rte">\s*{{ guide\.content }}/)
+  })
+
+  it('opens the page in a modal dialog: labelled, a close button, Escape closes, the page behind locked', () => {
+    expect(source).toMatch(/<button\s+type="button"\s+class="button--secondary size-guide__open"\s+aria-haspopup="dialog"\s*>\s*{{ block\.settings\.label \| escape }}/)
+    expect(dialog).toMatch(/<dialog class="size-guide__dialog" aria-labelledby="SizeGuide-{{ block\.id }}" scroll-lock>/)
+    expect(dialog).toMatch(/<h2 id="SizeGuide-{{ block\.id }}"/)
+    expect(dialog).toMatch(/<form method="dialog">\s*<button class="size-guide__close" aria-label="{{ 'product\.close_size_guide' \| t }}"/)
+    expect(source).toContain('this.dialog.showModal()')
+    expect(source).not.toMatch(/key === 'Escape'/)
+    expect(JSON.parse(read('base-theme/locales/en.default.json')).product.close_size_guide).toBe('Close size guide')
+  })
+
+  it('scrolls a wide size chart inside the dialog, never the page', () => {
+    expect(source).toMatch(/\.size-guide__content {[^}]*overflow-x: auto;/)
+  })
+})
+
 describe('Product page layouts', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const source = readFileSync(path.join(skillDir, 'catalog/sections/main-product.liquid'), 'utf8')

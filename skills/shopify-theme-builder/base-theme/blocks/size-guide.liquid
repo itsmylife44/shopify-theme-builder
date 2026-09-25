@@ -1,0 +1,135 @@
+{% doc %}
+  Renders a button that opens the size guide, a shop page the Merchant picks,
+  in a dialog. Renders nothing until a page is picked.
+
+  @example
+  {% content_for 'block', type: 'size-guide', id: 'size-guide' %}
+{% enddoc %}
+
+{% assign guide = block.settings.page %}
+
+{% if guide != blank or request.design_mode %}
+  <size-guide class="size-guide" {{ block.shopify_attributes }}>
+    <button
+      type="button"
+      class="button--secondary size-guide__open"
+      aria-haspopup="dialog"
+    >
+      {{ block.settings.label | escape }}
+    </button>
+    <dialog class="size-guide__dialog" aria-labelledby="SizeGuide-{{ block.id }}" scroll-lock>
+      <div class="size-guide__header">
+        <h2 id="SizeGuide-{{ block.id }}" class="size-guide__title text-h4">{{ guide.title | escape }}</h2>
+        <form method="dialog">
+          <button class="size-guide__close" aria-label="{{ 'product.close_size_guide' | t }}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+              <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m5 5 10 10M15 5 5 15" />
+            </svg>
+          </button>
+        </form>
+      </div>
+      <div class="size-guide__content rte">
+        {{ guide.content }}
+      </div>
+    </dialog>
+  </size-guide>
+{% endif %}
+
+{% javascript %}
+  class SizeGuide extends HTMLElement {
+    connectedCallback() {
+      this.dialog = this.querySelector('dialog');
+      this.querySelector('.size-guide__open').addEventListener('click', () => this.dialog.showModal());
+    }
+  }
+
+  if (!customElements.get('size-guide')) customElements.define('size-guide', SizeGuide);
+{% endjavascript %}
+
+{% stylesheet %}
+  .size-guide__dialog {
+    width: min(40rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    padding: 0;
+    border: 0;
+  }
+
+  .size-guide__dialog::backdrop {
+    background-color: color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  }
+
+  .size-guide__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border-block-end: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .size-guide__title {
+    margin: 0;
+  }
+
+  .size-guide__close {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .size-guide__close svg {
+    width: 1.5rem;
+  }
+
+  .size-guide__content {
+    padding: var(--space-lg);
+    overflow-x: auto;
+  }
+
+  .size-guide__content > :first-child {
+    margin-block-start: 0;
+  }
+
+  .size-guide__content > :last-child {
+    margin-block-end: 0;
+  }
+
+  .size-guide__content table {
+    border-collapse: collapse;
+  }
+
+  .size-guide__content :is(th, td) {
+    padding: var(--space-xs) var(--space-sm);
+    border-block-end: var(--border-width) solid var(--color-border-subtle);
+    text-align: start;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.size_guide",
+  "settings": [
+    {
+      "type": "page",
+      "id": "page",
+      "label": "t:labels.page",
+      "info": "t:info.size_guide_page"
+    },
+    {
+      "type": "text",
+      "id": "label",
+      "label": "t:labels.label",
+      "default": "Size guide"
+    }
+  ],
+  "presets": [{ "name": "t:general.size_guide" }]
+}
+{% endschema %}

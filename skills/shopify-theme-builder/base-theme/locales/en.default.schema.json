@@ -146,7 +146,8 @@
     "newsletter_inline": "Newsletter: inline",
     "collection_list_large_first": "Collection list: large first tile",
     "collection_list_carousel": "Collection list: carousel",
-    "collection_list_text_list": "Collection list: text list"
+    "collection_list_text_list": "Collection list: text list",
+    "size_guide": "Size guide"
   },
   "labels": {
     "accent": "Accent",
@@ -278,7 +279,8 @@
     "contact_details": "Contact details",
     "image_zoom": "Image zoom",
     "sticky_buy_bar": "Sticky add to cart bar on mobile",
-    "free_shipping_threshold": "Free-shipping threshold"
+    "free_shipping_threshold": "Free-shipping threshold",
+    "page": "Page"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -327,7 +329,8 @@
     "main_product_sticky_buy_bar": "Slides in at the bottom of the screen with the title, price and an add to cart button once the buy buttons scroll away.",
     "contact_form_heading": "Leave blank to show the page's title.",
     "contact_form_details": "Email, phone number, address and opening hours.",
-    "free_shipping_threshold": "The order total, in the store currency, from which shipping is free, as your shipping rates in Settings › Shipping and delivery set it. The cart shows how far the shopper is from it, and the shipping note shows it. Leave blank to show neither."
+    "free_shipping_threshold": "The order total, in the store currency, from which shipping is free, as your shipping rates in Settings › Shipping and delivery set it. The cart shows how far the shopper is from it, and the shipping note shows it. Leave blank to show neither.",
+    "size_guide_page": "The shop page with the size chart, shown in a dialog next to the variant picker. Create it in the Shopify admin, under Online Store › Pages. Nothing shows until a page is picked."
   },
   "options": {
     "alignment": {
