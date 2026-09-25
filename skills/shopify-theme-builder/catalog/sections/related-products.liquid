@@ -6,7 +6,7 @@
   endif
 %}
 
-<div class="related-products full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
+<div class="related-products full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
   <product-recommendations
     class="related-products__inner"
     {% unless recommendations.performed? %}
@@ -21,6 +21,7 @@
 
         <ul
           class="related-products__grid"
+          data-reveal-stagger
           role="list"
           style="--columns: {{ section.settings.columns }};"
         >
@@ -210,6 +211,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "presets": [

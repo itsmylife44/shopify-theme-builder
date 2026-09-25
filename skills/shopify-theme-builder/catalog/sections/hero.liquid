@@ -28,7 +28,7 @@
 
 <div
   class="hero full-width media-edge hero--{{ section.settings.height }} hero--{{ section.settings.content_style }} color-{{ section.settings.color_scheme }}"
-  data-spacing="{{ section.settings.spacing }}"
+  data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}
   style="--content-block: {{ content_block }}; --content-inline: {{ content_inline }}; --overlay-opacity: {{ overlay_opacity }};"
 >
   <div class="hero__media">
@@ -113,6 +113,7 @@
   .hero__media {
     position: absolute;
     inset: 0;
+    overflow: hidden;
   }
 
   .hero__media-item {
@@ -181,6 +182,20 @@
 
     .hero--split .hero__content {
       padding-inline: var(--space-2xl);
+    }
+  }
+
+  /* With expressive motion, the image slowly zooms in from its first frame. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__media img {
+      scale: var(--motion-hero-zoom);
+      transition: scale var(--motion-duration-hero-zoom) ease-out;
+    }
+
+    @starting-style {
+      .hero__media img {
+        scale: 1;
+      }
     }
   }
 {% endstylesheet %}
@@ -311,6 +326,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "presets": [

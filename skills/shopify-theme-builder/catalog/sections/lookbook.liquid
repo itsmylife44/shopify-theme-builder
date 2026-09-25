@@ -1,5 +1,5 @@
 {% comment %}An image with product hotspots that each open a small product card, for shoppable lookbooks.{% endcomment %}
-<div class="lookbook full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
+<div class="lookbook full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
   <div class="lookbook__inner">
     {% if section.settings.heading != blank %}
       <h2 class="lookbook__heading">{{ section.settings.heading | escape }}</h2>
@@ -182,6 +182,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "blocks": [

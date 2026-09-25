@@ -3,7 +3,7 @@
   assign columns = section.blocks.size | at_most: 4 | at_least: 1
   assign image_sizes = 100 | divided_by: columns | prepend: '(min-width: 750px) ' | append: 'vw, 100vw'
 %}
-<div class="process-steps full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="process-steps full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="process-steps__inner">
     {% if section.settings.heading != blank %}
       <h2 class="process-steps__heading">{{ section.settings.heading }}</h2>
@@ -158,6 +158,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "blocks": [

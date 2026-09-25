@@ -16,7 +16,7 @@ A Direction decides each axis below. Three Directions must **differ on at least 
 | Spacing | Section rhythm and container | `density` (compact, normal, airy: about 48, 80 or 112px between sections on desktop, halved on mobile), `page_width` |
 | Cards | Product card anatomy (every anatomy shows Sold out, a sale's saving and crossed-out price, and "From" when prices vary; the anatomy only changes the look) | `card_anatomy` (minimal, detailed, editorial), `card_image_ratio` (1 / 1, 4 / 5, 2 / 3), `card_style` (plain, bordered, surface), `card_text_alignment`, `card_text_style` (quiet, caps, bold), `card_hover` (none, second_image, zoom) |
 | Media | How product images sit on the page (other photos always fill their box) | `media_treatment` (full_bleed, or framed: contained on a tint, for cut-outs), `media_tint`; both apply to product and collection images only. Every section with images has an `image_ratio` (`card`, the default, follows `card_image_ratio`; `portrait` 4 / 5, `square`, `landscape` 4 / 3, `natural`): keep a page to two ratios at most, so leave it on `card` and give one section at most a ratio of its own |
-| Motion | A character, not decoration | `motion` (none; subtle: 0.25s fades; expressive: 1s rises and slow image zooms). Always off under reduced motion. The three Directions don't all use `subtle`: at least one uses `expressive` when its thesis allows |
+| Motion | A character, not decoration | `motion` (none; subtle: 0.2s hovers and 0.6s fades; expressive: 0.25s hovers, 0.8s rises, and the hero and slides slowly zooming to 1.06 over 8s). Sections enter with a hard deceleration and the items of a card grid follow each other by 60ms. Each section's `reveal` decides whether it fades in on scroll: on for image-led sections, off for type-led ones, so the page doesn't fade every band alike. Always off under reduced motion. The three Directions don't all use `subtle`: at least one uses `expressive` when its thesis allows |
 | Composition | The home page: 6 to 8 sections, which ones, in what order, on which color schemes, and how the hero sits | The Direction's `template`; a `hero` or `slideshow` takes a `height` (small, medium, large, full_screen), and the hero or each slide a `content_position` (`top_left` to `bottom_right`) and `content_style` (bare text over the media with an `overlay_opacity`, boxed, or split beside the media) |
 | Signature | The one memorable element; everything around it stays quiet | A section in the `template`, like `type-banner`, `editorial-split`, `marquee`, `spec-tiles`, `lookbook`, `timeline`, `process-steps` or `comparison-table` |
 
@@ -39,7 +39,7 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 - `marquee`, a strip of short texts or badges (`item_style` text or badge) scrolling at a `speed`
 - `testimonials` with the `carousel` layout
 - `collection-list` with the `carousel` layout
-- `motion: expressive`, rises and slow image zooms on every section
+- `motion: expressive`, rises on the sections that reveal and a slow zoom on the hero and slides
 
 `card_hover` (the second image or a zoom on hover) doesn't count: phones can't hover. `subtle` motion doesn't count either.
 

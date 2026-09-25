@@ -500,20 +500,27 @@ a.product-card__title:hover {
   margin-block-start: auto;
 }
 
-/* Reveal on scroll: reveal.js hides the sections out of view on load with .reveal, then
-   fades them in, and with expressive motion raises them, as they scroll into view. */
+/* Reveal on scroll: reveal.js hides the sections that opt in and are out of view on load with .reveal, then
+   fades them in, and with expressive motion raises them, as they scroll into view, entering with a hard
+   deceleration. The items of a staggered grid do the same, each --motion-stagger after the one before. */
 @media (prefers-reduced-motion: no-preference) {
-  .reveal {
+  .reveal,
+  .reveal [data-reveal-stagger] > * {
     opacity: 0;
     translate: 0 var(--motion-rise);
   }
 
-  .reveal--visible {
+  .reveal--visible,
+  .reveal--visible [data-reveal-stagger] > * {
     opacity: 1;
     translate: none;
     transition:
-      opacity var(--motion-duration-reveal) var(--motion-easing),
-      translate var(--motion-duration-reveal) var(--motion-easing);
+      opacity var(--motion-duration-reveal) var(--motion-easing-enter),
+      translate var(--motion-duration-reveal) var(--motion-easing-enter);
+  }
+
+  .reveal--visible [data-reveal-stagger] > * {
+    transition-delay: calc(var(--reveal-order, 0) * var(--motion-stagger));
   }
 }
 

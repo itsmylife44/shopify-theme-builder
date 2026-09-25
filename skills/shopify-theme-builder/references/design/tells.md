@@ -63,7 +63,7 @@ Use it as a check, line by line, on each Direction card and on the composed Them
 - **Or no states at all**: hovers that do nothing, buttons that snap.
 - **Bounces and endless loops.**
 
-The Theme's `motion` setting is one character for the whole Theme; pick it for a reason (a slow zoom for patience, quick fades for a shop people buy from in a hurry, none for a catalog).
+The Theme's `motion` setting is one character for the whole Theme; pick it for a reason (a slow zoom for patience, quick fades for a shop people buy from in a hurry, none for a catalog). Against the same fade on every band, each section's `reveal` is on only for image-led sections by default; leave type-led bands still unless the sketch says they move.
 
 ## Craft
 

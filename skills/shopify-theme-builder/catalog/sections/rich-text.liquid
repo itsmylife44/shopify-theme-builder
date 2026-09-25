@@ -1,7 +1,7 @@
 {% comment %}A heading, text and buttons, centered or wide to the start, for a message or a story.{% endcomment %}
 <div
   class="rich-text rich-text--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"
-  data-spacing="{{ section.settings.spacing }}"
+  data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}
   style="--text-align: {{ section.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }};"
 >
   <div class="rich-text__inner">
@@ -154,6 +154,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": false
     }
   ],
   "presets": [
