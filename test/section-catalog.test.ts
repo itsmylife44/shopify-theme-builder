@@ -2896,6 +2896,15 @@ describe('Type settings', () => {
     expect(variables).toMatch(/--font-size-display: max\(var\(--font-size-h1\)/)
   })
 
+  it('preloads the heading font variant its @font-face loads, the one the heading weight picks', () => {
+    // Render scope is isolated, so the snippet that computes the variant preloads it, only when the layout asks.
+    expect(variables).toMatch(/{%- if preload -%}[\s\S]*{{ heading_font \| font_url \| preload_tag: as: 'font', crossorigin: 'anonymous' }}/)
+    expect(variables).toContain("{{ heading_font | font_face: font_display: 'swap' }}")
+    const layout = read('base-theme/layout/theme.liquid')
+    expect(layout).toContain("{% render 'css-variables', preload: true %}")
+    expect(layout).not.toContain('type_heading_font | font_url')
+  })
+
   it('gives headings their case and tracking, and labels and prices the accent font, in critical.css', () => {
     expect(critical).toMatch(/h6 {[^}]*text-transform: var\(--font-heading--case\)/)
     expect(critical).toMatch(/h6 {[^}]*letter-spacing: var\(--font-heading--tracking\)/)

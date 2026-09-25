@@ -125,6 +125,15 @@
   assign display_intercept = display_slope | times: -390 | plus: display_mobile | divided_by: 16.0 | round: 4
   assign display_vw = display_slope | times: 100 | round: 4
 -%}
+{%- if preload -%}
+  {% # The layout's preloads: the heading variant the @font-face below loads, and the body font's base weight %}
+  {% unless heading_font.system? %}
+    {{ heading_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+  {% endunless %}
+  {% unless settings.type_body_font.system? %}
+    {{ settings.type_body_font | font_url | preload_tag: as: 'font', crossorigin: 'anonymous' }}
+  {% endunless %}
+{%- endif -%}
 {% style %}
   {% # Loads all font variantions with display: swap %}
   {{ heading_font | font_face: font_display: 'swap' }}
