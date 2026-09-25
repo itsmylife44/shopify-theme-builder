@@ -132,6 +132,36 @@ describe('Studio API: Directions', () => {
     expect(readFileSync(path.join(theme, 'listings/quiet/templates/index.json'), 'utf8')).toBe(before)
   })
 
+  it("checks every setting of its home template's sections and blocks as a PATCH does, naming the setting", async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme, { catalog: path.join(projectDir, 'skills/shopify-theme-builder/catalog') })
+    const home = (hero: object, tile: object = {}) => ({
+      sections: {
+        hero: { type: 'hero', settings: { color_scheme: 'scheme-2', ...hero } },
+        gallery: { type: 'image-gallery', blocks: { tile: { type: 'image', settings: tile } }, block_order: ['tile'] },
+      },
+      order: ['hero', 'gallery'],
+    })
+    const placed = home({ overlay_opacity: 40, height: 'large', reveal: true, video: 'shopify://files/videos/intro.mp4' })
+    expect((await studio.send('PUT', 'api/directions/Quiet', { template: placed })).status).toBe(200)
+    expect(readTemplate(theme, 'listings/quiet/templates/index.json')).toEqual(placed)
+
+    const before = readFileSync(path.join(theme, 'listings/quiet/templates/index.json'), 'utf8')
+    for (const [template, message] of [
+      [home({ overlay_opacity: 45 }), 'overlay_opacity must be a number from 0 to 90 in steps of 10.'],
+      [home({ height: 'huge' }), 'height must be one of: small, medium, large, full_screen.'],
+      [home({ reveal: 'yes' }), 'reveal must be true or false.'],
+      [home({ glow: 3 }), 'glow is not a setting of the hero section.'],
+      [home({ color_scheme: 'scheme-9' }), 'color_scheme must be one of the Brand\'s color schemes: scheme-1, scheme-2.'],
+      [home({}, { mood: 'calm' }), 'mood is not a setting of the image block.'],
+    ] as const) {
+      const { status, body } = await studio.send('PUT', 'api/directions/Quiet', { template })
+      expect(status).toBe(400)
+      expect(body.error).toContain(message)
+    }
+    expect(readFileSync(path.join(theme, 'listings/quiet/templates/index.json'), 'utf8')).toBe(before)
+  })
+
   it('holds at most three Directions, refuses a name whose folder another has, and switches only to one it has', async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme)
