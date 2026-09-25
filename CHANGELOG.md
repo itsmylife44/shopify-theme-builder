@@ -181,6 +181,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- The Studio's Theme Check runs offline, on the JSON schemas and Liquid docs bundled with its version, instead of downloading Shopify's latest into a cache every Theme Check run shares. A failed download or a file another run was rewriting read as an empty schema: Theme Check then skipped that schema with an unhandled rejection and reported the Theme clean. A bundled schema that doesn't load is now an error naming it.
 - A full-screen hero or slideshow fills its whole height on phones again. The `<picture>` added for the mobile image took the Base Theme's `picture { display: block; height: auto }`, so the image stopped at its own ratio and left an empty band under it. The `<picture>` now steps out of the layout (`display: contents`).
 - The `og:image` link uses `https:` instead of `http:`.
 
