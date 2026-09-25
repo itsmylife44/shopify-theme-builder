@@ -12,7 +12,7 @@ An open-source Claude Code plugin and agent skill for Codex, Cursor and other co
 [![Agent skill](https://img.shields.io/badge/agent%20skill-npx%20skills%20add-black.svg)](https://github.com/vercel-labs/skills)
 [![Online Store 2.0](https://img.shields.io/badge/Shopify-Online%20Store%202.0-95BF47.svg)](https://shopify.dev/docs/storefronts/themes)
 
-[Quickstart](#quickstart) · [Example prompt](#an-example-prompt) · [How it works](#how-it-works) · [Directions](#three-directions-not-one-guess) · [Studio](#the-studio) · [Quality](#quality-checks) · [Sections](#the-section-catalog) · [FAQ](#faq)
+[Website](https://itsmylife44.github.io/shopify-theme-builder/) · [Quickstart](#quickstart) · [Example prompt](#an-example-prompt) · [How it works](#how-it-works) · [Directions](#three-directions-not-one-guess) · [Studio](#the-studio) · [Quality](#quality-checks) · [Sections](#the-section-catalog) · [FAQ](#faq)
 
 ![The Studio: selecting the hero, rewriting its heading and switching its color scheme, while the live Shopify preview updates](docs/images/demo.gif)
 
