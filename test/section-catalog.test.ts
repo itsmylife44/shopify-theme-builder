@@ -1341,17 +1341,17 @@ describe('Footer', () => {
     ])
     // The shop's own text, written by the agent: a guidance sentence as its default would show on the storefront.
     expect(block('text').settings[1]).not.toHaveProperty('default')
-    expect(source).toMatch(/<div class="rte">{{ block\.settings\.text }}<\/div>/)
+    expect(source).toMatch(/<div class="rte{% if layout == 'split_menus' %} text-h4{% endif %}">{{ block\.settings\.text }}<\/div>/)
   })
 
   it("takes a social block that links the theme's social media settings as icons, named for screen readers", () => {
     expect(block('social').settings).toContainEqual(expect.objectContaining({ type: 'text', id: 'heading' }))
     expect(block('social').settings).toContainEqual({ type: 'paragraph', content: 't:info.social_links_setting' })
-    expect(source).toContain("assign key = 'social_' | append: id")
+    expect(source).toMatch(/assign key = 'social_' \| append: icon\s*assign url = settings\[key\]\s*assign label = social_names\[index\]/)
     for (const network of ['instagram', 'facebook', 'tiktok', 'x', 'youtube', 'pinterest']) {
       expect(source).toMatch(new RegExp(`when '${network}' -?%}\\s*<svg[^>]*aria-hidden="true"`))
     }
-    expect(source).toMatch(/<a\s+href="{{ settings\[key\] }}"[^>]*aria-label="{{ social_names\[forloop\.index0\] }}"/)
+    expect(source).toMatch(/<a\s+href="{{ url }}"\s+class="footer__social-link"[^>]*aria-label="{{ label \| escape }}"/)
     expect(schema.blocks.map((block: { type: string }) => block.type)).toEqual(['text', 'menu', 'social'])
   })
 
@@ -1368,9 +1368,70 @@ describe('Footer', () => {
     expect(styles).not.toMatch(/\.footer__follow\s+[^{,]+{|shop-login-button|shop-follow/)
   })
 
-  it('sets the blocks in columns on desktop and stacks them on mobile', () => {
+  const layouts = ['columns', 'wordmark', 'split_menus', 'newsletter_band', 'centered', 'menu_grid', 'top_bar', 'one_row']
+
+  it('takes eight layouts, columns by default so existing Themes keep theirs, each also a named preset with the same blocks', () => {
+    expect(schema.settings).toContainEqual({
+      type: 'select',
+      id: 'layout',
+      label: 't:labels.layout',
+      info: 't:info.footer_layout',
+      options: layouts.map((value) => ({ value, label: `t:options.layout.${value}` })),
+      default: 'columns',
+    })
+    expect(source).toContain('class="footer footer--{{ section.settings.layout }} full-width')
+    expect(schema.presets.map((preset: { name: string }) => preset.name)).toEqual(['t:general.footer', ...layouts.slice(1).map((layout) => `t:general.footer_${layout}`)])
+    for (const [index, layout] of layouts.slice(1).entries()) {
+      expect(schema.presets[index + 1]).toEqual({ name: `t:general.footer_${layout}`, settings: { layout }, blocks: schema.presets[0].blocks })
+    }
+  })
+
+  it('stacks the blocks on mobile and sizes each column to its content on desktop, the brand text and newsletter taking the room left', () => {
     expect(source).toMatch(/\.footer__columns {[^}]*grid-template-columns: 1fr;/)
-    expect(source).toMatch(/@media \(min-width: 750px\) {\s*\.footer__columns {[^}]*grid-template-columns: repeat\(auto-fit, minmax\(/)
+    const desktop = source.slice(source.indexOf('@media (min-width: 750px) {'))
+    expect(desktop).toMatch(/\.footer__columns {[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*justify-content: space-between;/)
+    expect(desktop).toMatch(/\.footer__columns > \* {\s*flex: 0 1 auto;/)
+    expect(desktop).toMatch(/\.footer__columns > :is\(\.footer__text, \.footer__newsletter\) {\s*flex: 2 1 16rem;/)
+  })
+
+  it('sets a few social icons under the last menu instead of in a column of their own', () => {
+    expect(source).toMatch(/if block\.type == 'menu'\s*assign last_menu = forloop\.index/)
+    expect(source).toMatch(/if social_count > 0 and social_count <= 3 and last_menu > 0 and stacking_layouts contains layout\s*assign stack_social = true/)
+    expect(source).toMatch(/{% if stack_social and forloop\.index == last_menu %}\s*<div class="footer__stack">\s*{{ block_html }}\s*{{ social_html }}\s*<\/div>/)
+  })
+
+  it('takes up to three other social links, shown as text or, for a known network, as its icon', () => {
+    const social = block('social')
+    expect(social.limit).toBe(1)
+    for (const n of [1, 2, 3]) {
+      expect(social.settings).toContainEqual({ type: 'text', id: `link_${n}_label`, label: 't:labels.link_label' })
+      expect(social.settings).toContainEqual({ type: 'url', id: `link_${n}`, label: 't:labels.link' })
+    }
+    expect(source).toMatch(/assign host = url \| split: '\/\/' \| last \| split: '\/' \| first \| downcase \| remove_first: 'www\.'/)
+    expect(source).toMatch(/when 'x\.com', 'twitter\.com'\s*assign icon = 'x'/)
+    expect(source).toMatch(/<a href="{{ url }}" class="footer__social-text" rel="noopener" target="_blank">{{ label \| default: host \| default: url \| escape }}<\/a>/)
+  })
+
+  it('sets the wordmark large at the bottom, small above a line in the top bar or on top when centered', () => {
+    expect(source).toMatch(/assign wordmark_class = 'text-h3'\s*if layout == 'wordmark'\s*assign wordmark_class = 'text-display'/)
+    expect(source).toMatch(/{% if layout == 'top_bar' %}\s*<div class="footer__top">\s*{{ wordmark }}\s*{{ social_html }}/)
+    expect(source).toMatch(/\.footer__top {[^}]*border-block-end: var\(--border-width\) solid var\(--color-border-subtle\);/)
+    expect(source.indexOf("{% if layout == 'wordmark' %}")).toBeGreaterThan(source.indexOf('<div class="footer__bottom'))
+  })
+
+  it('opens the newsletter band layout with the signup across the full width on its own color scheme, hidden when the page has a newsletter', () => {
+    expect(schema.settings).toContainEqual(
+      expect.objectContaining({ type: 'color_scheme', id: 'newsletter_color_scheme', default: 'scheme-2', visible_if: "{{ section.settings.layout == 'newsletter_band' }}" }),
+    )
+    expect(source).toContain('<div class="footer__band color-{{ section.settings.newsletter_color_scheme }}">')
+    expect(source).toMatch(/\.footer__band {[^}]*grid-column: 1 \/ -1;/)
+    expect(source).toMatch(/body:has\(\.shopify-section > \.newsletter\) :is\(\.footer__newsletter, \.footer__band\) {\s*display: none;/)
+  })
+
+  it('puts the brand and the menus on two sides in the split, grid and one row layouts, the menus 2 × 2 in the grid', () => {
+    expect(source).toMatch(/{% when 'split_menus', 'menu_grid' %}\s*<div class="footer__brand">{{ brand_html }}{{ newsletter_html }}<\/div>\s*<div class="footer__links">{{ links_html }}<\/div>/)
+    expect(source).toMatch(/{% when 'one_row' %}\s*<div class="footer__links">{{ links_html }}<\/div>\s*<div class="footer__brand">{{ brand_html }}{{ newsletter_html }}<\/div>/)
+    expect(source).toMatch(/\.footer--menu_grid \.footer__links {[^}]*grid-template-columns: repeat\(2, /)
   })
 })
 
