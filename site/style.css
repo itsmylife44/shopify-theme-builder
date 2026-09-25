@@ -197,7 +197,7 @@ p code, li code { font-size: 0.9em; background: var(--surface); padding: 0.1em 0
 .install__label { margin: 8px 0 0; font-size: 0.875rem; font-weight: 600; color: var(--muted); }
 .command { position: relative; }
 .command:not(.command--prompt) { display: flex; align-items: flex-start; background: var(--code-bg); border-radius: calc(var(--radius) * 0.7); }
-.command:not(.command--prompt) pre { flex: 1; min-width: 0; padding-inline-end: 12px; }
+.command:not(.command--prompt) pre { flex: 1; min-width: 0; padding-inline-end: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .command:not(.command--prompt) .copy { position: static; flex: none; margin: 8px; }
 .command pre {
   margin: 0; padding: 16px 88px 16px 18px; overflow-x: auto;
