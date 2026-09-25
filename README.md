@@ -14,7 +14,7 @@ An open-source Claude Code plugin and agent skill for Codex, Cursor and other co
 
 [Website](https://itsmylife44.github.io/shopify-theme-builder/) · [Quickstart](#quickstart) · [Example prompt](#an-example-prompt) · [How it works](#how-it-works) · [Directions](#three-directions-not-one-guess) · [Studio](#the-studio) · [Quality](#quality-checks) · [Sections](#the-section-catalog) · [FAQ](#faq)
 
-![The Studio: selecting the hero, rewriting its heading and switching its color scheme, while the live Shopify preview updates](docs/images/demo.gif)
+![The Studio switching a shop's home page between its three Directions, rendered live by Shopify, then selecting the product grid](docs/images/demo.gif)
 
 </div>
 
@@ -78,6 +78,23 @@ What each line gives the agent:
 
 Leave out whatever you don't know yet: the agent asks, one question at a time, and proposes a default you can just confirm. It always reads the brief back to you once before designing anything.
 
+## A shop built from that prompt
+
+[Olmo Ceramica](https://itsmylife44.github.io/shopify-theme-builder/) is the example prompt above, sent as is to Claude Code with this plugin. The agent created the store, wrote three Directions and built every page; a person answered its questions and picked one. The brand is fictional and its photos were generated with AI; the theme, the store setup and the copy are what the plugin produced.
+
+![Olmo Ceramica's home page, built from the example prompt: a full-width photo of a breakfast table set with speckled stoneware, under the heading "Breakfast, set for two"](docs/images/olmo-home-1440-top.jpg)
+
+| Firing Log | Breakfast Table (chosen) | Foot Stamp |
+| --- | --- | --- |
+| ![The Firing Log Direction: a split hero with a large serif heading on white paper](docs/images/olmo-direction-firing-log.jpg) | ![The Breakfast Table Direction: a full-bleed photo with a large light heading](docs/images/olmo-home-1440-top.jpg) | ![The Foot Stamp Direction: a terracotta band with a bold grotesk heading over product cards](docs/images/olmo-direction-foot-stamp.jpg) |
+| A quiet page set like a Japanese cookbook | The shop as a slow morning, terracotta owning whole bands | Plain facts: what it is, what it costs, when it arrives |
+
+<p>
+  <img src="docs/images/olmo-products-speckled-mug-1440-top.jpg" alt="The Speckled Mug product page: the mug on a warm tint, the price with taxes included, the buy buttons and the delivery note" width="68%">
+  <img src="docs/images/olmo-home-390-top.jpg" alt="The home page on a phone, with the portrait photo of the table" width="15%">
+  <img src="docs/images/olmo-products-speckled-mug-390-top.jpg" alt="The product page on a phone" width="15%">
+</p>
+
 ## How it works
 
 ```mermaid
@@ -124,7 +141,7 @@ The agent checks each Direction against a list of generic-design tells before yo
 
 The Studio is a local app that opens next to your agent, in Google Chrome. It shows your real theme rendered by Shopify through `shopify theme dev`, and saves every change straight into the theme's files, where your agent sees it too.
 
-![The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected section's text on the right](docs/images/studio.png)
+![The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected product grid's settings on the right](docs/images/studio.png)
 
 - **Click to edit.** Click a section in the preview or in the list, header and footer included. Change its color scheme, text, layout, collections, products, menus and links. Every edit applies live.
 - **Add sections** from the catalog, picking a layout from wireframe thumbnails, or add the Custom Sections your agent wrote.
