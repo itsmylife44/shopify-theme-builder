@@ -4,9 +4,10 @@
 //   node <skill-dir>/scripts/check-a11y.mjs <url> [--mobile]
 // It runs axe-core's WCAG 2.2 A and AA rules on the page, then a keyboard pass through the menu drawer, the cart
 // drawer and quick add: Tab until the control has focus, Enter opens its dialog with focus inside, Tab keeps focus
-// there, Escape closes it and focus returns to the control. Both run without Shopify's cookie consent banner, which an
-// EU store shows over the page; when the page shows it, axe also runs once with it first, as a first-time visitor meets
-// it. It drives the browser like screenshot.mjs and stops within 90 seconds.
+// there, Escape closes it and focus returns to the control. A control whose dialog doesn't open is tried once more, on
+// the page opened again, and reported only when it fails both times. Both run without Shopify's cookie consent banner,
+// which an EU store shows over the page; when the page shows it, axe also runs once with it first, as a first-time
+// visitor meets it. It drives the browser like screenshot.mjs and stops within 90 seconds.
 import { readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -16,20 +17,93 @@ import { dismissConsent, findChromeOrExit, sleep, withPage } from './screenshot.
 /** @typedef {{ url: string, width: number, height: number, mobile: boolean }} Options */
 /** @typedef {{ id: string, impact: string, help: string, targets: string[] }} Violation */
 /**
- * What the keyboard pass saw on one control. A step is left out once an earlier one makes it impossible.
- * @typedef {{ name: string, selector: string, found: boolean, reached?: boolean, opened?: boolean, focusIn?: boolean, focusKept?: boolean, closed?: boolean, focusBack?: boolean }} Pass
+ * What the keyboard pass saw on one control. A step is left out once an earlier one makes it impossible. `retried` when
+ * its dialog didn't open on the first try, so what it holds is the second try.
+ * @typedef {{ name: string, selector: string, found: boolean, reached?: boolean, opened?: boolean, focusIn?: boolean, focusKept?: boolean, closed?: boolean, focusBack?: boolean, retried?: boolean }} Pass
  */
 
 const usage = `Usage: node check-a11y.mjs <url> [--mobile]
   <url>     a page of the preview, like http://127.0.0.1:9292/products/<handle>
   --mobile  emulate a 390 by 844 phone with touch, instead of a 1440 by 900 desktop`
 
-/** The controls the keyboard pass opens and closes, each the first visible match of its selector. */
+/**
+ * The controls the keyboard pass opens and closes, each the first visible match of its selector, and the custom element
+ * that makes it open its dialog: until that element is defined, Enter just follows the control's link.
+ */
 export const controls = [
-  { name: 'menu drawer', selector: '.header__menu-button' },
-  { name: 'cart drawer', selector: 'cart-drawer .header__cart' },
-  { name: 'quick add', selector: '[data-quick-add]' },
+  { name: 'menu drawer', selector: '.header__menu-button', element: 'header-menu' },
+  { name: 'cart drawer', selector: 'cart-drawer .header__cart', element: 'cart-drawer' },
+  { name: 'quick add', selector: '[data-quick-add]', element: 'quick-add-dialog' },
 ]
+
+/**
+ * The page as the keyboard pass drives it: `evaluate` runs an expression in it and gives back its value, `reload` opens
+ * the checked page again.
+ * @typedef {{ evaluate: (expression: string) => Promise<any>, press: (key: 'Tab' | 'Enter' | 'Escape') => Promise<void>, sleep: (ms: number) => Promise<void>, reload: () => Promise<void> }} Driver
+ */
+
+/**
+ * The Tab, Enter and Escape pass on one control of the page. When its dialog doesn't open, the page is opened again and
+ * the pass tried once more, so a slow fetch or a drawer not yet defined isn't reported; one that fails twice is (#231).
+ * @param {Driver} driver
+ * @param {{ name: string, selector: string, element: string }} control
+ * @returns {Promise<Pass>}
+ */
+export async function keyboardPass(driver, control) {
+  const first = await tryControl(driver, control)
+  if (first.opened !== false) return first
+  // Enter may have followed the link to another page, or left a fetch that opens the dialog later.
+  await driver.reload()
+  const second = await tryControl(driver, control)
+  // The next control is checked on the same page, not the one this control's link led to.
+  if (second.opened === false) await driver.reload()
+  return { ...second, retried: true }
+}
+
+/**
+ * One try of the pass on one control.
+ * @param {Driver} driver
+ * @param {{ name: string, selector: string, element: string }} control
+ * @returns {Promise<Pass>}
+ */
+async function tryControl({ evaluate, press, sleep }, { name, selector, element }) {
+  /** @type {Pass} */
+  const pass = { name, selector, found: await evaluate(`[...document.querySelectorAll(${JSON.stringify(selector)})].some((match) => match.checkVisibility())`) }
+  if (!pass.found) return pass
+  // Enter before the element is defined follows the control's link instead of opening its dialog (#231).
+  await evaluate(`Promise.race([customElements.whenDefined(${JSON.stringify(element)}), new Promise((resolve) => setTimeout(resolve, 5000))])`)
+  // Start Tab from the top of the page, as a visitor would.
+  await evaluate(`document.activeElement?.blur(); document.body.tabIndex = -1; document.body.focus(); document.body.removeAttribute('tabindex')`)
+  pass.reached = false
+  for (let tab = 0; tab < 500 && !pass.reached; tab++) {
+    await press('Tab')
+    pass.reached = await evaluate(`document.activeElement?.matches(${JSON.stringify(selector)}) ?? false`)
+  }
+  if (!pass.reached) return pass
+  await press('Enter')
+  // The cart drawer and quick add fetch their content first.
+  pass.opened = false
+  for (let wait = 0; wait < 25 && !pass.opened; wait++) {
+    await sleep(200)
+    // Throws while Enter takes the page to the control's link.
+    pass.opened = await evaluate(`document.querySelector('dialog[open]') !== null`).catch(() => false)
+  }
+  if (!pass.opened) return pass
+  await sleep(300)
+  pass.focusIn = await evaluate(`(document.querySelector('dialog[open]')?.contains(document.activeElement) ?? false)`)
+  pass.focusKept = true
+  for (let tab = 0; tab < 10 && pass.focusKept; tab++) {
+    await press('Tab')
+    // Past the dialog's last control focus may leave for the browser's own controls (the body), then comes back.
+    pass.focusKept = await evaluate(`[document.body, null].includes(document.activeElement) || (document.querySelector('dialog[open]')?.contains(document.activeElement) ?? false)`)
+  }
+  await press('Escape')
+  await sleep(300)
+  pass.closed = await evaluate(`document.querySelector('dialog[open]') === null`)
+  if (pass.closed) pass.focusBack = await evaluate(`document.activeElement?.matches(${JSON.stringify(selector)}) ?? false`)
+  else await evaluate(`document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close())`)
+  return pass
+}
 
 /**
  * The check the command line asks for.
@@ -86,6 +160,21 @@ export function findings(violations, passes, bannerViolations = []) {
 }
 
 /**
+ * The keyboard pass's summary line: the controls it checked, those the page doesn't have at `width`, and those whose
+ * dialog opened only on the second try, which a failure on both tries reports instead.
+ * @param {Pass[]} passes
+ * @param {number} width
+ * @returns {string}
+ */
+export function keyboardSummary(passes, width) {
+  const names = (/** @type {(pass: Pass) => boolean} */ keep) => passes.filter(keep).map((pass) => pass.name).join(', ')
+  const checked = names((pass) => pass.found)
+  const missing = names((pass) => !pass.found)
+  const retried = names((pass) => pass.retried === true && pass.opened === true)
+  return `Keyboard pass: ${checked || 'no control'} checked${missing ? `; not on this page at ${width}px: ${missing}` : ''}${retried ? `; opened its dialog only on the second try: ${retried}` : ''}`
+}
+
+/**
  * Runs axe and the keyboard pass on the page with the browser at `chrome`, without Shopify's consent banner, and axe
  * once more with it first when the page shows it.
  * @param {string} chrome
@@ -97,7 +186,7 @@ function check(chrome, options) {
   return withPage(
     chrome,
     { ...options, keepConsent: true },
-    async (page) => {
+    async (page, open) => {
       /** @param {string} expression */
       const evaluate = async (expression) => (await page.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value
       /** @param {'Tab' | 'Enter' | 'Escape'} key */
@@ -121,41 +210,11 @@ function check(chrome, options) {
 
       /** @type {Pass[]} */
       const passes = []
-      for (const { name, selector } of controls) {
-        /** @type {Pass} */
-        const pass = { name, selector, found: await evaluate(`[...document.querySelectorAll(${JSON.stringify(selector)})].some((match) => match.checkVisibility())`) }
-        passes.push(pass)
-        if (!pass.found) continue
-        // Start Tab from the top of the page, as a visitor would.
-        await evaluate(`document.activeElement?.blur(); document.body.tabIndex = -1; document.body.focus(); document.body.removeAttribute('tabindex')`)
-        pass.reached = false
-        for (let tab = 0; tab < 500 && !pass.reached; tab++) {
-          await press('Tab')
-          pass.reached = await evaluate(`document.activeElement?.matches(${JSON.stringify(selector)}) ?? false`)
-        }
-        if (!pass.reached) continue
-        await press('Enter')
-        // The cart drawer and quick add fetch their content first.
-        pass.opened = false
-        for (let wait = 0; wait < 25 && !pass.opened; wait++) {
-          await sleep(200)
-          pass.opened = await evaluate(`document.querySelector('dialog[open]') !== null`)
-        }
-        if (!pass.opened) continue
-        await sleep(300)
-        pass.focusIn = await evaluate(`(document.querySelector('dialog[open]')?.contains(document.activeElement) ?? false)`)
-        pass.focusKept = true
-        for (let tab = 0; tab < 10 && pass.focusKept; tab++) {
-          await press('Tab')
-          // Past the dialog's last control focus may leave for the browser's own controls (the body), then comes back.
-          pass.focusKept = await evaluate(`[document.body, null].includes(document.activeElement) || (document.querySelector('dialog[open]')?.contains(document.activeElement) ?? false)`)
-        }
-        await press('Escape')
-        await sleep(300)
-        pass.closed = await evaluate(`document.querySelector('dialog[open]') === null`)
-        if (pass.closed) pass.focusBack = await evaluate(`document.activeElement?.matches(${JSON.stringify(selector)}) ?? false`)
-        else await evaluate(`document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close())`)
+      const reload = async () => {
+        await open(options.url)
+        await evaluate(dismissConsent)
       }
+      for (const control of controls) passes.push(await keyboardPass({ evaluate, press, sleep, reload }, control))
       return { violations, passes, banner, bannerViolations }
     },
     75,
@@ -182,9 +241,7 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     const { violations, passes, banner, bannerViolations } = await check(chrome, options)
     const lines = findings(violations, passes, bannerViolations)
     for (const line of lines) console.log(line)
-    const missing = passes.filter((pass) => !pass.found).map((pass) => pass.name)
-    const checked = passes.filter((pass) => pass.found).map((pass) => pass.name)
-    console.log(`Keyboard pass: ${checked.join(', ') || 'no control'} checked${missing.length ? `; not on this page at ${options.width}px: ${missing.join(', ')}` : ''}`)
+    console.log(keyboardSummary(passes, options.width))
     console.log(banner ? "Shopify's cookie consent banner: axe ran once with it, then without it" : "Shopify's cookie consent banner: not on this page")
     console.log(`Accessibility check of ${options.url} at ${options.width}px${options.mobile ? ', mobile' : ''}: ${lines.length} finding${lines.length === 1 ? '' : 's'}`)
     process.exit(lines.length > 0 ? 1 : 0)
