@@ -175,6 +175,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- The layout preloads the heading font variant the page actually uses: with a Heading weight other than the font's own, it preloaded the base weight while the `@font-face` loaded the other, so the preload was wasted and headings swapped font late. `snippets/css-variables.liquid` computes the variant once and, rendered with `preload: true` (as `layout/theme.liquid` does), preloads it with the body font's base weight.
+
 - Screen readers hear what a variant change or a cart change did: after picking a variant, the product page announces the new price and availability ("$25.00, In stock"), and after an add or a quantity change, the cart drawer announces "Cart updated, subtotal X", each from a visually hidden `role="status"` region that stays on the page while the content around it is replaced (WCAG 4.1.3). New storefront keys: `product.in_stock`, `product.variant_status`, `cart.updated`.
 
 - A home that opens with image with text, an editorial split, a lookbook or a collection list has its h1 and loads its first image first: like the hero, slideshow and type banner, each makes its heading the page's h1 as the first section (h2 otherwise, at the same size) and loads its first image eagerly with `fetchpriority="high"`. The `product-card` snippet takes a `loading` parameter, and the collection and search pages load their first row of cards eagerly. `check-direction.mjs` names all seven opening sections in its `h1` findings.
