@@ -112,6 +112,12 @@
     else
       assign page_width = '90rem'
   endcase
+
+  # Display type grows linearly from its mobile size at a 390px viewport to its size at 1200px.
+  assign display_mobile = settings.type_display_size_mobile | at_most: settings.type_display_size
+  assign display_slope = settings.type_display_size | minus: display_mobile | divided_by: 810.0
+  assign display_intercept = display_slope | times: -390 | plus: display_mobile | divided_by: 16.0 | round: 4
+  assign display_vw = display_slope | times: 100 | round: 4
 -%}
 {% style %}
   {% # Loads all font variantions with display: swap %}
@@ -140,13 +146,13 @@
       The type scale. Each heading level is the body size times the scale ratio to the power of its step (h4 1, h3 2,
       h2 3, h1 4; h5 halfway between body and h4). h1 to h3 and display are fluid: they reach their size at a 1200px
       viewport (--font-size-fluid is the body size there) and shrink to a ratio half as steep on mobile, which keeps
-      their order. Display is its own size, never below h1.
+      their order. Display has its own desktop and mobile sizes (see display_mobile above), never below h1.
     {% endcomment %}
     --font-scale: {{ settings.type_scale_ratio | divided_by: 100.0 }};
     --font-scale-mobile: calc(1 + (var(--font-scale) - 1) / 2);
     --font-size-body: {{ settings.type_body_size | divided_by: 16.0 }}rem;
     --font-size-fluid: {{ settings.type_body_size | divided_by: 12.0 | round: 4 }}vw;
-    --font-size-display: max(var(--font-size-h1), clamp({{ settings.type_display_size | times: 0.64 | divided_by: 16 }}rem, {{ settings.type_display_size | divided_by: 12.0 | round: 4 }}vw, {{ settings.type_display_size | divided_by: 16.0 }}rem));
+    --font-size-display: max(var(--font-size-h1), clamp({{ display_mobile | divided_by: 16.0 }}rem, calc({{ display_intercept }}rem + {{ display_vw }}vw), {{ settings.type_display_size | divided_by: 16.0 }}rem));
     --font-size-h1: clamp(calc(var(--font-size-body) * pow(var(--font-scale-mobile), 4)), calc(var(--font-size-fluid) * pow(var(--font-scale), 4)), calc(var(--font-size-body) * pow(var(--font-scale), 4)));
     --font-size-h2: clamp(calc(var(--font-size-body) * pow(var(--font-scale-mobile), 3)), calc(var(--font-size-fluid) * pow(var(--font-scale), 3)), calc(var(--font-size-body) * pow(var(--font-scale), 3)));
     --font-size-h3: clamp(calc(var(--font-size-body) * pow(var(--font-scale-mobile), 2)), calc(var(--font-size-fluid) * pow(var(--font-scale), 2)), calc(var(--font-size-body) * pow(var(--font-scale), 2)));

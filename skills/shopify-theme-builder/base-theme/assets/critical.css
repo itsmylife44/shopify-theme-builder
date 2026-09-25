@@ -48,13 +48,19 @@ p {
   text-wrap: pretty;
 }
 p,
-h1,
-h2,
-h3,
 h4,
 h5,
 h6 {
   overflow-wrap: break-word;
+}
+
+/* Large type wraps whole words, in lines of even length. */
+h1,
+h2,
+h3,
+.text-display {
+  overflow-wrap: normal;
+  text-wrap: balance;
 }
 
 p:empty {
