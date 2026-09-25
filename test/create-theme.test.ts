@@ -92,6 +92,18 @@ describe('create-theme', () => {
     expect(listFiles(theme)).toContain('layout/theme.liquid')
   })
 
+  it("points the Theme's documentation and support links at the Creator's, or keeps Shopify's help without them", () => {
+    const info = (theme: string) => JSON.parse(readFileSync(path.join(theme, 'config/settings_schema.json'), 'utf8'))[0]
+    const theme = path.join(tempDir(), 'theme')
+    const result = createTheme(theme, '--name', 'Acme', '--author', 'Jane Doe', '--documentation-url', 'https://studio.example/docs', '--support-url', 'https://studio.example/help')
+    expect(result.stderr).toBe('')
+    expect(info(theme)).toMatchObject({ theme_documentation_url: 'https://studio.example/docs', theme_support_url: 'https://studio.example/help' })
+
+    const plain = path.join(tempDir(), 'theme')
+    expect(createTheme(plain, '--name', 'Acme', '--author', 'Jane Doe').status).toBe(0)
+    expect(info(plain)).toMatchObject({ theme_documentation_url: 'https://help.shopify.com/manual/online-store/themes', theme_support_url: 'https://support.shopify.com/' })
+  })
+
   it('refuses a folder with files, and leaves it as it was', () => {
     const theme = tempDir()
     writeFileSync(path.join(theme, 'notes.txt'), 'mine')
@@ -111,6 +123,8 @@ describe('create-theme', () => {
     ['no name', ['--author', 'Jane Doe']],
     ['no author', ['--name', 'Acme']],
     ['a name over 50 characters', ['--name', 'A'.repeat(51), '--author', 'Jane Doe']],
+    ['a support link that is not an https URL', ['--name', 'Acme', '--author', 'Jane Doe', '--support-url', 'studio.example']],
+    ['a documentation link that is not an https URL', ['--name', 'Acme', '--author', 'Jane Doe', '--documentation-url', 'http://studio.example']],
   ])('refuses %s', (_, args) => {
     const parent = tempDir()
     const result = createTheme(path.join(parent, 'theme'), ...args)

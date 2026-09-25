@@ -22,7 +22,7 @@
       {% if show_products %}
         {% for product in featured.products limit: section.settings.products_to_show %}
           <li>
-            {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
+            {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy, collection: featured %}
           </li>
         {% endfor %}
       {% else %}

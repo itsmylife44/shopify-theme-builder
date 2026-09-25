@@ -205,7 +205,7 @@
                     endif
                   %}
                   <li>
-                    {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy, loading: card_loading %}
+                    {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy, collection: collection, loading: card_loading %}
                   </li>
                 {% endfor %}
               {% endif %}

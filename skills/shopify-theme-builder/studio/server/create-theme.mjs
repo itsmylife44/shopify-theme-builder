@@ -1,5 +1,5 @@
 // Creates a Theme folder (SKILL.md step 3): the Base Theme, the catalog files every Theme
-// starts with, the Theme's name and author, and a Git repository.
+// starts with, the Theme's name, author, documentation and support links, and a Git repository.
 import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
@@ -37,13 +37,17 @@ export const starterFiles = [
 ]
 
 /**
- * Creates the Theme in `theme`, which must be outside the skill and not exist or be empty.
- * @param {{ theme: string, name: string, author: string }} options
+ * Creates the Theme in `theme`, which must be outside the skill and not exist or be empty. Without a
+ * documentation or support URL, the Theme keeps the Base Theme's links to Shopify's help.
+ * @param {{ theme: string, name: string, author: string, documentationUrl?: string, supportUrl?: string }} options
  */
-export function createTheme({ theme, name, author }) {
+export function createTheme({ theme, name, author, documentationUrl, supportUrl }) {
   theme = path.resolve(theme)
   if (!name || name.length > 50) throw new Error('--name is the shop name, 1 to 50 characters.')
   if (!author) throw new Error('--author is required.')
+  for (const [flag, url] of [['--documentation-url', documentationUrl], ['--support-url', supportUrl]]) {
+    if (url !== undefined && URL.parse(url)?.protocol !== 'https:') throw new Error(`${flag} is an https:// URL.`)
+  }
   const fromSkill = path.relative(skillDir, theme)
   if (!fromSkill.startsWith('..') && !path.isAbsolute(fromSkill)) throw new Error(`${theme} is inside the skill: the Theme goes outside ${skillDir}.`)
   if (existsSync(theme) && readdirSync(theme).length > 0) throw new Error(`${theme} isn't empty: pick another folder.`)
@@ -56,6 +60,8 @@ export function createTheme({ theme, name, author }) {
   const schemaFile = path.join(theme, 'config/settings_schema.json')
   const schema = JSON.parse(readFileSync(schemaFile, 'utf8'))
   Object.assign(schema[0], { theme_name: name, theme_author: author })
+  if (documentationUrl) schema[0].theme_documentation_url = documentationUrl
+  if (supportUrl) schema[0].theme_support_url = supportUrl
   writeFileSync(schemaFile, JSON.stringify(schema, null, 2) + '\n')
 
   // Shopify's GitHub integration connects to a repository with the Theme at its root.

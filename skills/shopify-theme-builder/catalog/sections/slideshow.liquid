@@ -21,7 +21,48 @@
       data-autoplay="{{ section.settings.autoplay_speed | times: 1000 }}"
     {% endif %}
   >
-    <div class="slideshow__track" {% if several %}tabindex="0"{% endif %}>
+    {% if several %}
+      <div class="slideshow__controls">
+        {% if autoplay %}
+          <button
+            type="button"
+            class="slideshow__control"
+            data-pause
+            aria-controls="Slideshow-{{ section.id }}"
+            aria-label="{{ 'slideshow.pause' | t }}"
+            data-label-pause="{{ 'slideshow.pause' | t }}"
+            data-label-play="{{ 'slideshow.play' | t }}"
+            hidden
+          >
+            <svg class="slideshow__icon-pause" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+              <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10m6-10v10" />
+            </svg>
+            <svg class="slideshow__icon-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+              <path stroke="currentColor" stroke-linejoin="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10l8-5z" />
+            </svg>
+          </button>
+        {% endif %}
+        <button type="button" class="slideshow__control" data-step="-1" aria-controls="Slideshow-{{ section.id }}" aria-label="{{ 'slideshow.previous' | t }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
+          </svg>
+        </button>
+        <button type="button" class="slideshow__control" data-step="1" aria-controls="Slideshow-{{ section.id }}" aria-label="{{ 'slideshow.next' | t }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
+      </div>
+    {% endif %}
+
+    <div
+      id="Slideshow-{{ section.id }}"
+      class="slideshow__track"
+      aria-live="polite"
+      {% if several %}
+        tabindex="0"
+      {% endif %}
+    >
       {% for block in section.blocks %}
         {% liquid
           assign loading = 'lazy'
@@ -108,38 +149,6 @@
       {% endfor %}
     </div>
 
-    {% if several %}
-      <div class="slideshow__controls">
-        <button type="button" class="slideshow__control" data-step="-1" aria-label="{{ 'slideshow.previous' | t }}">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
-          </svg>
-        </button>
-        {% if autoplay %}
-          <button
-            type="button"
-            class="slideshow__control"
-            data-pause
-            aria-label="{{ 'slideshow.pause' | t }}"
-            data-label-pause="{{ 'slideshow.pause' | t }}"
-            data-label-play="{{ 'slideshow.play' | t }}"
-            hidden
-          >
-            <svg class="slideshow__icon-pause" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-              <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10m6-10v10" />
-            </svg>
-            <svg class="slideshow__icon-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-              <path stroke="currentColor" stroke-linejoin="round" stroke-width="var(--icon-stroke-width)" d="M7 5v10l8-5z" />
-            </svg>
-          </button>
-        {% endif %}
-        <button type="button" class="slideshow__control" data-step="1" aria-label="{{ 'slideshow.next' | t }}">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
-          </svg>
-        </button>
-      </div>
-    {% endif %}
   </slide-show>
 {% endif %}
 
@@ -270,6 +279,7 @@
   }
 
   .slideshow__controls {
+    order: 1;
     display: flex;
     justify-content: center;
     gap: var(--space-xs);
@@ -377,6 +387,8 @@
         { signal }
       );
       this.addEventListener('shopify:block:deselect', () => (this.selected = false), { signal });
+      this.addEventListener('focusin', () => this.live(), { signal });
+      this.addEventListener('focusout', (event) => this.live(event.relatedTarget), { signal });
 
       const delay = Number(this.dataset.autoplay);
       if (!delay || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -385,6 +397,7 @@
       this.timer = setInterval(() => {
         if (!this.paused && !this.selected && !this.matches(':hover, :focus-within')) this.show(this.current + 1);
       }, delay);
+      this.live();
     }
 
     disconnectedCallback() {
@@ -405,8 +418,15 @@
 
     setPaused(paused) {
       this.paused = paused;
+      this.live();
       this.pauseButton.toggleAttribute('data-paused', paused);
       this.pauseButton.setAttribute('aria-label', this.pauseButton.dataset[paused ? 'labelPlay' : 'labelPause']);
+    }
+
+    // Slides are announced when customers change them, not while they rotate on their own.
+    live(focus = document.activeElement) {
+      const rotating = Boolean(this.timer) && !this.paused && !this.contains(focus);
+      this.track.setAttribute('aria-live', rotating ? 'off' : 'polite');
     }
   }
 

@@ -1,7 +1,8 @@
-{% comment %}The cart page's items, discounts, free-shipping progress, order note, checkout and accelerated checkout buttons.{% endcomment %}
+{% comment %}The cart page's items, discounts, free-shipping progress, order note, checkout and accelerated checkout buttons, with product suggestions when it is empty.{% endcomment %}
 {% assign subtotal = cart.total_price | money_with_currency | strip_html %}
-<div class="main-cart basic-page full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" data-status="{{ 'cart.updated' | t: subtotal: subtotal }}">
+<div class="main-cart basic-page full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" data-status="{{ 'cart.updated' | t: subtotal: subtotal }}" data-section-id="{{ section.id }}" data-change-url="{{ routes.cart_change_url }}">
   <h1>{{ 'cart.title' | t }}</h1>
+  <p class="main-cart__error" role="alert" hidden></p>
 
   {% if cart.item_count > 0 %}
     <form action="{{ routes.cart_url }}" method="post" class="main-cart__form">
@@ -141,7 +142,9 @@
           </p>
           <p class="rte">{%- render 'tax-note' -%}</p>
           <div class="main-cart__actions">
-            <button type="submit" name="update" class="button--secondary">{{ 'cart.update' | t }}</button>
+            <noscript>
+              <button type="submit" name="update" class="button--secondary">{{ 'cart.update' | t }}</button>
+            </noscript>
             <button type="submit" name="checkout" class="button">{{ 'cart.checkout' | t }}</button>
           </div>
         </div>
@@ -158,8 +161,29 @@
     <a class="button" href="{{ routes.all_products_collection_url }}">
       {{- 'cart.continue_shopping' | t -}}
     </a>
+    {% liquid
+      assign suggestion = section.settings.empty_collection
+      if suggestion == blank
+        assign suggestion = collections.all
+      endif
+    %}
+    {% if suggestion.products.size > 0 %}
+      <div class="main-cart__suggestions">
+        {% if section.settings.empty_heading != blank %}
+          <h2 class="main-cart__suggestions-title text-h4">{{ section.settings.empty_heading | escape }}</h2>
+        {% endif %}
+        <ul class="main-cart__grid" role="list">
+          {% for product in suggestion.products limit: 4 %}
+            <li>
+              {% render 'product-card', product: product %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
   {% endif %}
 </div>
+<p id="CartStatus-{{ section.id }}" class="visually-hidden" role="status"></p>
 
 {% javascript %}
   document.addEventListener('change', (event) => {
@@ -169,6 +193,59 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ note: event.target.value }),
     });
+  });
+
+  // On the cart page, a quantity change or a removal updates the cart in place, like the drawer does with its own copy.
+  const cartPage = (target) => (target.closest('cart-drawer') ? null : target.closest('.main-cart'));
+
+  async function changeLine(cart, line, quantity) {
+    const id = cart.dataset.sectionId;
+    const header = document.querySelector('.header__cart')?.closest('.shopify-section')?.id.replace('shopify-section-', '');
+    const response = await fetch(`${cart.dataset.changeUrl}.js`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ line: Number(line), quantity: Number(quantity), sections: [id, header].filter(Boolean).join(',') }),
+    }).catch(() => null);
+    const json = await response?.json().catch(() => null);
+    const parse = (html) => new DOMParser().parseFromString(html ?? '', 'text/html');
+    const next = response?.ok && parse(json?.sections?.[id]).querySelector('.main-cart');
+    if (!next) {
+      // Without a message to show, Shopify's own /cart/change makes the change and reloads the page.
+      if (!json?.description) return location.assign(`${cart.dataset.changeUrl}?line=${line}&quantity=${quantity}`);
+      const error = cart.querySelector('.main-cart__error');
+      error.textContent = json.description;
+      error.hidden = false;
+      return;
+    }
+    const focused = cart.contains(document.activeElement);
+    cart.replaceWith(next);
+    if (focused) (next.querySelector(`input[data-line="${line}"]`) ?? next.querySelector('input[data-line], .button'))?.focus();
+    const link = parse(json.sections?.[header]).querySelector('.header__cart');
+    if (link) document.querySelector('.header__cart').replaceWith(link);
+    const status = document.getElementById(`CartStatus-${id}`);
+    status.textContent = '';
+    setTimeout(() => (status.textContent = next.dataset.status), 100);
+  }
+
+  document.addEventListener('change', (event) => {
+    const cart = cartPage(event.target);
+    if (cart && event.target.matches('input[data-line]')) changeLine(cart, event.target.dataset.line, event.target.value);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || !event.target.matches('input[data-line]')) return;
+    const cart = cartPage(event.target);
+    if (!cart) return;
+    event.preventDefault();
+    changeLine(cart, event.target.dataset.line, event.target.value);
+  });
+
+  document.addEventListener('click', (event) => {
+    const remove = event.target.closest('a[data-line]');
+    const cart = remove && cartPage(remove);
+    if (!cart) return;
+    event.preventDefault();
+    changeLine(cart, remove.dataset.line, 0);
   });
 {% endjavascript %}
 
@@ -274,6 +351,31 @@
     justify-self: end;
     width: min(100%, 20rem);
   }
+
+  .main-cart__suggestions {
+    display: grid;
+    gap: var(--space-lg);
+    margin-block-start: var(--space-2xl);
+  }
+
+  .main-cart__suggestions-title {
+    margin: 0;
+  }
+
+  .main-cart__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--grid-row-gap) var(--grid-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  @media (min-width: 750px) {
+    .main-cart__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -302,6 +404,18 @@
       "id": "show_note",
       "label": "t:labels.show_order_note",
       "default": false
+    },
+    {
+      "type": "collection",
+      "id": "empty_collection",
+      "label": "t:labels.empty_cart_collection",
+      "info": "t:info.main_cart_empty_collection"
+    },
+    {
+      "type": "text",
+      "id": "empty_heading",
+      "label": "t:labels.empty_cart_heading",
+      "default": "You might like"
     },
     {
       "type": "select",
