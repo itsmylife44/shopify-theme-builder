@@ -540,7 +540,52 @@ describe('404 page', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
     expect(source).toContain('color-{{ section.settings.color_scheme }}')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.main_404' }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.main_404' })
+  })
+
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('lays the page out centered by default, split with an image, with suggestions or beside a big number', () => {
+    expect(source).toContain('class="main-404 main-404--{{ section.settings.layout }} basic-page full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'centered' })
+    expect(values(settings.layout)).toEqual(['centered', 'split', 'suggestions', 'big_number'])
+    // The centered layouts center the message; the others align it to the start side.
+    expect(css).toMatch(/\.main-404--centered \.main-404__message,\s*\.main-404--suggestions \.main-404__message {[^}]*align-items: center;[^}]*text-align: center;/)
+  })
+
+  it('puts an image in the image ratio box beside the message in the split layout, stacked on mobile', () => {
+    expect(settings.image).toMatchObject({ type: 'image_picker', label: 't:labels.image', visible_if: "{{ section.settings.layout == 'split' }}" })
+    expect(source).toMatch(/{% if layout == 'split' %}\s*<div class="main-404__media">/)
+    expect(source).toContain("{{ 'image' | placeholder_svg_tag: 'placeholder main-404__placeholder' }}")
+    expect(css).toMatch(/\.main-404__media {[^}]*aspect-ratio: var\(--image-ratio\);/)
+    expect(desktop).toMatch(/\.main-404--split \.main-404__inner {\s*grid-template-columns: 1fr 1fr;/)
+    expect(source).toContain("sizes: '(min-width: 750px) 50vw, 100vw'")
+  })
+
+  it("suggests four products of a collection under the message, or the shop's collections when none is set", () => {
+    expect(settings.collection).toMatchObject({ type: 'collection', label: 't:labels.collection', info: 't:info.main_404_collection' })
+    expect(settings.suggestions_heading).toMatchObject({ type: 'text', label: 't:labels.suggestions_heading', default: expect.any(String) })
+    expect(source).toMatch(/{% if suggestion != blank and suggestion\.products_count > 0 %}[\s\S]*{% for product in suggestion\.products limit: 4 %}[\s\S]*{% elsif collections\.size > 0 %}/)
+    expect(source).toContain("{% render 'product-card', product: product, collection: suggestion %}")
+    expect(css).toMatch(/\.main-404__grid {[^}]*grid-template-columns: repeat\(2, 1fr\);[^}]*gap: var\(--grid-row-gap\) var\(--grid-gap\);/)
+    expect(desktop).toMatch(/\.main-404__grid {\s*grid-template-columns: repeat\(4, 1fr\);/)
+  })
+
+  it('shows "404" in display type as the graphic, hidden from screen readers, beside the message on desktop', () => {
+    expect(source).toMatch(/{% if layout == 'big_number' %}\s*<p class="main-404__number text-display" aria-hidden="true">404<\/p>/)
+    expect(desktop).toMatch(/\.main-404--big_number \.main-404__inner {\s*grid-template-columns: auto 1fr;/)
+  })
+
+  it('offers each other layout as a named preset', () => {
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets).toEqual([
+      { name: 't:general.main_404' },
+      { name: 't:general.main_404_split', settings: { layout: 'split' } },
+      { name: 't:general.main_404_suggestions', settings: { layout: 'suggestions' } },
+      { name: 't:general.main_404_big_number', settings: { layout: 'big_number' } },
+    ])
   })
 
   it('shows the heading and text the Creator writes, a search form and a link back to the shop', () => {
@@ -4317,6 +4362,7 @@ describe('Image ratio', () => {
     'featured-product',
     'image-gallery',
     'image-with-text',
+    'main-404',
     'main-blog',
     'main-list-collections',
     'main-product',
@@ -4373,7 +4419,7 @@ describe('Image loading', () => {
     expect(source).not.toMatch(/<h[12][\s>]/)
   })
 
-  it.each(['hero', 'slideshow', 'main-product', 'image-with-text', 'editorial-split', 'lookbook', 'collection-list'])('loads the first viewport image of %s first: high fetch priority, never lazy, never animated', (name) => {
+  it.each(['hero', 'slideshow', 'main-product', 'main-404', 'image-with-text', 'editorial-split', 'lookbook', 'collection-list'])('loads the first viewport image of %s first: high fetch priority, never lazy, never animated', (name) => {
     const source = read(`catalog/sections/${name}.liquid`)
     // The branch that gives the image high priority also loads it eagerly.
     expect(source).toMatch(/\n\s*if [^\n]+\n\s*assign loading = 'eager'\n\s*assign fetchpriority = 'high'\n/)
