@@ -3,8 +3,9 @@ import { mkdtempSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
-import { findChrome, parseArguments, partClips } from '../skills/shopify-theme-builder/scripts/screenshot.mjs'
+import { runInNewContext } from 'node:vm'
+import { describe, expect, it, vi } from 'vitest'
+import { dismissConsent, findChrome, parseArguments, partClips } from '../skills/shopify-theme-builder/scripts/screenshot.mjs'
 
 // The capture itself needs a browser, so it stays out of CI: only the arguments, the parts' geometry and the Chrome lookup are tested.
 const command = fileURLToPath(new URL('../skills/shopify-theme-builder/scripts/screenshot.mjs', import.meta.url))
@@ -19,7 +20,12 @@ describe('screenshot script (review.md step 2)', () => {
         mobile: false,
         partHeight: undefined,
         hover: undefined,
+        keepConsent: false,
       })
+    })
+
+    it("keeps Shopify's cookie consent banner with --keep-consent, to review the banner itself", () => {
+      expect(parseArguments(['http://127.0.0.1:9292/', 'home.png', '--keep-consent'])).toMatchObject({ keepConsent: true })
     })
 
     it('captures several pages in one run with --pages, each to <out-dir>/<page-slug>-<width>.png', () => {
@@ -81,6 +87,23 @@ describe('screenshot script (review.md step 2)', () => {
     it('makes one part of a page shorter than a part, and no empty last part', () => {
       expect(partClips(900, 1800, 'shots/home.png')).toEqual([{ out: 'shots/home-1.png', y: 0, height: 900 }])
       expect(partClips(3600, 1800, 'home.png').map(({ height }) => height)).toEqual([1800, 1800])
+    })
+  })
+
+  describe('consent banner', () => {
+    it("accepts every kind of tracking and removes Shopify's consent banner", () => {
+      const setTrackingConsent = vi.fn()
+      const banner = { remove: vi.fn() }
+      const querySelectorAll = vi.fn(() => [banner])
+      runInNewContext(dismissConsent, { window: { Shopify: { customerPrivacy: { setTrackingConsent } } }, document: { querySelectorAll } })
+      expect(setTrackingConsent).toHaveBeenCalledWith({ analytics: true, marketing: true, preferences: true, sale_of_data: true }, expect.any(Function))
+      expect(querySelectorAll).toHaveBeenCalledWith('[id^="shopify-pc"]')
+      expect(banner.remove).toHaveBeenCalled()
+    })
+
+    it('does nothing on a store without the banner', () => {
+      expect(() => runInNewContext(dismissConsent, { window: {}, document: { querySelectorAll: () => [] } })).not.toThrow()
+      expect(() => runInNewContext(dismissConsent, { window: { Shopify: {} }, document: { querySelectorAll: () => [] } })).not.toThrow()
     })
   })
 

@@ -4,13 +4,14 @@
 //   node <skill-dir>/scripts/check-a11y.mjs <url> [--mobile]
 // It runs axe-core's WCAG 2.2 A and AA rules on the page, then a keyboard pass through the menu drawer, the cart
 // drawer and quick add: Tab until the control has focus, Enter opens its dialog with focus inside, Tab keeps focus
-// there, Escape closes it and focus returns to the control. It drives the browser like screenshot.mjs and stops
-// within 90 seconds.
+// there, Escape closes it and focus returns to the control. Both run without Shopify's cookie consent banner, which an
+// EU store shows over the page; when the page shows it, axe also runs once with it first, as a first-time visitor meets
+// it. It drives the browser like screenshot.mjs and stops within 90 seconds.
 import { readFileSync, realpathSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { findChromeOrExit, sleep, withPage } from './screenshot.mjs'
+import { dismissConsent, findChromeOrExit, sleep, withPage } from './screenshot.mjs'
 
 /** @typedef {{ url: string, width: number, height: number, mobile: boolean }} Options */
 /** @typedef {{ id: string, impact: string, help: string, targets: string[] }} Violation */
@@ -50,16 +51,20 @@ export function parseArguments(args) {
 }
 
 /**
- * One line per axe violation and per failed step of the keyboard pass.
+ * One line per axe violation and per failed step of the keyboard pass, then one per violation axe found only with
+ * Shopify's consent banner open (`bannerViolations`), on the elements it didn't already report without it.
  * @param {Violation[]} violations
  * @param {Pass[]} passes
+ * @param {Violation[]} [bannerViolations]
  * @returns {string[]}
  */
-export function findings(violations, passes) {
-  const lines = violations.map(({ id, impact, help, targets }) => {
+export function findings(violations, passes, bannerViolations = []) {
+  /** @param {Violation} violation @param {string} [context] */
+  const line = ({ id, impact, help, targets }, context = '') => {
     const shown = targets.slice(0, 5).join(', ')
-    return `axe ${id} (${impact}): ${help}: ${targets.length > 5 ? `${shown} and ${targets.length - 5} more` : shown}`
-  })
+    return `axe ${id} (${impact})${context}: ${help}: ${targets.length > 5 ? `${shown} and ${targets.length - 5} more` : shown}`
+  }
+  const lines = violations.map((violation) => line(violation))
   for (const pass of passes) {
     /** @type {[boolean | undefined, string][]} */
     const steps = [
@@ -72,20 +77,26 @@ export function findings(violations, passes) {
     ]
     for (const [ok, message] of steps) if (ok === false) lines.push(`keyboard ${pass.name}: ${message}`)
   }
+  const reported = new Set(violations.flatMap(({ id, targets }) => targets.map((target) => `${id} ${target}`)))
+  for (const violation of bannerViolations) {
+    const targets = violation.targets.filter((target) => !reported.has(`${violation.id} ${target}`))
+    if (targets.length > 0) lines.push(line({ ...violation, targets }, ' with the consent banner'))
+  }
   return lines
 }
 
 /**
- * Runs axe and the keyboard pass on the page with the browser at `chrome`.
+ * Runs axe and the keyboard pass on the page with the browser at `chrome`, without Shopify's consent banner, and axe
+ * once more with it first when the page shows it.
  * @param {string} chrome
  * @param {Options} options
- * @returns {Promise<{ violations: Violation[], passes: Pass[] }>}
+ * @returns {Promise<{ violations: Violation[], passes: Pass[], banner: boolean, bannerViolations: Violation[] }>}
  */
 function check(chrome, options) {
   const axe = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
   return withPage(
     chrome,
-    options,
+    { ...options, keepConsent: true },
     async (page) => {
       /** @param {string} expression */
       const evaluate = async (expression) => (await page.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value
@@ -97,9 +108,16 @@ function check(chrome, options) {
       }
       // Evaluated as a script, so the page's CSP doesn't apply; it sets window.axe even where the page defines AMD's define.
       await page.send('Runtime.evaluate', { expression: axe })
-      /** @type {Violation[]} */
-      const violations = await evaluate(`axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] } })
+      /** @returns {Promise<Violation[]>} */
+      const audit = () =>
+        evaluate(`axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] } })
         .then(({ violations }) => violations.map(({ id, impact, help, nodes }) => ({ id, impact, help, targets: nodes.map((node) => node.target.join(' ')) })))`)
+      // The banner is what a first-time visitor meets, so axe audits it once; then it goes, or the Tab pass would stop in it.
+      /** @type {boolean} */
+      const banner = await evaluate(`document.querySelector('[id^="shopify-pc"]') !== null`)
+      const bannerViolations = banner ? await audit() : []
+      await evaluate(dismissConsent)
+      const violations = await audit()
 
       /** @type {Pass[]} */
       const passes = []
@@ -138,7 +156,7 @@ function check(chrome, options) {
         if (pass.closed) pass.focusBack = await evaluate(`document.activeElement?.matches(${JSON.stringify(selector)}) ?? false`)
         else await evaluate(`document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close())`)
       }
-      return { violations, passes }
+      return { violations, passes, banner, bannerViolations }
     },
     75,
   )
@@ -161,12 +179,13 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     process.exit(1)
   }, 88_000).unref()
   try {
-    const { violations, passes } = await check(chrome, options)
-    const lines = findings(violations, passes)
+    const { violations, passes, banner, bannerViolations } = await check(chrome, options)
+    const lines = findings(violations, passes, bannerViolations)
     for (const line of lines) console.log(line)
     const missing = passes.filter((pass) => !pass.found).map((pass) => pass.name)
     const checked = passes.filter((pass) => pass.found).map((pass) => pass.name)
     console.log(`Keyboard pass: ${checked.join(', ') || 'no control'} checked${missing.length ? `; not on this page at ${options.width}px: ${missing.join(', ')}` : ''}`)
+    console.log(banner ? "Shopify's cookie consent banner: axe ran once with it, then without it" : "Shopify's cookie consent banner: not on this page")
     console.log(`Accessibility check of ${options.url} at ${options.width}px${options.mobile ? ', mobile' : ''}: ${lines.length} finding${lines.length === 1 ? '' : 's'}`)
     process.exit(lines.length > 0 ? 1 : 0)
   } catch (error) {
