@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The empty cart page suggests four products under a heading, from its new `empty_collection` setting or the shop's first products, and `create-theme` takes `--documentation-url` and `--support-url` for the Theme info links the Merchant sees in the Theme Editor (without them the Theme keeps Shopify's help). Article pages output Shopify's `article` structured data.
+
 - An accessibility check for the review and the delivery: `node <skill-dir>/scripts/check-a11y.mjs <url> [--mobile]` runs axe-core's WCAG 2.2 A and AA rules on a page of the preview, then a Tab, Enter and Escape pass through the menu drawer, cart drawer and quick add, checking each opens with focus inside, keeps it there, closes with Escape and returns focus to its control. It prints one line per finding and exits 1 when there is any; the review and the delivery run it on the home, product and collection pages at 1440 and 390 and fix every finding before the hand-off. It drives the browser like `screenshot.mjs`, and axe-core is now a dependency of the skill.
 
 - `check-direction.mjs` finds six more failures: `hierarchy`, a Direction whose display is under 3× its body; `distinct`, two Directions that differ in kind on fewer than 3 axes, or all on subtle motion; `strategy`, a Committed or Full Direction with no home section on an accent scheme; `centered-hero`, a hero at `middle_center`; `merchandise`, a home with no featured collection, collection list or featured product in its first three sections; and `h1`, a page without exactly one h1. `screenshot.mjs --hover <selector>` captures an element's hover state, and the review adds hover captures of a product card and a button.
@@ -164,6 +166,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Changed
 
+- The cart page updates a quantity or removes a line in place through `/cart/change.js`, like the cart drawer, and announces the new subtotal; its Update button shows only without JavaScript. Product cards on the collection page and in a featured collection link to the product within that collection, so the product page's breadcrumbs lead back to it. The slideshow follows the ARIA carousel pattern: its pause button comes first, and its slides are announced when the shopper changes them, not while they rotate. The hero's video no longer plays on its own under reduced motion or with the motion setting on none.
+
 - `check-direction.mjs`'s `movement` check no longer counts product cards with the second image on hover, which does nothing on a phone: a home moves with a slideshow, a marquee, a testimonials or collection list carousel, or `motion: expressive`. `directions.md`, `review.md` and `SKILL.md` say the same.
 - The shipping note ships with empty text instead of an example policy ("Returns accepted within 30 days"), which shops showed as their own.
 - The agent writes only shop-wide facts (shipping, returns, care that applies to everything) into the product template, whose text shows on every product: the "Materials" and "Care" collapsible blocks stay empty, and the hand-off tells the Creator how to connect them to product metafields as dynamic sources in the Theme Editor. The collapsible block's Text setting says so in the Theme Editor too.
@@ -176,6 +180,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 - A detailed product card's sold out or sale badge sits over the image's top start corner instead of in the text, so the titles of cards with and without a badge line up. Screen readers still read it.
 
 ### Fixed
+
+- The `og:image` link uses `https:` instead of `http:`.
 
 - The layout preloads the heading font variant the page actually uses: with a Heading weight other than the font's own, it preloaded the base weight while the `@font-face` loaded the other, so the preload was wasted and headings swapped font late. `snippets/css-variables.liquid` computes the variant once and, rendered with `preload: true` (as `layout/theme.liquid` does), preloads it with the body font's base weight.
 

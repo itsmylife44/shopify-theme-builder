@@ -9,28 +9,34 @@
   minimal or detailed card (quiet, caps or bold); an editorial card keeps its large title. The .product-card
   classes in assets/critical.css style it from the --card-* and --media-* variables in
   snippets/css-variables.liquid; when the card hover setting shows the second image, the card stacks the
-  product's second media over the first.
+  product's second media over the first. Given the collection it lists the product in, the card links to the
+  product within it, so the product page's breadcrumbs lead back to that collection.
 
   @param {product} [product] - The product; leave it out for an example card
+  @param {collection} [collection] - The collection the card lists the product in, which its links keep
   @param {number} [placeholder] - Which product placeholder (1 to 6) an example card or a product without an image shows, 1 by default
   @param {boolean} [show_quick_add] - Show an add to cart button, or a link that opens quick add for a product with variants
   @param {string} [anatomy] - minimal, detailed or editorial; theme or blank for the card_anatomy theme setting
   @param {string} [loading] - eager for a card in the first viewport, like the first row of a collection page; lazy by default
 
   @example
-  {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
+  {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy, collection: collection %}
   {% render 'product-card', placeholder: 3 %}
 {% enddoc %}
 {% liquid
   assign placeholder = placeholder | default: 1
   assign loading = loading | default: 'lazy'
+  assign product_url = product.url
+  if collection
+    assign product_url = product.url | within: collection
+  endif
   if anatomy == blank or anatomy == 'theme'
     assign anatomy = settings.card_anatomy | default: 'minimal'
   endif
 %}
 <div class="product-card product-card--{{ anatomy }} product-card--{{ settings.card_style }}{% unless anatomy == 'editorial' %} product-card--text-{{ settings.card_text_style }}{% endunless %}">
   {% if product %}
-    <a class="product-card__image" href="{{ product.url }}" tabindex="-1" aria-hidden="true">
+    <a class="product-card__image" href="{{ product_url }}" tabindex="-1" aria-hidden="true">
       {% if product.featured_image %}
         {{
           product.featured_image
@@ -58,7 +64,7 @@
     {% if anatomy == 'detailed' and product.vendor != blank %}
       <p class="product-card__vendor text-small">{{ product.vendor | escape }}</p>
     {% endif %}
-    <a class="product-card__title{% if anatomy == 'editorial' %} text-h4{% endif %}" href="{{ product.url }}">
+    <a class="product-card__title{% if anatomy == 'editorial' %} text-h4{% endif %}" href="{{ product_url }}">
       {{- product.title | escape -}}
     </a>
     {% liquid
@@ -146,7 +152,7 @@
       {% else %}
         <a
           class="button product-card__quick-add-button"
-          href="{{ product.url }}"
+          href="{{ product_url }}"
           aria-haspopup="dialog"
           aria-label="{{ 'quick_add.choose_options_label' | t: product: product.title }}"
           data-quick-add

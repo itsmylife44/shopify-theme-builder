@@ -167,6 +167,41 @@ describe('Cart page', () => {
     expect(source).toContain('routes.all_products_collection_url')
   })
 
+  it('updates quantities and removes lines on the cart page through /cart/change.js, with the Update button only without JavaScript', () => {
+    expect(source).toMatch(/<noscript>\s*<button type="submit" name="update" class="button--secondary">{{ 'cart\.update' \| t }}<\/button>\s*<\/noscript>/)
+    expect(source).toMatch(/<div class="main-cart [^"]*"[^>]*data-section-id="{{ section\.id }}"[^>]*data-change-url="{{ routes\.cart_change_url }}"/)
+    const script = source.match(/{% javascript %}([\s\S]*){% endjavascript %}/)![1]
+    // The drawer changes its own copy of the cart.
+    expect(script).toContain("target.closest('cart-drawer') ? null : target.closest('.main-cart')")
+    expect(script).toContain('fetch(`${cart.dataset.changeUrl}.js`')
+    expect(script).toMatch(/JSON\.stringify\({ line: Number\(line\), quantity: Number\(quantity\), sections: /)
+    expect(script).toContain('cart.replaceWith(next)')
+    // Enter in a quantity field changes it instead of submitting the form to checkout.
+    expect(script).toMatch(/event\.key !== 'Enter'[\s\S]*event\.preventDefault\(\);\s*changeLine\(/)
+    // Without a response it falls back to Shopify's own /cart/change.
+    expect(script).toContain('location.assign(`${cart.dataset.changeUrl}?line=${line}&quantity=${quantity}`)')
+    expect(source).toMatch(/<p class="main-cart__error" role="alert" hidden><\/p>/)
+  })
+
+  it('announces the updated subtotal on the cart page from a status region the re-render keeps', () => {
+    const cart = source.slice(0, source.indexOf('{% javascript %}'))
+    const status = cart.indexOf('<p id="CartStatus-{{ section.id }}" class="visually-hidden" role="status"></p>')
+    expect(status).toBeGreaterThan(cart.lastIndexOf('</div>'))
+    expect(source).toContain('status.textContent = next.dataset.status')
+  })
+
+  it('suggests products from a collection when the cart is empty, from all products by default', () => {
+    expect(schema.settings).toContainEqual({ type: 'collection', id: 'empty_collection', label: 't:labels.empty_cart_collection', info: 't:info.main_cart_empty_collection' })
+    expect(schema.settings).toContainEqual({ type: 'text', id: 'empty_heading', label: 't:labels.empty_cart_heading', default: 'You might like' })
+    const empty = source.slice(source.indexOf("<p>{{ 'cart.empty' | t }}</p>"))
+    expect(empty).toMatch(/assign suggestion = section\.settings\.empty_collection\s+if suggestion == blank\s+assign suggestion = collections\.all\s+endif/)
+    expect(empty).toContain('{% for product in suggestion.products limit: 4 %}')
+    expect(empty).toContain("{% render 'product-card', product: product %}")
+    expect(empty).toMatch(/<h2 class="main-cart__suggestions-title text-h4">{{ section\.settings\.empty_heading \| escape }}<\/h2>/)
+    // The drawer keeps its empty state short.
+    expect(readFileSync(path.join(skillDir, 'catalog/sections/header.liquid'), 'utf8')).toMatch(/\.header__cart-content \.main-cart__suggestions {\s*display: none;/)
+  })
+
   it('has a free-shipping threshold theme setting, a number in the shop currency, off when blank', () => {
     const groups = parseJSON(readFileSync(path.join(skillDir, 'base-theme/config/settings_schema.json'), 'utf8'))
     const cart = groups.find((group: { name: string }) => group.name === 't:general.cart')
@@ -1503,6 +1538,16 @@ describe('Hero', () => {
     expect(css).toMatch(/\.hero__content {[^}]*align-self: var\(--content-block\);[^}]*justify-self: var\(--content-inline\);/)
   })
 
+  it('plays its video on its own only without reduced motion and when the Merchant kept motion, with controls either way', () => {
+    const video = source.match(/{{\s*section\.settings\.video[^}]*}}/)![0]
+    expect(video).toContain('controls: true')
+    expect(video).not.toContain('autoplay')
+    expect(source).toMatch(/<hero-video{% if settings\.motion != 'none' %} data-autoplay{% endif %}>\s*{{\s*section\.settings\.video/)
+    expect(source).toMatch(/if \(this\.hasAttribute\('data-autoplay'\) && !matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\)/)
+    expect(source).toContain("customElements.define('hero-video'")
+    expect(css).toMatch(/hero-video {\s*display: contents;/)
+  })
+
   it('sizes the image for half the viewport when it sits beside the content', () => {
     expect(source).toContain("assign sizes = '(min-width: 750px) 50vw, 100vw'")
     expect(css).toMatch(/@media \(min-width: 750px\) {\s*\.hero--split {[^}]*grid-template-columns: 1fr 1fr;/)
@@ -1569,6 +1614,22 @@ describe('Slideshow', () => {
     expect(source).toContain("'ArrowLeft'")
     expect(source).toContain("'ArrowRight'")
     expect(source).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
+  })
+
+  it('follows the ARIA carousel pattern: the pause button first, then the arrows, then a track that announces slides only while not rotating', () => {
+    const controls = source.indexOf('<div class="slideshow__controls">')
+    const track = source.indexOf('<div\n      id="Slideshow-{{ section.id }}"\n      class="slideshow__track"')
+    expect(controls).toBeGreaterThan(-1)
+    expect(track).toBeGreaterThan(controls)
+    const buttons = [...source.slice(controls, track).matchAll(/<button[^>]*>/g)].map(([button]) => button)
+    expect(buttons.map((button) => button.match(/data-(step="-?1"|pause)/)![1])).toEqual(['pause', 'step="-1"', 'step="1"'])
+    for (const button of buttons) expect(button).toContain('aria-controls="Slideshow-{{ section.id }}"')
+    expect(source.slice(track, source.indexOf('>', track))).toContain('aria-live="polite"')
+    expect(source).toMatch(/this\.track\.setAttribute\('aria-live', rotating \? 'off' : 'polite'\)/)
+    expect(source).toContain("this.addEventListener('focusin', () => this.live(), { signal })")
+    expect(source).toContain("this.addEventListener('focusout', (event) => this.live(event.relatedTarget), { signal })")
+    // The controls stay below the slides.
+    expect(source).toMatch(/\.slideshow__controls {[^}]*order: 1;/)
   })
 
   it('does not autoplay when the Merchant turned motion off, and stays swipeable with working arrows', () => {
@@ -2452,7 +2513,7 @@ describe('Quick add', () => {
 
   it('links a product with variants on a card to its page, which quick add opens in a dialog instead', () => {
     const card = read('base-theme/snippets/product-card.liquid')
-    expect(card).toMatch(/<a\s+class="button product-card__quick-add-button"\s+href="{{ product\.url }}"\s+aria-haspopup="dialog"/)
+    expect(card).toMatch(/<a\s+class="button product-card__quick-add-button"\s+href="{{ product_url }}"\s+aria-haspopup="dialog"/)
     expect(card).toContain("'quick_add.choose_options_label' | t: product: product.title")
     expect(card).toMatch(/\s+data-quick-add\s/)
   })
@@ -2516,6 +2577,18 @@ describe('Structured data', () => {
     for (const network of ['instagram', 'facebook', 'tiktok', 'x', 'youtube', 'pinterest']) {
       expect(meta).toContain(network)
     }
+  })
+
+  it("describes a product page's product and an article page's article with Shopify's structured data", () => {
+    const meta = readFileSync(path.join(baseTheme, 'snippets/meta-tags.liquid'), 'utf8')
+    expect(meta).toMatch(/{%- if request\.page_type == 'product' -%}\s*<script type="application\/ld\+json">\s*{{ product \| structured_data }}/)
+    expect(meta).toMatch(/{%- if request\.page_type == 'article' -%}\s*<script type="application\/ld\+json">\s*{{ article \| structured_data }}/)
+  })
+
+  it('shares the page image over https only', () => {
+    const meta = readFileSync(path.join(baseTheme, 'snippets/meta-tags.liquid'), 'utf8')
+    expect(meta).toMatch(/property="og:image"\s+content="https:{{ page_image \| image_url }}"/)
+    expect(meta).not.toContain('http:{{')
   })
 
   it('shows breadcrumbs with BreadcrumbList data on product, collection, article and page templates, with a setting to hide them', () => {
@@ -3592,6 +3665,17 @@ describe('Product card', () => {
     expect(source).not.toContain('unit_price_with_measurement')
     expect(source).not.toContain('__quick-add')
     expect(source).not.toMatch(/\.price \| money|1999 \| money/)
+  })
+
+  it("links to the product within the collection it is listed in, so the product page's breadcrumbs keep that collection", () => {
+    const card = read('base-theme/snippets/product-card.liquid')
+    expect(card).toContain('@param {collection} [collection]')
+    expect(card).toMatch(/if collection\s+assign product_url = product\.url \| within: collection\s+endif/)
+    expect(card).not.toContain('{{ product.url }}')
+    expect(read('catalog/sections/main-collection.liquid')).toMatch(/{% render 'product-card', product: product, [^%]*, collection: collection[,\s]/)
+    expect(read('catalog/sections/featured-collection.liquid')).toMatch(/{% render 'product-card', product: product, [^%]*, collection: featured[,\s]/)
+    const breadcrumbs = read('base-theme/snippets/breadcrumbs.liquid')
+    expect(breadcrumbs).toMatch(/when 'product'\s+if collection\s+assign parent_title = collection\.title\s+assign parent_url = collection\.url/)
   })
 
   it('takes its image ratio, text alignment, border and surface from variables', () => {

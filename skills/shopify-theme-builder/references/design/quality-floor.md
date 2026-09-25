@@ -37,7 +37,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Every input, select and textarea has an `id` and a `<label for>` it, visually hidden (`visually-hidden`) where the design shows none, never only a placeholder or an `aria-label`; an email field takes `autocomplete="email"` (the newsletter forms).
 - No select submits or navigates on change, which an arrow key would trigger (WCAG F37): the country and language selectors open a list whose every choice is a button.
 - Content a script swaps is announced (WCAG 4.1.3): a visually hidden `role="status"` region says the new price and availability after a variant change, and "Cart updated, subtotal X" after a cart change.
-- Anything that moves or changes on its own (the announcement bar's rotation, a slideshow on autoplay, a marquee) has a pause button, not only a pause on hover.
+- Anything that moves or changes on its own (the announcement bar's rotation, a slideshow on autoplay, a marquee) has a pause button, not only a pause on hover. The slideshow follows [the APG carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/): its pause button comes first, and its slides are announced when the shopper changes them, not while they rotate. Under reduced motion, or with the `motion` setting on none, nothing plays on its own: the slideshow and the hero's video wait for a press.
 
 ## Content
 
@@ -52,6 +52,6 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - No heading wraps to leave one word alone on its last line, at 1440px or at 390px.
 - Nothing overflows the screen sideways at 390px, and no text sits on an image where it can't be read.
 - Spacing between sections follows one rhythm (the Theme's density, each section's `spacing` setting around it), with no section doubled up or squeezed: two neighbours on one color scheme share one gap by themselves.
-- Empty states read well: an empty cart, a search with no results (search tips and a collection's products or the shop's collections under a heading, `main-search`), a collection with no products.
+- Empty states read well: an empty cart (a continue shopping link and four products of `main-cart`'s `empty_collection`, the shop's first products without one), a search with no results (search tips and a collection's products or the shop's collections under a heading, `main-search`), a collection with no products.
 - One radius family everywhere: the Theme's shape setting (`check-direction.mjs` finds a radius of its own).
 - Buttons never snap: every button, and every link styled as one, takes the shared `button` or `button--secondary` class, which gives it a hover and a pressed state from the color scheme and the motion setting; a Custom Section's button gets none of its own.

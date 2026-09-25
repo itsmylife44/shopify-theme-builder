@@ -33,10 +33,12 @@
 >
   <div class="hero__media">
     {% if section.settings.video != blank %}
-      {{
-        section.settings.video
-        | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: true, class: 'hero__media-item'
-      }}
+      <hero-video{% if settings.motion != 'none' %} data-autoplay{% endif %}>
+        {{
+          section.settings.video
+          | video_tag: loop: true, muted: true, playsinline: true, controls: true, class: 'hero__media-item'
+        }}
+      </hero-video>
     {% elsif image != blank %}
       <picture>
         {% if section.settings.image_mobile != blank %}
@@ -185,6 +187,10 @@
     }
   }
 
+  hero-video {
+    display: contents;
+  }
+
   /* With expressive motion, the image slowly zooms in from its first frame. */
   @media (prefers-reduced-motion: no-preference) {
     .hero__media img {
@@ -199,6 +205,18 @@
     }
   }
 {% endstylesheet %}
+
+{% javascript %}
+  class HeroVideo extends HTMLElement {
+    connectedCallback() {
+      if (this.hasAttribute('data-autoplay') && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        this.querySelector('video')?.play().catch(() => {});
+      }
+    }
+  }
+
+  if (!customElements.get('hero-video')) customElements.define('hero-video', HeroVideo);
+{% endjavascript %}
 
 {% schema %}
 {
