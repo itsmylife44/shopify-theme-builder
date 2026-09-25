@@ -1911,9 +1911,8 @@ describe('Blog posts', () => {
 
   it('is a catalog section with a description, a color scheme and a preset', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
-    expect(source).toContain('class="blog-posts full-width color-{{ section.settings.color_scheme }}"')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.blog_posts' }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.blog_posts' })
     expect(schema.enabled_on).toBeUndefined()
   })
 
@@ -1927,6 +1926,50 @@ describe('Blog posts', () => {
     expect(source).toContain("article.published_at | time_tag: format: 'date'")
     expect(source).toContain('article.excerpt_or_content')
     expect(source).toMatch(/'image' \| placeholder_svg_tag/)
+  })
+
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('lays the articles out as cards by default, a featured article with a list, a list with thumbnails or a text list', () => {
+    expect(source).toContain('class="blog-posts blog-posts--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'cards' })
+    expect(values(settings.layout)).toEqual(['cards', 'featured', 'thumbnails', 'text_list'])
+    expect(settings.columns).toMatchObject({ visible_if: "{{ section.settings.layout == 'cards' }}" })
+  })
+
+  it('shows the latest article large on the start side and the next ones as a list on the end side, stacked on mobile', () => {
+    expect(desktop).toMatch(/\.blog-posts--featured \.blog-posts__grid {[^}]*grid-template-columns: 3fr 2fr;[^}]*grid-template-rows: repeat\(var\(--rows\), auto\) 1fr;/)
+    expect(desktop).toMatch(/\.blog-posts--featured \.blog-posts__card:first-child {[^}]*grid-row: 1 \/ -1;/)
+    expect(source).toContain('--rows: {{ rows }};')
+    // Only the featured article has an image, and a larger title; the ones listed beside it have neither.
+    expect(source).toMatch(/if layout == 'featured' and forloop\.first\s+assign title_class = 'text-h3'\s+elsif layout == 'featured'\s+assign show_image = false/)
+    expect(source).toContain("assign sizes = '(min-width: 750px) 60vw, 100vw'")
+  })
+
+  it('lists one article a row with a small image beside its date, title and excerpt', () => {
+    expect(css).toMatch(/\.blog-posts--thumbnails \.blog-posts__card {[^}]*display: grid;[^}]*grid-template-columns: 6rem 1fr;/)
+    expect(desktop).toMatch(/\.blog-posts--thumbnails \.blog-posts__card {[^}]*grid-template-columns: 12rem 1fr;/)
+    expect(desktop).toMatch(/\.blog-posts--thumbnails \.blog-posts__grid,\s*\.blog-posts--text_list \.blog-posts__grid {\s*grid-template-columns: 1fr;/)
+    // The image stays in the ratio box the image ratio setting sets.
+    expect(css).toMatch(/\.blog-posts__image {[^}]*aspect-ratio: var\(--image-ratio\);/)
+  })
+
+  it('lists only titles and dates in the text list, divided by rules, with no images or excerpts', () => {
+    expect(css).toMatch(/\.blog-posts--text_list \.blog-posts__card \+ \.blog-posts__card {\s*border-block-start: var\(--border-width\) solid var\(--color-border-subtle\);/)
+    expect(source).toMatch(/if layout == 'text_list'\s+assign show_images = false\s+assign show_excerpt = false/)
+    expect(source).toContain('{% if show_excerpt %}')
+  })
+
+  it('offers each other layout as a named preset', () => {
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets).toEqual([
+      { name: 't:general.blog_posts' },
+      { name: 't:general.blog_posts_featured', settings: { layout: 'featured', posts_to_show: 4 } },
+      { name: 't:general.blog_posts_thumbnails', settings: { layout: 'thumbnails', posts_to_show: 4 } },
+      { name: 't:general.blog_posts_text_list', settings: { layout: 'text_list', posts_to_show: 6 } },
+    ])
   })
 })
 

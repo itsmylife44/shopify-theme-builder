@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Blog posts layouts: article cards (the default, as before), the latest article large with the next ones listed beside it, a list with a small image, the date, the title and the excerpt on each row, or a text list of titles and dates divided by rules, for journals without photos. Each layout is also a named preset, like "Blog posts: featured and list", and stacks on mobile.
+
 - Image gallery layouts: an equal grid (the default, as before), a bento (every fifth image large, two rows and two columns big, the others around it; two columns on mobile), or a strip (tall images in one full-width row that scrolls and snaps, with previous and next buttons). Each layout is also a named preset, like "Image gallery: bento"; the strip's preset starts with portrait images.
 
 - Logo list layouts: a centered row (the default, as before), a tile grid (the logos on tiles three a row, beside the heading and a short text), or an accent band (one row of logos across the full width on its own color scheme, `band_color_scheme`, under the heading). Each layout is also a named preset, like "Logo list: tile grid", and stacks on mobile.

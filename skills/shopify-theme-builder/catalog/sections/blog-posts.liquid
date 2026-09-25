@@ -1,13 +1,31 @@
-{% comment %}The latest articles of a blog, with image, title, date and excerpt.{% endcomment %}
+{% comment %}The latest articles of a blog as cards, a featured article with a list, a list with thumbnails or a text list.{% endcomment %}
 {% liquid
   assign featured_blog = section.settings.blog
+  assign layout = section.settings.layout
   assign show_articles = false
+  assign shown = section.settings.posts_to_show
   if featured_blog != blank and featured_blog.articles_count > 0
     assign show_articles = true
+    assign shown = featured_blog.articles_count | at_most: shown
+  endif
+  assign rows = shown | minus: 1 | at_least: 1
+
+  assign show_images = true
+  assign show_excerpt = true
+  if layout == 'text_list'
+    assign show_images = false
+    assign show_excerpt = false
+  endif
+
+  assign sizes = '(min-width: 750px) 33vw, 100vw'
+  if layout == 'featured'
+    assign sizes = '(min-width: 750px) 60vw, 100vw'
+  elsif layout == 'thumbnails'
+    assign sizes = '(min-width: 750px) 12rem, 6rem'
   endif
 %}
 
-<div class="blog-posts full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="blog-posts blog-posts--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="blog-posts__inner">
     {% if section.settings.heading != blank %}
       <h2 class="blog-posts__heading">{{ section.settings.heading }}</h2>
@@ -17,36 +35,64 @@
       class="blog-posts__grid"
       data-reveal-stagger
       role="list"
-      style="--columns: {{ section.settings.columns }};"
+      style="--columns: {{ section.settings.columns }}; --rows: {{ rows }};"
     >
       {% if show_articles %}
         {% for article in featured_blog.articles limit: section.settings.posts_to_show %}
+          {% liquid
+            assign show_image = show_images
+            assign title_class = 'text-h4'
+            if layout == 'featured' and forloop.first
+              assign title_class = 'text-h3'
+            elsif layout == 'featured'
+              assign show_image = false
+            endif
+          %}
           <li class="blog-posts__card">
-            <a class="blog-posts__image" href="{{ article.url }}" tabindex="-1" aria-hidden="true">
-              {% if article.image %}
-                {{
-                  article.image
-                  | image_url: width: 1200
-                  | image_tag: widths: '400, 600, 800, 1200', sizes: '(min-width: 750px) 33vw, 100vw', loading: 'lazy'
-                }}
-              {% else %}
-                {{ 'image' | placeholder_svg_tag: 'placeholder blog-posts__placeholder' }}
+            {% if show_image %}
+              <a class="blog-posts__image" href="{{ article.url }}" tabindex="-1" aria-hidden="true">
+                {% if article.image %}
+                  {{
+                    article.image
+                    | image_url: width: 1200
+                    | image_tag: widths: '200, 400, 600, 800, 1200', sizes: sizes, loading: 'lazy'
+                  }}
+                {% else %}
+                  {{ 'image' | placeholder_svg_tag: 'placeholder blog-posts__placeholder' }}
+                {% endif %}
+              </a>
+            {% endif %}
+            <div class="blog-posts__text">
+              <h3 class="blog-posts__title {{ title_class }}">
+                <a href="{{ article.url }}">{{ article.title | escape }}</a>
+              </h3>
+              <p class="blog-posts__date text-small">{{ article.published_at | time_tag: format: 'date' }}</p>
+              {% if show_excerpt %}
+                <p class="blog-posts__excerpt">{{ article.excerpt_or_content | strip_html | truncatewords: 30 }}</p>
               {% endif %}
-            </a>
-            <h3 class="blog-posts__title text-h4">
-              <a href="{{ article.url }}">{{ article.title | escape }}</a>
-            </h3>
-            <p class="blog-posts__date text-small">{{ article.published_at | time_tag: format: 'date' }}</p>
-            <p class="blog-posts__excerpt">{{ article.excerpt_or_content | strip_html | truncatewords: 30 }}</p>
+            </div>
           </li>
         {% endfor %}
       {% else %}
         {% for i in (1..section.settings.posts_to_show) %}
+          {% liquid
+            assign show_image = show_images
+            assign title_class = 'text-h4'
+            if layout == 'featured' and forloop.first
+              assign title_class = 'text-h3'
+            elsif layout == 'featured'
+              assign show_image = false
+            endif
+          %}
           <li class="blog-posts__card">
-            <div class="blog-posts__image">
-              {{ 'image' | placeholder_svg_tag: 'placeholder blog-posts__placeholder' }}
+            {% if show_image %}
+              <div class="blog-posts__image">
+                {{ 'image' | placeholder_svg_tag: 'placeholder blog-posts__placeholder' }}
+              </div>
+            {% endif %}
+            <div class="blog-posts__text">
+              <h3 class="blog-posts__title {{ title_class }}">{{ 'blog_posts.article_title' | t }}</h3>
             </div>
-            <h3 class="blog-posts__title text-h4">{{ 'blog_posts.article_title' | t }}</h3>
           </li>
         {% endfor %}
       {% endif %}
@@ -83,6 +129,27 @@
     .blog-posts__grid {
       grid-template-columns: repeat(var(--columns), 1fr);
     }
+
+    /* The listed articles keep their own height; a last flexible row takes what the featured one needs beyond them. */
+    .blog-posts--featured .blog-posts__grid {
+      grid-template-columns: 3fr 2fr;
+      grid-template-rows: repeat(var(--rows), auto) 1fr;
+      align-items: start;
+    }
+
+    .blog-posts--featured .blog-posts__card:first-child {
+      grid-row: 1 / -1;
+    }
+
+    .blog-posts--thumbnails .blog-posts__grid,
+    .blog-posts--text_list .blog-posts__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .blog-posts--thumbnails .blog-posts__card {
+      grid-template-columns: 12rem 1fr;
+      gap: var(--space-lg);
+    }
   }
 
   .blog-posts__card {
@@ -103,6 +170,12 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  .blog-posts__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
   }
 
   .blog-posts__title {
@@ -127,6 +200,50 @@
   .blog-posts__excerpt {
     margin: 0;
   }
+
+  /* Featured and list: the latest article large on the start side, the next ones listed beside it, divided by rules. */
+  .blog-posts--featured .blog-posts__card:not(:first-child) {
+    padding-block-start: var(--space-md);
+    border-block-start: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  /* List with thumbnails and text list: one article a row, in a column as wide as running text. */
+  .blog-posts--thumbnails .blog-posts__grid,
+  .blog-posts--text_list .blog-posts__grid {
+    max-width: var(--width-prose);
+  }
+
+  .blog-posts--thumbnails .blog-posts__card {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: var(--space-md);
+    align-items: start;
+  }
+
+  .blog-posts--thumbnails .blog-posts__date {
+    order: -1;
+  }
+
+  /* Text list: titles and dates only, divided by rules. */
+  .blog-posts--text_list .blog-posts__grid {
+    gap: 0;
+  }
+
+  .blog-posts--text_list .blog-posts__card {
+    padding-block: var(--space-md);
+  }
+
+  .blog-posts--text_list .blog-posts__card + .blog-posts__card {
+    border-block-start: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .blog-posts--text_list .blog-posts__text {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -139,6 +256,18 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "cards", "label": "t:options.layout.cards" },
+        { "value": "featured", "label": "t:options.layout.featured" },
+        { "value": "thumbnails", "label": "t:options.layout.thumbnails" },
+        { "value": "text_list", "label": "t:options.layout.text_list" }
+      ],
+      "default": "cards"
     },
     {
       "type": "select",
@@ -180,7 +309,8 @@
       "min": 1,
       "max": 4,
       "step": 1,
-      "default": 3
+      "default": 3,
+      "visible_if": "{{ section.settings.layout == 'cards' }}"
     },
     {
       "type": "select",
@@ -204,6 +334,18 @@
   "presets": [
     {
       "name": "t:general.blog_posts"
+    },
+    {
+      "name": "t:general.blog_posts_featured",
+      "settings": { "layout": "featured", "posts_to_show": 4 }
+    },
+    {
+      "name": "t:general.blog_posts_thumbnails",
+      "settings": { "layout": "thumbnails", "posts_to_show": 4 }
+    },
+    {
+      "name": "t:general.blog_posts_text_list",
+      "settings": { "layout": "text_list", "posts_to_show": 6 }
     }
   ]
 }
