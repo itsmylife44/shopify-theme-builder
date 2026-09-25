@@ -138,6 +138,7 @@
   "product": {
     "add_to_cart": "Add to cart",
     "media": "Product media",
+    "option_with_value": "{{ option }}: {{ value }}",
     "media_thumbnails": "Product media thumbnails",
     "one_time_purchase": "One-time purchase",
     "per_delivery": "{{ price }} per delivery",

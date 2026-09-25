@@ -11,7 +11,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 ## Product page
 
 - The price, the options and the buy button are in the first viewport on desktop, and right under the gallery on mobile, where the main product's sticky buy bar keeps add to cart in reach once they scroll away.
-- Options (size, color) are buttons, not drop-downs.
+- Options (size, color) are buttons, not drop-downs, and each option's name shows its selected value, like "Color: Sage", since a swatch alone doesn't name the color.
 - Shipping and returns sit next to the buy button, not only in the announcement bar, written from the shop's buying facts: never an example policy the Creator didn't give (`check-direction.mjs` reports the catalog's default text).
 - The mobile gallery shows thumbnails, not dots only.
 - A product image opens full screen on a click or tap, large enough to see the detail, with pinch to zoom on touch (`image_zoom: lightbox`).

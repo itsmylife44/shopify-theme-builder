@@ -849,6 +849,15 @@ describe('Product page requirements', () => {
     expect(picker).toContain('<span class="visually-hidden">{{ option_value | escape }}</span>')
   })
 
+  it('names the selected value next to the option name, like "Color: Sage", re-rendered with the variant', () => {
+    const picker = block('_variant-picker')
+    expect(picker).toMatch(/{%- if option\.selected_value != blank -%}\s*{{ 'product\.option_with_value' \| t: option: option\.name, value: option\.selected_value }}/)
+    const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.product.option_with_value).toBe('{{ option }}: {{ value }}')
+    expect(source).toContain('this.replaceChildren(...fresh.childNodes)')
+    expect(readFileSync(path.join(skillDir, 'references/design/quality-floor.md'), 'utf8')).toContain('"Color: Sage"')
+  })
+
   it('links option values of combined listings to their sibling product, swatches included', () => {
     const picker = block('_variant-picker')
     expect(picker).toContain('data-product-url="{{ option_value.product_url }}"')
