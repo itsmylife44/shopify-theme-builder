@@ -160,7 +160,9 @@
     "faq_three_column_cards": "FAQ: three-column cards",
     "faq_three_column_list": "FAQ: three-column list",
     "logo_list_tile_grid": "Logo list: tile grid",
-    "logo_list_accent_band": "Logo list: accent band"
+    "logo_list_accent_band": "Logo list: accent band",
+    "image_gallery_bento": "Image gallery: bento",
+    "image_gallery_strip": "Image gallery: strip"
   },
   "labels": {
     "accent": "Accent",
@@ -435,7 +437,9 @@
       "three_column_cards": "Three-column cards",
       "three_column_list": "Three-column list",
       "tile_grid": "Tile grid",
-      "accent_band": "Accent band"
+      "accent_band": "Accent band",
+      "bento": "Bento",
+      "strip": "Strip"
     },
     "cart_type": {
       "drawer": "Drawer",

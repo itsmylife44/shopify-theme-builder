@@ -304,7 +304,17 @@ export const wireframes = {
       description: 'A short strip with a heading and a button',
     },
   },
-  'image-gallery': { 't:general.image_gallery': { wireframe: 'image x3' } },
+  'image-gallery': {
+    't:general.image_gallery': { wireframe: 'image x3', description: 'Images of one size in an even grid' },
+    't:general.image_gallery_bento': {
+      wireframe: 'center heading / 4* image | image image | image image',
+      description: 'One large image with smaller ones around it',
+    },
+    't:general.image_gallery_strip': {
+      wireframe: 'center heading / 4* bleed image x6 / center dots',
+      description: 'Tall images in a row that scrolls, with arrows',
+    },
+  },
   'image-with-text': {
     't:general.image_with_text': {
       wireframe: 'image | heading text button',

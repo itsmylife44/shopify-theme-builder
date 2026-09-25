@@ -211,6 +211,10 @@
     "pause": "Pause announcements",
     "play": "Play announcements"
   },
+  "image_gallery": {
+    "previous": "Previous images",
+    "next": "Next images"
+  },
   "collection_list": {
     "collection_title": "Example collection",
     "previous": "Previous collections",
