@@ -4441,6 +4441,33 @@ describe('Tax note', () => {
   })
 })
 
+describe('Store decisions', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+  const brief = readFileSync(path.join(skillDir, 'references/design/brief.md'), 'utf8')
+  const line = (name: string) => skill.match(new RegExp(`^   - \\*\\*${name}\\*\\*[^\\n]*`, 'm'))?.[0] ?? ''
+
+  it("keeps a default language the Creator names, and proposes the country's only when they named none", () => {
+    expect(line('Languages')).toMatch(/default language the Creator names[^\n]*kept as is/)
+    expect(line('Languages')).toMatch(/only when they named none/)
+  })
+
+  it('titles the menus in that default language', () => {
+    expect(line('Menus')).toMatch(/in the default language/)
+  })
+
+  it('tells the Creator to correct a previewed answer with a note, since a question with previews has no Other', () => {
+    for (const text of [skill, brief]) {
+      expect(text).toMatch(/no \*\*Other\*\*[^\n]*note on the option \(press `n`\)/)
+    }
+  })
+
+  it('names the logo in the read-back only when one was found or given', () => {
+    const readBack = brief.match(/^## Reading it back\n([\s\S]*?)(?=^## |$(?![\s\S]))/m)?.[1] ?? ''
+    expect(readBack).toMatch(/logo only when[^\n]*found or given[^\n]*"no logo"/)
+  })
+})
+
 describe('Catalog updates', () => {
   const skill = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/SKILL.md'), 'utf8')
   const step = skill.match(/^## 7\. Update the catalog sections\n([\s\S]*?)^## /m)?.[1] ?? ''
