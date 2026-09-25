@@ -39,7 +39,8 @@
     "title": "Cart",
     "total": "Total",
     "unit_price": "Unit price",
-    "update": "Update"
+    "update": "Update",
+    "updated": "Cart updated, subtotal {{ subtotal }}"
   },
   "contact": {
     "name": "Name",
@@ -154,6 +155,8 @@
     "show_media": "Show media {{ index }} of {{ count }}",
     "sold_out": "Sold out",
     "unavailable": "Unavailable",
+    "in_stock": "In stock",
+    "variant_status": "{{ price }}, {{ availability }}",
     "unit_price": "Unit price",
     "previous_media": "Previous media",
     "next_media": "Next media",

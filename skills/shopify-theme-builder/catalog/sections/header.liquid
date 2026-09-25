@@ -253,6 +253,7 @@
                 </button>
               </form>
               <p class="header__cart-error" role="alert" hidden></p>
+              <p class="header__cart-status visually-hidden" role="status"></p>
               <div class="header__cart-content"></div>
             </div>
           </dialog>
@@ -1059,7 +1060,7 @@
       body.append('sections', this.dataset.sections);
       const response = await fetch(this.dataset.addUrl, { method: 'POST', headers: { Accept: 'application/json' }, body }).catch(() => null);
       if (!response?.ok) return form.submit();
-      this.render((await response.json()).sections);
+      this.render((await response.json()).sections, true);
       this.open(opener);
     }
 
@@ -1070,13 +1071,13 @@
         body: JSON.stringify({ line: Number(line), quantity: Number(quantity), sections: this.dataset.sections }),
       }).catch(() => null);
       const json = await response?.json().catch(() => null);
-      if (response?.ok) return this.render(json.sections);
+      if (response?.ok) return this.render(json.sections, true);
       const error = this.querySelector('.header__cart-error');
       error.textContent = json?.description ?? json?.message ?? '';
       error.hidden = false;
     }
 
-    render(sections) {
+    render(sections, announce) {
       this.querySelector('.header__cart-error').hidden = true;
       const parse = (html) => new DOMParser().parseFromString(html ?? '', 'text/html');
       const line = document.activeElement?.closest('input[data-line]')?.dataset.line;
@@ -1087,6 +1088,10 @@
       if (this.dialog.open && !this.dialog.contains(document.activeElement)) {
         (this.querySelector(`input[data-line="${line}"]`) ?? this.querySelector('.header__drawer-close')).focus();
       }
+      if (!announce || !cart) return;
+      const status = this.querySelector('.header__cart-status');
+      status.textContent = '';
+      setTimeout(() => (status.textContent = cart.dataset.status), 100);
     }
 
     open(opener) {

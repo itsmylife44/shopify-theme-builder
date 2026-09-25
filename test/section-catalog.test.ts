@@ -261,6 +261,20 @@ describe('Cart drawer', () => {
     expect(cart).toMatch(/href="{{ item\.url_to_remove }}"\s+data-line="{{ forloop\.index }}"/)
   })
 
+  it('announces "Cart updated" with the subtotal in a status region inside the drawer after an add or a change', () => {
+    const header = read('catalog/sections/header.liquid')
+    const cart = read('catalog/sections/main-cart.liquid')
+    const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+    const dialog = header.slice(header.indexOf('<dialog class="header__drawer header__drawer--cart"'), header.indexOf('</cart-drawer>'))
+    expect(dialog).toMatch(/<p class="header__cart-status visually-hidden" role="status"><\/p>/)
+    expect(locale.cart.updated).toBe('Cart updated, subtotal {{ subtotal }}')
+    expect(cart).toMatch(/assign subtotal = cart\.total_price \| money_with_currency \| strip_html/)
+    expect(cart).toMatch(/<div class="main-cart [^"]*"[^>]*data-status="{{ 'cart\.updated' \| t: subtotal: subtotal }}"/)
+    expect(header).toContain('this.render(json.sections, true)')
+    expect(header).toContain('this.render((await response.json()).sections, true)')
+    expect(header).toContain("status.textContent = cart.dataset.status")
+  })
+
   it.each(['main-product', 'featured-product'])('adds from %s through /cart/add.js and opens the drawer, or posts to /cart without one', (name) => {
     const header = read('catalog/sections/header.liquid')
     const source = read(`catalog/sections/${name}.liquid`)
@@ -773,8 +787,8 @@ describe('Sticky buy bar', () => {
     expect(bar).toMatch(/^{% if section\.settings\.sticky_buy_bar %}/)
     expect(bar).toContain('<sticky-buy-bar')
     expect(bar).toContain('{{ product.title | escape }}')
-    expect(bar).toMatch(/class="[^"]*\bprice\b[^"]*">\s*{{ bar_price \| money }}/)
-    expect(bar).toContain('assign bar_price = current_variant.price')
+    expect(bar).toMatch(/class="[^"]*\bprice\b[^"]*">\s*{{ price \| money }}/)
+    expect(source).toContain('assign price = current_variant.price')
     expect(bar).toMatch(/<button\s+type="submit"\s+form="product-form-{{ section\.id }}"\s+class="button main-product__buy-bar-button"/)
     expect(bar).toMatch(/{% unless current_variant\.available %}\s*disabled\s*{% endunless %}/)
     expect(bar).toContain("{{ 'product.add_to_cart' | t }}")
@@ -894,6 +908,16 @@ describe('Product page requirements', () => {
     expect(info).toContain('selling_plan_allocation.selling_plan.description')
     expect(source).toContain("event.target.name !== 'selling_plan'")
     expect(source).toContain("params.set('selling_plan', sellingPlan)")
+  })
+
+  it('announces the new price and availability in a status region outside the re-rendered product info after a variant change', () => {
+    const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+    expect(locale.product.variant_status).toBe('{{ price }}, {{ availability }}')
+    expect(locale.product.in_stock).toBe('In stock')
+    expect(source).toMatch(/<product-info[^>]*data-status="{{ variant_status }}"/)
+    expect(source).toContain("assign variant_status = 'product.variant_status' | t: price: variant_price, availability: availability")
+    expect(source).toMatch(/<\/product-info>\s*<p class="main-product__status visually-hidden" role="status"><\/p>/)
+    expect(source).toContain('status.textContent = fresh.dataset.status')
   })
 
   it('lets the customer send a gift card to a recipient, with labelled and validated fields', () => {
