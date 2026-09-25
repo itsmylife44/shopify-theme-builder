@@ -1,7 +1,7 @@
 {% doc %}
   Renders a button for each value of each product option, a color or image
-  swatch when the value has one. Values of a combined listing's sibling
-  products link to them.
+  swatch when the value has one, under the option's name and selected value.
+  Values of a combined listing's sibling products link to them.
 
   @example
   {% content_for 'block', type: '_variant-picker', id: 'variant-picker' %}
@@ -11,7 +11,13 @@
   <div class="variant-picker" {{ block.shopify_attributes }}>
     {% for option in product.options_with_values %}
       <fieldset class="variant-picker__option">
-        <legend>{{ option.name | escape }}</legend>
+        <legend>
+          {%- if option.selected_value != blank -%}
+            {{ 'product.option_with_value' | t: option: option.name, value: option.selected_value }}
+          {%- else -%}
+            {{ option.name | escape }}
+          {%- endif -%}
+        </legend>
         {% for option_value in option.values %}
           {% capture input_id %}{{ section.id }}-{{ option.position }}-{{ forloop.index0 }}{% endcapture %}
           <input

@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- The product page's variant picker names the selected value next to each option, like "Color: Sage", so a swatch's color is named on screen, and updates it when the variant changes.
+
 - A sticky buy bar on the product page on mobile: below 750px, once the main add to cart scrolls away, a bar with the product's title, the selected variant's price and an add to cart button slides in at the bottom of the screen, above the safe area and without sliding under reduced motion. It submits the buy buttons form, so it opens the cart drawer like the main button. The main product's new Sticky add to cart bar setting (`sticky_buy_bar`, on by default) turns it off.
 
 - Collection and search filters no longer reload the page: every choice updates the results through the Section Rendering API, with the URL updated, focus kept on the control, and the product count above the grid announced to screen readers (`role="status"`). Below 750px one "Filter and sort" button opens the filters and sorting in a drawer that closes with "Show N results". Without JavaScript the form still submits with its Apply button.
