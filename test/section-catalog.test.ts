@@ -1570,6 +1570,14 @@ describe('Slideshow', () => {
     expect(source).toContain("'ArrowRight'")
     expect(source).toContain("matchMedia('(prefers-reduced-motion: reduce)')")
   })
+
+  it('does not autoplay when the Merchant turned motion off, and stays swipeable with working arrows', () => {
+    expect(source).toMatch(/if several and section\.settings\.autoplay and settings\.motion != 'none'\s+assign autoplay = true/)
+    expect(source).toMatch(/{% if autoplay %}\s*data-autoplay=/)
+    expect(source).toMatch(/{% if autoplay %}\s*<button[^>]*data-pause/)
+    expect(source).not.toMatch(/if [^%]*section\.settings\.autoplay %}/)
+    expect(source).toMatch(/{% if several %}\s*<div class="slideshow__controls">/)
+  })
 })
 
 describe('Header layouts', () => {

@@ -4,6 +4,11 @@
   if section.blocks.size > 1
     assign several = true
   endif
+
+  assign autoplay = false
+  if several and section.settings.autoplay and settings.motion != 'none'
+    assign autoplay = true
+  endif
 %}
 {% if section.blocks.size > 0 %}
   <slide-show
@@ -12,7 +17,7 @@
     role="region"
     aria-roledescription="carousel"
     aria-label="{{ 'slideshow.label' | t }}"
-    {% if several and section.settings.autoplay %}
+    {% if autoplay %}
       data-autoplay="{{ section.settings.autoplay_speed | times: 1000 }}"
     {% endif %}
   >
@@ -110,7 +115,7 @@
             <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
           </svg>
         </button>
-        {% if section.settings.autoplay %}
+        {% if autoplay %}
           <button
             type="button"
             class="slideshow__control"
