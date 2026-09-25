@@ -1,28 +1,47 @@
-{% comment %}A row of logos, like press mentions or partner brands.{% endcomment %}
-<div class="logo-list full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
-  <div class="logo-list__inner">
-    {% if section.settings.heading != blank %}
-      <h2 class="logo-list__heading text-h3">{{ section.settings.heading }}</h2>
-    {% endif %}
-
-    <ul class="logo-list__items" role="list">
-      {% for block in section.blocks %}
-        <li class="logo-list__item" {{ block.shopify_attributes }}>
-          {% if block.settings.image != blank %}
-            {{ block.settings.image | image_url: width: 320 | image_tag: widths: '160, 320', sizes: '160px', loading: 'lazy' }}
-          {% else %}
-            {{ 'image' | placeholder_svg_tag: 'placeholder logo-list__placeholder' }}
+{% comment %}Logos, like press mentions or partner brands, in a row, on tiles or on a band.{% endcomment %}
+{%- liquid
+  assign layout = section.settings.layout
+-%}
+{%- capture logos -%}
+  <ul class="logo-list__items" role="list"{% if layout == 'tile_grid' %} data-reveal-stagger{% endif %}>
+    {% for block in section.blocks %}
+      <li class="logo-list__item" {{ block.shopify_attributes }}>
+        {% if block.settings.image != blank %}
+          {{ block.settings.image | image_url: width: 320 | image_tag: widths: '160, 320', sizes: '160px', loading: 'lazy' }}
+        {% else %}
+          {{ 'image' | placeholder_svg_tag: 'placeholder logo-list__placeholder' }}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{%- endcapture -%}
+<div class="logo-list logo-list--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
+  {% if layout != 'accent_band' or section.settings.heading != blank %}
+    <div class="logo-list__inner">
+      {% if section.settings.heading != blank or layout == 'tile_grid' %}
+        <div class="logo-list__intro">
+          {% if section.settings.heading != blank %}
+            <h2 class="logo-list__heading text-h3">{{ section.settings.heading }}</h2>
           {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  </div>
+          {% if layout == 'tile_grid' and section.settings.text != blank %}
+            <div class="logo-list__text rte">{{ section.settings.text }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+      {% unless layout == 'accent_band' %}{{ logos }}{% endunless %}
+    </div>
+  {% endif %}
+  {% if layout == 'accent_band' %}
+    <div class="logo-list__band color-{{ section.settings.band_color_scheme }}">{{ logos }}</div>
+  {% endif %}
 </div>
 
 {% stylesheet %}
   .logo-list {
     display: grid;
     grid-template-columns: var(--content-grid);
+    row-gap: var(--space-xl);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
   .logo-list__inner {
@@ -31,11 +50,17 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-xl);
-    padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
-  .logo-list__heading {
+  .logo-list__intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
     text-align: center;
+  }
+
+  .logo-list__text {
+    color: var(--color-foreground-muted);
   }
 
   .logo-list__items {
@@ -53,8 +78,64 @@
   .logo-list__placeholder {
     display: block;
     width: 8rem;
+    max-width: 100%;
     height: 4rem;
     object-fit: contain;
+  }
+
+  .logo-list--tile_grid .logo-list__inner {
+    align-items: stretch;
+  }
+
+  .logo-list--tile_grid .logo-list__intro {
+    text-align: start;
+  }
+
+  .logo-list--tile_grid .logo-list__items {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--grid-gap);
+  }
+
+  .logo-list--tile_grid .logo-list__item {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--card-padding);
+    border: var(--card-border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-cards);
+    background-color: var(--card-background);
+  }
+
+  .logo-list__band {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: var(--content-grid);
+    padding-block: var(--space-xl);
+  }
+
+  .logo-list__band .logo-list__items {
+    grid-column: 2;
+  }
+
+  @media (min-width: 750px) {
+    .logo-list--tile_grid .logo-list__inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      align-items: center;
+      gap: var(--space-2xl);
+    }
+
+    .logo-list--tile_grid .logo-list__items {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .logo-list__band .logo-list__items {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+      justify-items: center;
+    }
   }
 {% endstylesheet %}
 
@@ -75,6 +156,31 @@
       "id": "heading",
       "label": "t:labels.heading",
       "default": "As featured in"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>The shops, magazines and makers who carry and write about what we make.</p>",
+      "visible_if": "{{ section.settings.layout == 'tile_grid' }}"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "row", "label": "t:options.layout.row" },
+        { "value": "tile_grid", "label": "t:options.layout.tile_grid" },
+        { "value": "accent_band", "label": "t:options.layout.accent_band" }
+      ],
+      "default": "row"
+    },
+    {
+      "type": "color_scheme",
+      "id": "band_color_scheme",
+      "label": "t:labels.band_color_scheme",
+      "default": "scheme-2",
+      "visible_if": "{{ section.settings.layout == 'accent_band' }}"
     },
     {
       "type": "select",
@@ -113,6 +219,29 @@
     {
       "name": "t:general.logo_list",
       "blocks": [
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" }
+      ]
+    },
+    {
+      "name": "t:general.logo_list_tile_grid",
+      "settings": { "layout": "tile_grid" },
+      "blocks": [
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" },
+        { "type": "logo" }
+      ]
+    },
+    {
+      "name": "t:general.logo_list_accent_band",
+      "settings": { "layout": "accent_band" },
+      "blocks": [
+        { "type": "logo" },
         { "type": "logo" },
         { "type": "logo" },
         { "type": "logo" },

@@ -323,7 +323,17 @@ export const wireframes = {
       description: 'Image to the edge of the page, text in a narrow column',
     },
   },
-  'logo-list': { 't:general.logo_list': { wireframe: 'center heading / logo x4' } },
+  'logo-list': {
+    't:general.logo_list': { wireframe: 'center heading / logo x4', description: 'A centered row of logos under the heading' },
+    't:general.logo_list_tile_grid': {
+      wireframe: 'heading text | center panel logo x3 / _ | center panel logo x3',
+      description: 'Logos on tiles, three a row, beside the heading',
+    },
+    't:general.logo_list_accent_band': {
+      wireframe: 'center heading / 1.5* bleed center panel logo x5 / 0.5* _',
+      description: 'One row of logos on a colored band, heading above',
+    },
+  },
   lookbook: { 't:general.lookbook': { wireframe: 'image@mr icon _ icon' } },
   'main-404': { 't:general.main_404': { wireframe: 'center heading text input button' } },
   'main-article': { 't:general.main_article': { wireframe: '3* image / center heading line / 2* text text' } },

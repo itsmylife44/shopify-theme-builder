@@ -158,7 +158,9 @@
     "size_guide": "Size guide",
     "faq_two_column_cards": "FAQ: two-column cards",
     "faq_three_column_cards": "FAQ: three-column cards",
-    "faq_three_column_list": "FAQ: three-column list"
+    "faq_three_column_list": "FAQ: three-column list",
+    "logo_list_tile_grid": "Logo list: tile grid",
+    "logo_list_accent_band": "Logo list: accent band"
   },
   "labels": {
     "accent": "Accent",
@@ -275,6 +277,7 @@
     "type_size": "Type size",
     "link_label": "Link label",
     "newsletter_band_color_scheme": "Newsletter band color scheme",
+    "band_color_scheme": "Band color scheme",
     "item_style": "Item style",
     "speed": "Speed",
     "drop_cap": "Drop cap on the first paragraph",
@@ -430,7 +433,9 @@
       "accordion": "Accordion",
       "two_column_cards": "Two-column cards",
       "three_column_cards": "Three-column cards",
-      "three_column_list": "Three-column list"
+      "three_column_list": "Three-column list",
+      "tile_grid": "Tile grid",
+      "accent_band": "Accent band"
     },
     "cart_type": {
       "drawer": "Drawer",
