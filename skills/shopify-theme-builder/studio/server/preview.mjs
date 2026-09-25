@@ -23,6 +23,8 @@ const loginStopped = 'Run `shopify auth login` in a terminal, then restart the S
 const passwordPrompt = /Enter your store password/
 const passwordMissing =
   "The store has a password page: restart the Studio with --store-password <password>, from the Shopify admin's Online Store › Preferences."
+const passwordRefused =
+  "The preview shows the store's password page, and the store refused the Studio's password: restart the Studio with the storefront password in --store-password <password>, from the Shopify admin's Online Store › Preferences."
 // A line of theme dev's output, or a whole box it draws around a message, once its last line arrived.
 const block = /^[^\n╭]*╭[\s\S]*?╰[^\n]*\n|^(?![^\n]*╭)[^\n]*\n/
 // The CLI's session expired and it can't ask for a login without a terminal; a new run gets fresh credentials.
@@ -35,7 +37,7 @@ const missingSection = /(?:section type|tipo di sezione) "([^"/]+)"/i
 
 /**
  * @typedef {{ file: string, message: string }} UploadError A file theme dev failed to upload, and why.
- * @typedef {{ status: 'starting' | 'login-required' | 'reconnecting' | 'error', message: string } | { status: 'running', url: string }} PreviewStatus
+ * @typedef {{ status: 'starting' | 'login-required' | 'reconnecting' | 'password-page' | 'error', message: string } | { status: 'running', url: string }} PreviewStatus
  * @typedef {PreviewStatus & { uploadErrors: UploadError[] }} PreviewState
  */
 
@@ -57,6 +59,12 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
   let stopped = false
   /** @type {string | undefined} */
   let editor
+  /** @type {string | undefined} theme dev's preview URL, once it printed it. */
+  let url
+  /** @type {Promise<PreviewStatus['status']> | undefined} */
+  let checking
+  // ponytail: theme dev's session drops at no signal it prints, so the preview is checked on a timer too.
+  const checker = setInterval(() => check(), 30_000).unref()
 
   /** @param {PreviewStatus} next */
   function set(next) {
@@ -145,6 +153,44 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     utimes(path.join(theme, file), now, now).catch(() => {})
   }
 
+  /**
+   * Brings the preview past the store's password page, where theme dev sends every client once its storefront
+   * session drops (#223): posts the store password to theme dev, which brings the session back for every client,
+   * cookie or not. When that doesn't help, restarts theme dev (#113), else the status is `password-page`.
+   * Resolves the status after the check.
+   * @returns {Promise<PreviewStatus['status']>}
+   */
+  function check() {
+    checking ??= (async () => {
+      const at = url
+      if (!at || (state.status !== 'running' && state.status !== 'password-page')) return state.status
+      let locked = await passwordPage(at)
+      if (locked && storePassword) {
+        await submitPassword(at, storePassword)
+        locked = await passwordPage(at)
+      }
+      // A restart while checking says nothing about the new run.
+      if (at !== url || (state.status !== 'running' && state.status !== 'password-page')) return state.status
+      if (locked && state.status === 'running' && !reconnect()) {
+        set({ status: 'password-page', message: storePassword ? passwordRefused : passwordMissing })
+      }
+      if (!locked && state.status === 'password-page') set({ status: 'running', url: at })
+      return state.status
+    })().finally(() => (checking = undefined))
+    return checking
+  }
+
+  /**
+   * Restarts theme dev when its storefront session expired, since a new run logs in to the storefront again.
+   * Returns false and does nothing while theme dev isn't running, or when it restarted less than a minute ago.
+   */
+  function reconnect() {
+    if (state.status !== 'running' || Date.now() - reconnected < 60_000) return false
+    reconnected = Date.now()
+    restart('Reconnecting to the store, whose storefront session expired…')
+    return true
+  }
+
   function run() {
     freePort(themePort(theme)).then((port) => {
       if (stopped) return
@@ -176,10 +222,12 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
           }
           // ponytail: a box that never closes is dropped after 16 KB; its lines are then read one by one.
           unread = unread.slice(-16384)
-          if (current !== child || state.status === 'running') return
-          const url = previewUrl(output)
-          if (url) set({ status: 'running', url })
-          else if (state.status === 'starting' && loginPrompt.test(output)) {
+          if (current !== child || state.status === 'running' || state.status === 'password-page') return
+          url = previewUrl(output)
+          if (url) {
+            set({ status: 'running', url })
+            check()
+          } else if (state.status === 'starting' && loginPrompt.test(output)) {
             set({ status: 'login-required', message: loginWaiting })
           }
         }
@@ -207,21 +255,43 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     get editor() {
       return editor
     },
-    /**
-     * Restarts theme dev when its storefront session expired, since a new run logs in to the storefront again.
-     * Returns false and does nothing while theme dev isn't running, or when it restarted less than a minute ago.
-     */
-    reconnect() {
-      if (state.status !== 'running' || Date.now() - reconnected < 60_000) return false
-      reconnected = Date.now()
-      restart('Reconnecting to the store, whose storefront session expired…')
-      return true
-    },
+    check,
+    reconnect,
     stop() {
       stopped = true
+      clearInterval(checker)
       child?.kill()
     },
   }
+}
+
+/**
+ * Whether the preview's home page sends a client without cookies to the store's password page.
+ * @param {string} url
+ */
+async function passwordPage(url) {
+  try {
+    const response = await fetch(new URL('/', url), { redirect: 'manual', signal: AbortSignal.timeout(5000) })
+    await response.body?.cancel()
+    const location = response.headers.get('location')
+    return location !== null && URL.parse(location, url)?.pathname === '/password'
+  } catch {
+    // theme dev not answering is not the password page.
+    return false
+  }
+}
+
+/**
+ * Posts the storefront password to the preview's password page, as the page's own form does.
+ * @param {string} url
+ * @param {string} password
+ */
+async function submitPassword(url, password) {
+  try {
+    const body = new URLSearchParams({ form_type: 'storefront_password', utf8: '✓', password })
+    const response = await fetch(new URL('/password', url), { method: 'POST', body, redirect: 'manual', signal: AbortSignal.timeout(10_000) })
+    await response.body?.cancel()
+  } catch {}
 }
 
 /**

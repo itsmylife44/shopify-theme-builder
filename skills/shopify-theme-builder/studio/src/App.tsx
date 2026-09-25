@@ -564,6 +564,7 @@ function PreviewBadge({ preview }: { preview: PreviewState | null }) {
     running: 'Live',
     'login-required': 'Login required',
     reconnecting: 'Reconnecting',
+    'password-page': 'Password page',
     error: 'Preview error',
   }
   const status = preview?.status ?? 'starting'
