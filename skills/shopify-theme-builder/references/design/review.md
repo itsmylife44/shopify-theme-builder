@@ -41,12 +41,14 @@ Fix each finding. A finding stays only when `DIRECTION.md` gives it a reason (th
 
 Screenshot three pages of the preview (`url` in `GET /api/preview`), each at 1440 and at 390 pixels wide, full page, six in all: the home page `<url>/`, a product `<url>/products/<handle>` and a collection `<url>/collections/<handle>`, with a product and a collection from `GET /api/store`. Then two hover captures of the home page at 1440: a product card and a button, since a full page shows neither state. Save them outside the Theme folder.
 
-Take them with the screenshot script, one per page and width:
+Take them with the screenshot script, one call per width, all three pages in one Chrome session (no shell loop around it):
 
 ```sh
-node <skill-dir>/scripts/screenshot.mjs <page> <file>-1440.png --parts
-node <skill-dir>/scripts/screenshot.mjs <page> <file>-390.png --mobile --parts
+node <skill-dir>/scripts/screenshot.mjs <url> <dir> --pages / /products/<handle> /collections/<handle> --parts
+node <skill-dir>/scripts/screenshot.mjs <url> <dir> --pages / /products/<handle> /collections/<handle> --mobile --parts
 ```
+
+`--pages` writes each page to `<dir>/<page>-<width>.png`: `home-1440.png`, `products-<handle>-1440.png`, `collections-<handle>-390.png`. `node <skill-dir>/scripts/screenshot.mjs <page> <file>.png` still captures a single page.
 
 And the two hover captures:
 
@@ -57,7 +59,7 @@ node <skill-dir>/scripts/screenshot.mjs <url>/ button-hover.png --hover .button
 
 `--hover <selector>` moves the mouse over the first visible element the selector matches, and captures the viewport around it instead of the full page; under reduced motion the state shows at once, without its transition.
 
-The script drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. With `--parts` it also writes the page top to bottom in parts twice the viewport tall, `<file>-1440-1.png`, `<file>-1440-2.png`, …, and prints their paths (`--part-height <px>` sets another height). Don't crop or split the captures yourself. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
+The script drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute, 20 seconds more for each other page. With `--parts` it also writes each page top to bottom in parts twice the viewport tall, `home-1440-1.png`, `home-1440-2.png`, …, and prints their paths (`--part-height <px>` sets another height). Don't crop or split the captures yourself. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. It prints each page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
 
 Then check the same three pages for accessibility, at both widths (the menu drawer shows at 390):
 

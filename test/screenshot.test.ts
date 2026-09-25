@@ -13,14 +13,28 @@ describe('screenshot script (review.md step 2)', () => {
   describe('arguments', () => {
     it('captures a desktop page at 1440 by default', () => {
       expect(parseArguments(['http://127.0.0.1:9292/', 'home-1440.png'])).toEqual({
-        url: 'http://127.0.0.1:9292/',
-        out: 'home-1440.png',
+        pages: [{ url: 'http://127.0.0.1:9292/', out: 'home-1440.png' }],
         width: 1440,
         height: 900,
         mobile: false,
         partHeight: undefined,
         hover: undefined,
       })
+    })
+
+    it('captures several pages in one run with --pages, each to <out-dir>/<page-slug>-<width>.png', () => {
+      expect(parseArguments(['http://127.0.0.1:9292', 'shots', '--pages', '/', '/products/olive-oil', '/collections/all', '--parts'])).toMatchObject({
+        pages: [
+          { url: 'http://127.0.0.1:9292/', out: path.join('shots', 'home-1440.png') },
+          { url: 'http://127.0.0.1:9292/products/olive-oil', out: path.join('shots', 'products-olive-oil-1440.png') },
+          { url: 'http://127.0.0.1:9292/collections/all', out: path.join('shots', 'collections-all-1440.png') },
+        ],
+        partHeight: 1800,
+      })
+      expect(parseArguments(['http://127.0.0.1:9292/', 'shots', '--mobile', '--pages', '/', '/collections/all']).pages.map(({ out }) => out)).toEqual([
+        path.join('shots', 'home-390.png'),
+        path.join('shots', 'collections-all-390.png'),
+      ])
     })
 
     it('hovers the first visible element a selector matches with --hover, for a capture of the viewport around it', () => {
@@ -47,6 +61,9 @@ describe('screenshot script (review.md step 2)', () => {
       ['a part height of zero', ['http://127.0.0.1:9292/', 'home.png', '--part-height', '0']],
       ['an empty hover selector', ['http://127.0.0.1:9292/', 'home.png', '--hover', '']],
       ['a hover with parts, as a hover capture is one viewport', ['http://127.0.0.1:9292/', 'home.png', '--hover', '.button', '--parts']],
+      ['--pages with no page', ['http://127.0.0.1:9292/', 'shots', '--pages']],
+      ['--pages with a page that is not a path', ['http://127.0.0.1:9292/', 'shots', '--pages', 'products/oil']],
+      ['--pages with --hover, as a hover capture is one page', ['http://127.0.0.1:9292/', 'shots', '--pages', '/', '--hover', '.button']],
     ])('rejects %s with the usage', (_, args) => {
       expect(() => parseArguments(args)).toThrow(/Usage: node screenshot\.mjs <url> <out\.png>/)
     })
