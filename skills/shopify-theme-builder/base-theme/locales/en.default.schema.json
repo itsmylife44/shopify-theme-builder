@@ -308,7 +308,7 @@
     "related_products_intent": "Shopify picks related products automatically. Set complementary products in the Shopify admin with the Search & Discovery app.",
     "custom_liquid_setting": "Add app snippets, tracking code or embeds. Liquid and HTML both work.",
     "announcement_bar_layout": "Rotate shows one message at a time, changing every 5 seconds. Stack shows them all.",
-    "slideshow_autoplay": "Customers can pause it. It doesn't play when a customer's device asks for reduced motion.",
+    "slideshow_autoplay": "Customers can pause it. It doesn't play when the theme's animations are off or a customer's device asks for reduced motion.",
     "multicolumn_image_size": "Small suits icons. Large fills the column's width.",
     "video_video": "Takes precedence over a YouTube or Vimeo URL.",
     "video_cover_image": "Shown until a customer plays the video.",
