@@ -1372,6 +1372,18 @@ describe('Header menu', () => {
     // The centered logo's column gives way before the side columns do, so that layout stays one row too.
     expect(mobile).toMatch(/\.header--logo_center_menu_below \.header__inner {[^}]*grid-template-columns: minmax\(max-content, 1fr\) minmax\(0, auto\) minmax\(max-content, 1fr\);/)
   })
+
+  it('steps the shop name down to h5 on mobile and wraps it between words, so a large type scale still fits a 390px phone', () => {
+    const mobile = source.slice(source.indexOf('@media (max-width: 749px) {'), source.indexOf('@media (min-width: 750px) {'))
+    expect(source).toContain('<span class="header__shop-name text-h3">{{ shop.name | escape }}</span>')
+    // h3 reaches 30px on a phone at the largest body size and scale ratio; h5 stays near 23px. A section sets no
+    // font-size of its own, so the name's text-h3 class takes the h5 step there.
+    expect(mobile).toMatch(/\.header__shop-name {[^}]*--font-size-h3: var\(--font-size-h5\);/)
+    // A long name wraps onto a second line instead of losing its end; only a word wider than the space is cut, with an ellipsis.
+    const logo = mobile.match(/\.header__logo {[^}]*}/)![0]
+    expect(logo).not.toContain('white-space: nowrap')
+    expect(logo).toContain('text-overflow: ellipsis')
+  })
 })
 
 describe('Country and language selector', () => {

@@ -5,7 +5,8 @@
 // It drives the system's Google Chrome (or Chromium, or Microsoft Edge; CHROME_PATH names another) headless over the
 // DevTools Protocol, with reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the
 // network (theme dev's hot reload never goes idle), dismisses Shopify's cookie consent banner (an EU store shows it to
-// every fresh browser, over the page; --keep-consent keeps it), prints the page's scrollWidth, and stops within 60
+// every fresh browser, over the page; --keep-consent keeps it), prints the page's scrollWidth and what the header cuts
+// off (an element too narrow for its content, which scrollWidth misses), and stops within 60
 // seconds (20 more for each other page with --pages).
 // With --parts it also writes the page in parts, <out>-1.png, <out>-2.png, …, each small enough for a model to read.
 // With --hover it moves the mouse over the first visible element the selector matches, and captures the viewport
@@ -69,6 +70,15 @@ export function parseArguments(args) {
  */
 export const dismissConsent = `window.Shopify?.customerPrivacy?.setTrackingConsent?.({ analytics: true, marketing: true, preferences: true, sale_of_data: true }, () => {})
 document.querySelectorAll('[id^="shopify-pc"]').forEach((element) => element.remove())`
+
+/**
+ * Run in a page, the elements of the header that cut off content wider than themselves, like a shop name too big
+ * for a phone beside the icons, each as `a.header__logo shows 160 of its 241px`. The page's scrollWidth misses them:
+ * they hide what overflows instead of widening the page. Visually hidden labels (1px wide) are left out.
+ */
+export const headerClips = `[...document.querySelectorAll('header, header *')]
+  .filter((element) => element.clientWidth > 1 && element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).overflowX !== 'visible')
+  .map((element) => element.tagName.toLowerCase() + (typeof element.className === 'string' && element.className.trim() ? '.' + element.className.trim().split(/\\s+/).join('.') : '') + ' shows ' + element.clientWidth + ' of its ' + element.scrollWidth + 'px')`
 
 /**
  * The parts that cover a page `pageHeight` pixels tall, top to bottom, each `partHeight` tall but the last, and the
@@ -200,7 +210,7 @@ export async function withPage(chrome, { url, width, height, mobile, keepConsent
  * @param {string} chrome
  * @param {Options} options
  * @param {number} seconds
- * @returns {Promise<{ out: string, scrollWidth: number, parts: string[] }[]>}
+ * @returns {Promise<{ out: string, scrollWidth: number, clipped: string[], parts: string[] }[]>}
  */
 function capture(chrome, options, seconds) {
   const { pages, width, partHeight, hover } = options
@@ -228,10 +238,13 @@ function capture(chrome, options, seconds) {
  * @param {number} width
  * @param {number | undefined} partHeight
  * @param {string | undefined} hover
- * @returns {Promise<{ scrollWidth: number, parts: string[] }>}
+ * @returns {Promise<{ scrollWidth: number, clipped: string[], parts: string[] }>}
  */
 async function capturePage(page, url, out, width, partHeight, hover) {
   const { result } = await page.send('Runtime.evaluate', { expression: 'document.documentElement.scrollWidth', returnByValue: true })
+  const { result: clips } = await page.send('Runtime.evaluate', { expression: headerClips, returnByValue: true })
+  const scrollWidth = result.value
+  const clipped = /** @type {string[]} */ (clips.value)
   if (hover !== undefined) {
     const { result: center } = await page.send('Runtime.evaluate', {
       expression: `(() => {
@@ -248,7 +261,7 @@ async function capturePage(page, url, out, width, partHeight, hover) {
     await sleep(1000)
     const { data } = await page.send('Page.captureScreenshot', { format: 'png' })
     writeFileSync(out, Buffer.from(data, 'base64'))
-    return { scrollWidth: result.value, parts: [] }
+    return { scrollWidth, clipped, parts: [] }
   }
   const { cssContentSize } = await page.send('Page.getLayoutMetrics')
   const pageHeight = Math.ceil(cssContentSize.height)
@@ -260,7 +273,7 @@ async function capturePage(page, url, out, width, partHeight, hover) {
   await shoot(out, 0, pageHeight)
   const parts = partHeight === undefined ? [] : partClips(pageHeight, partHeight, out)
   for (const part of parts) await shoot(part.out, part.y, part.height)
-  return { scrollWidth: result.value, parts: parts.map((part) => part.out) }
+  return { scrollWidth, clipped, parts: parts.map((part) => part.out) }
 }
 
 /**
@@ -347,9 +360,10 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     process.exit(1)
   }, (seconds + 13) * 1000).unref()
   try {
-    for (const { out, scrollWidth, parts } of await capture(chrome, options, seconds)) {
+    for (const { out, scrollWidth, clipped, parts } of await capture(chrome, options, seconds)) {
       const overflow = scrollWidth > options.width ? `, wider than the ${options.width}px viewport: something overflows horizontally` : ''
       console.log(`${out}: ${options.width}px wide${options.mobile ? ', mobile' : ''}; scrollWidth ${scrollWidth}${overflow}`)
+      if (clipped.length > 0) console.log(`  the header cuts off its content: ${clipped.join('; ')}`)
       for (const part of parts) console.log(part)
     }
     process.exit(0)

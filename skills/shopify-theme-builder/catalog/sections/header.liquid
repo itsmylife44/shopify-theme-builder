@@ -704,11 +704,16 @@
       margin-inline-start: auto;
     }
 
+    /* A long shop name wraps between words; only a word wider than the space left is cut, with an ellipsis. */
     .header__logo {
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+    }
+
+    /* h3 reaches 30px on a phone with the largest type scale, too big beside four icons: the name takes the h5 step. */
+    .header__shop-name {
+      --font-size-h3: var(--font-size-h5);
     }
 
     .header__logo-image {
