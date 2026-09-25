@@ -686,6 +686,24 @@ describe('check-direction', () => {
     expect(strategy().map((finding) => finding.file)).toEqual(['listings/harvest-date/templates/index.json'])
   })
 
+  it("finds an accented Direction's home in its listing folder without accents, as the Studio writes it", () => {
+    const theme = sampleTheme()
+    writeFileSync(path.join(theme, 'DIRECTION.md'), direction.replace('## Harvest Date\n', '## Récolte\n\n- Color: Full; four harvest colors\n'))
+    const data = readJSON(theme, 'config/settings_data.json')
+    data.presets['Récolte'] = data.presets['Harvest Date']
+    delete data.presets['Harvest Date']
+    writeJSON(theme, 'config/settings_data.json', data)
+    mkdirSync(path.join(theme, 'listings/recolte/templates'), { recursive: true })
+    writeJSON(theme, 'listings/recolte/templates/index.json', readJSON(theme, 'templates/index.json'))
+    expect(checkDirection(theme).filter((finding) => finding.check === 'strategy')).toEqual([
+      {
+        check: 'strategy',
+        file: 'listings/recolte/templates/index.json',
+        message: "Récolte's color strategy is full, but no section of its home is on an accent scheme: put the sections the color owns on scheme-3.",
+      },
+    ])
+  })
+
   it('reports two Directions that differ in kind on fewer than three axes, and Directions that all use subtle motion', () => {
     const theme = sampleTheme()
     const setPresets = (change: (presets: Record<string, any>) => void) => {

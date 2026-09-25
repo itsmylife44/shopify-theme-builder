@@ -199,6 +199,25 @@ describe('Studio API: Directions', () => {
     expect(readSettingsData(theme).current).not.toEqual(expect.any(String))
   })
 
+  it('takes a name with accents as written, in a listing folder without them, and refuses one that folds to the same folder', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    expect((await studio.send('PUT', `api/directions/${encodeURIComponent('Départ')}`, { template: heroHome })).status).toBe(200)
+    expect(readTemplate(theme, 'listings/depart/templates/index.json')).toEqual(heroHome)
+    expect((await studio.send('PUT', `api/directions/${encodeURIComponent('Café Noir')}`, { template: heroHome })).status).toBe(200)
+    expect(readTemplate(theme, 'listings/cafe-noir/templates/index.json')).toEqual(heroHome)
+    const same = await studio.send('PUT', 'api/directions/Cafe%20Noir', { template: heroHome })
+    expect(same.status).toBe(400)
+    expect(same.body.error).toContain('Direction Café Noir already')
+
+    expect((await studio.send('PUT', 'api/directions/current', { name: 'Départ' })).status).toBe(200)
+    expect(readSettingsData(theme).current).toBe('Départ')
+    const { body } = await studio.send('PUT', 'api/directions/chosen', { name: 'Café Noir' })
+    expect(readTemplate(theme)).toEqual(heroHome)
+    expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toBe('Chosen: Café Noir\n')
+    expect(body.directions.map((direction: { name: string }) => direction.name)).toEqual(['Départ', 'Café Noir'])
+  })
+
   const contract = [
     '# Directions',
     '',
