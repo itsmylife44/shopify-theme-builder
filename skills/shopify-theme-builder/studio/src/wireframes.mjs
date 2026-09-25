@@ -245,7 +245,24 @@ export const wireframes = {
       description: 'A long text on the left, image on the right',
     },
   },
-  faq: { 't:general.faq': { wireframe: 'center heading / 3* rule line rule line rule line rule' } },
+  faq: {
+    't:general.faq': {
+      wireframe: 'center heading / 3* rule line rule line rule line rule',
+      description: 'Questions that open one at a time',
+    },
+    't:general.faq_two_column_cards': {
+      wireframe: 'center heading / 2* panel title text x2 / 2* panel title text x2',
+      description: 'Each question and its answer on a card, two a row',
+    },
+    't:general.faq_three_column_cards': {
+      wireframe: 'center heading / 2* panel title text x3 / 2* panel title text x3',
+      description: 'Short answers on cards, three a row',
+    },
+    't:general.faq_three_column_list': {
+      wireframe: 'center heading / 2* title text x3 / 2* title text x3',
+      description: 'Questions and answers as plain text, three a row',
+    },
+  },
   'featured-collection': {
     't:general.featured_collection': {
       wireframe: 'heading / 3* image title line x4',

@@ -155,7 +155,10 @@
     "collection_list_large_first": "Collection list: large first tile",
     "collection_list_carousel": "Collection list: carousel",
     "collection_list_text_list": "Collection list: text list",
-    "size_guide": "Size guide"
+    "size_guide": "Size guide",
+    "faq_two_column_cards": "FAQ: two-column cards",
+    "faq_three_column_cards": "FAQ: three-column cards",
+    "faq_three_column_list": "FAQ: three-column list"
   },
   "labels": {
     "accent": "Accent",
@@ -423,7 +426,11 @@
       "newsletter_band": "Newsletter band",
       "menu_grid": "Menus in a grid",
       "top_bar": "Top bar",
-      "one_row": "One row"
+      "one_row": "One row",
+      "accordion": "Accordion",
+      "two_column_cards": "Two-column cards",
+      "three_column_cards": "Three-column cards",
+      "three_column_list": "Three-column list"
     },
     "cart_type": {
       "drawer": "Drawer",
