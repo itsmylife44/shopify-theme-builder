@@ -211,6 +211,15 @@ This installs the skill into the current project for the agents the [skills CLI]
 
 To update it, run `npx skills update -p` in that project (or `npx skills update -g` for a global install). The update replaces the skill's folder, so the agent reinstalls the Studio's dependencies the next time it runs.
 
+**In Claude Code**, you can install it as a plugin instead, from inside a session:
+
+```text
+/plugin marketplace add itsmylife44/shopify-theme-builder
+/plugin install shopify-theme-builder@shopify-theme-builder
+```
+
+Update it with `claude plugin update shopify-theme-builder@shopify-theme-builder`, then start a new session.
+
 ## FAQ
 
 <details>

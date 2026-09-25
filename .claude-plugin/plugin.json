@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "shopify-theme-builder",
+  "displayName": "Shopify Theme Builder",
+  "description": "Builds a custom Shopify Online Store 2.0 theme from one prompt: three design Directions to compare in a live Studio, every page written in the shop's language, checked with Theme Check, axe and Lighthouse, and uploaded unpublished. Not affiliated with Shopify.",
+  "author": {
+    "name": "itsmylife44",
+    "url": "https://github.com/itsmylife44"
+  },
+  "homepage": "https://github.com/itsmylife44/shopify-theme-builder#readme",
+  "repository": "https://github.com/itsmylife44/shopify-theme-builder",
+  "license": "MIT",
+  "keywords": ["shopify", "shopify-theme", "liquid", "ecommerce", "theme-builder", "online-store-2.0", "design"]
+}

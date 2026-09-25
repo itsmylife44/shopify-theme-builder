@@ -1,0 +1,14 @@
+{
+  "name": "shopify-theme-builder",
+  "description": "Shopify Theme Builder: an agent skill that designs, builds and delivers a custom Shopify theme from one prompt.",
+  "owner": {
+    "name": "itsmylife44",
+    "url": "https://github.com/itsmylife44"
+  },
+  "plugins": [
+    {
+      "name": "shopify-theme-builder",
+      "source": "./"
+    }
+  ]
+}
