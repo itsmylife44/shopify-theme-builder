@@ -442,6 +442,19 @@ describe('check-direction', () => {
       template.order = template.order.filter((id: string) => id !== 'steps')
     })
     expect(placeholders()).toEqual([])
+
+    // A split or over-image call to action shows its image; a centered or inline one shows none.
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.visit = { type: 'call-to-action', settings: { heading: 'Visit the mill', layout: 'split' } }
+      template.sections.order = { type: 'call-to-action', settings: { heading: 'Order a tin', layout: 'over_image' } }
+      template.sections.join = { type: 'call-to-action', settings: { heading: 'Join the harvest', layout: 'centered' } }
+      template.sections.ship = { type: 'call-to-action', settings: { heading: 'Free shipping', layout: 'inline' } }
+      template.order.push('visit', 'order', 'join', 'ship')
+    })
+    expect(placeholders().map((finding) => finding.message)).toEqual([
+      'visit, image: blank, so it shows a placeholder drawing. Set a photo (POST /api/files), or use a section or layout that needs none.',
+      'order, image: blank, so it shows a placeholder drawing. Set a photo (POST /api/files), or use a section or layout that needs none.',
+    ])
   })
 
   it("reports a home, the Theme's and each Direction's, where no section moves", () => {
@@ -518,6 +531,20 @@ describe('check-direction', () => {
     expect(typeOnly().map((finding) => finding.message)).toEqual([
       'note, specs: type-only sections in a row. Put an image-led section between them, or set an image.',
     ])
+
+    // Two centered calls to action in a row are type-only; one with its image set isn't.
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.visit = { type: 'call-to-action', settings: { heading: 'Visit the mill', layout: 'centered' } }
+      template.sections.order = { type: 'call-to-action', settings: { heading: 'Order a tin', layout: 'centered' } }
+      template.order = ['hero', 'rows', 'story', 'visit', 'order', 'ticker']
+    })
+    expect(typeOnly().map((finding) => finding.message)).toEqual([
+      'visit, order: type-only sections in a row. Put an image-led section between them, or set an image.',
+    ])
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.order.settings.image = 'shopify://shop_images/grove.jpg'
+    })
+    expect(typeOnly()).toEqual([])
   })
 
   it('reports a Direction whose display size is under three times the body', () => {
