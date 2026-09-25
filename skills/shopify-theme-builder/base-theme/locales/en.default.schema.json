@@ -277,6 +277,7 @@
     "gallery_layout": "Gallery layout",
     "contact_details": "Contact details",
     "image_zoom": "Image zoom",
+    "sticky_buy_bar": "Sticky add to cart bar on mobile",
     "free_shipping_threshold": "Free-shipping threshold"
   },
   "info": {
@@ -323,6 +324,7 @@
     "header_sticky": "Stays at the top of the page: hides as customers scroll down and comes back as they scroll up.",
     "header_logo_height": "For a logo image. Without one, the shop name shows at a heading size.",
     "main_product_gallery_layout": "On mobile, the media always swipes, with thumbnails below.",
+    "main_product_sticky_buy_bar": "Slides in at the bottom of the screen with the title, price and an add to cart button once the buy buttons scroll away.",
     "contact_form_heading": "Leave blank to show the page's title.",
     "contact_form_details": "Email, phone number, address and opening hours.",
     "free_shipping_threshold": "The order total, in the store currency, from which shipping is free, as your shipping rates in Settings › Shipping and delivery set it. The cart shows how far the shopper is from it, and the shipping note shows it. Leave blank to show neither."

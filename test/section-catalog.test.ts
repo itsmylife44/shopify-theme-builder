@@ -574,7 +574,7 @@ describe('Product page shipping note and collapsible content', () => {
   })
 
   it('moves the vendor and dynamic checkout settings to the title and buy buttons blocks', () => {
-    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'image_ratio', 'gallery_layout', 'image_zoom', 'spacing'])
+    expect(parse(mainProduct).settings.map((setting: { id: string }) => setting.id)).toEqual(['color_scheme', 'image_ratio', 'gallery_layout', 'image_zoom', 'sticky_buy_bar', 'spacing'])
     expect(parse(read('base-theme/blocks/_product-title.liquid')).settings).toContainEqual({ type: 'checkbox', id: 'show_vendor', label: 't:labels.show_vendor', default: true })
     expect(parse(read('base-theme/blocks/_buy-buttons.liquid')).settings).toContainEqual({
       type: 'checkbox',
@@ -666,6 +666,59 @@ describe('Product page layouts', () => {
       expect(locale.general[preset.name.replace('t:general.', '')]).toMatch(/^Product: /)
       expect(preset.blocks).toEqual(schema.presets[0].blocks)
     }
+  })
+})
+
+describe('Sticky buy bar', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const source = read('catalog/sections/main-product.liquid')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const locale = JSON.parse(read('base-theme/locales/en.default.schema.json'))
+  const bar = source.slice(source.indexOf('{% if section.settings.sticky_buy_bar %}'), source.indexOf('</product-info>'))
+  const css = source.slice(source.indexOf('{% stylesheet %}'), source.indexOf('{% endstylesheet %}'))
+
+  it('is a main product setting, on by default', () => {
+    expect(schema.settings).toContainEqual({
+      type: 'checkbox',
+      id: 'sticky_buy_bar',
+      label: 't:labels.sticky_buy_bar',
+      info: 't:info.main_product_sticky_buy_bar',
+      default: true,
+    })
+    expect(locale.labels.sticky_buy_bar).toBeTruthy()
+    expect(locale.info.main_product_sticky_buy_bar).toBeTruthy()
+  })
+
+  it("shows the title, the selected variant's price and an add to cart button, refreshed with the variant", () => {
+    // Inside <product-info>, so a variant change re-renders it with the rest of the product info.
+    expect(bar).toMatch(/^{% if section\.settings\.sticky_buy_bar %}/)
+    expect(bar).toContain('<sticky-buy-bar')
+    expect(bar).toContain('{{ product.title | escape }}')
+    expect(bar).toMatch(/class="[^"]*\bprice\b[^"]*">\s*{{ bar_price \| money }}/)
+    expect(bar).toContain('assign bar_price = current_variant.price')
+    expect(bar).toMatch(/<button\s+type="submit"\s+form="product-form-{{ section\.id }}"\s+class="button main-product__buy-bar-button"/)
+    expect(bar).toMatch(/{% unless current_variant\.available %}\s*disabled\s*{% endunless %}/)
+    expect(bar).toContain("{{ 'product.add_to_cart' | t }}")
+    expect(bar).toContain("{{ 'product.sold_out' | t }}")
+  })
+
+  it('submits the buy buttons form, so it hands off to the cart drawer like the main button', () => {
+    expect(read('base-theme/blocks/_buy-buttons.liquid')).toMatch(/assign form_id = 'product-form-' \| append: section\.id[\s\S]*{% form 'product', product, id: form_id, class: 'buy-buttons__form' %}/)
+    expect(source).toMatch(/drawer\.add\(event\.target, event\.submitter\)/)
+  })
+
+  it('slides in below 750px once the main add to cart scrolls out of view, above the safe area and eased only without reduced motion', () => {
+    expect(source).toContain("customElements.define('sticky-buy-bar'")
+    expect(source).toContain('new IntersectionObserver(')
+    expect(source).toMatch(/toggleAttribute\('data-visible', !entry\.isIntersecting && entry\.boundingClientRect\.bottom < 0\)/)
+    expect(css).toMatch(/\.main-product__buy-bar {[^}]*position: fixed;[^}]*inset-block-end: 0;[^}]*padding-block-end: calc\(var\(--space-sm\) \+ env\(safe-area-inset-bottom\)\);[^}]*translate: 0 100%;[^}]*visibility: hidden;/)
+    expect(css).toMatch(/\.main-product__buy-bar\[data-visible\] {\s*translate: none;\s*visibility: visible;/)
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) {\s*\.main-product__buy-bar {\s*transition:/)
+    expect(css).toMatch(/@media \(min-width: 750px\) {\s*\.main-product__buy-bar {\s*display: none;/)
+    // The page keeps room for it, so it never covers the end of the page or a focused control.
+    expect(css).toMatch(/body:has\(\.main-product__buy-bar\) {\s*padding-block-end: var\(--buy-bar-height\);/)
+    expect(css).toMatch(/html:has\(\.main-product__buy-bar\) {\s*scroll-padding-block-end: var\(--buy-bar-height\);/)
   })
 })
 
