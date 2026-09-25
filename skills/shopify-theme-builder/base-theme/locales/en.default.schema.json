@@ -68,6 +68,7 @@
     "predictive_search": "Predictive search",
     "main_product": "Main product",
     "main_cart": "Main cart",
+    "main_cart_summary_sidebar": "Main cart: summary sidebar",
     "related_products": "Related products",
     "complementary_products": "Complementary products",
     "rich_text": "Rich text",
@@ -475,7 +476,9 @@
       "big_number": "Big number",
       "image_left": "Image left",
       "image_right": "Image right",
-      "with_thumbnails": "With thumbnails"
+      "with_thumbnails": "With thumbnails",
+      "stacked": "Stacked",
+      "summary_sidebar": "Summary sidebar"
     },
     "cart_type": {
       "drawer": "Drawer",

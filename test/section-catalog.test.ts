@@ -168,7 +168,7 @@ describe('Cart page', () => {
   })
 
   it('updates quantities and removes lines on the cart page through /cart/change.js, with the Update button only without JavaScript', () => {
-    expect(source).toMatch(/<noscript>\s*<button type="submit" name="update" class="button--secondary">{{ 'cart\.update' \| t }}<\/button>\s*<\/noscript>/)
+    expect(source).toMatch(/<noscript>\s*<button type="submit" name="update" form="CartForm-{{ section\.id }}" class="button--secondary">{{ 'cart\.update' \| t }}<\/button>\s*<\/noscript>/)
     expect(source).toMatch(/<div class="main-cart [^"]*"[^>]*data-section-id="{{ section\.id }}"[^>]*data-change-url="{{ routes\.cart_change_url }}"/)
     const script = source.match(/{% javascript %}([\s\S]*){% endjavascript %}/)![1]
     // The drawer changes its own copy of the cart.
@@ -181,6 +181,39 @@ describe('Cart page', () => {
     // Without a response it falls back to Shopify's own /cart/change.
     expect(script).toContain('location.assign(`${cart.dataset.changeUrl}?line=${line}&quantity=${quantity}`)')
     expect(source).toMatch(/<p class="main-cart__error" role="alert" hidden><\/p>/)
+  })
+
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('lays the cart out stacked by default, or with the items beside a sticky summary', () => {
+    expect(source).toContain('class="main-cart main-cart--{{ section.settings.layout }} basic-page full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'stacked' })
+    expect(values(settings.layout)).toEqual(['stacked', 'summary_sidebar'])
+    // The summary holds the discounts, free shipping, subtotal, tax note, note, checkout and accelerated checkout buttons.
+    const summary = source.slice(source.indexOf('<div class="main-cart__footer">'), source.indexOf('{% else %}\n    <p>{{ \'cart.empty\''))
+    for (const part of ['main-cart__note', 'main-cart__shipping', 'main-cart__subtotal', "render 'tax-note'", 'name="checkout"', 'content_for_additional_checkout_buttons']) {
+      expect(summary).toContain(part)
+    }
+    expect(desktop).toMatch(/\.main-cart--summary_sidebar \.main-cart__layout {\s*grid-template-columns: minmax\(0, 2fr\) minmax\(0, 1fr\);/)
+    expect(desktop).toMatch(
+      /\.main-cart--summary_sidebar \.main-cart__footer {\s*position: sticky;\s*inset-block-start: calc\(var\(--header-offset, 0px\) \+ var\(--space-xl\)\);/,
+    )
+    expect(css).toMatch(/\.main-cart--summary_sidebar \.main-cart__footer {[^}]*border: var\(--border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-cards\);/)
+  })
+
+  it('keeps the note and the buttons outside the items form in its form, and the accelerated checkout buttons out of any form', () => {
+    expect(source).toContain('<form action="{{ routes.cart_url }}" method="post" id="CartForm-{{ section.id }}" class="main-cart__form">')
+    const form = source.slice(source.indexOf('<form action="{{ routes.cart_url }}"'), source.indexOf('</form>'))
+    expect(form).not.toContain('content_for_additional_checkout_buttons')
+    expect(source).toMatch(/<textarea id="CartNote-{{ section\.id }}" name="note" form="CartForm-{{ section\.id }}"/)
+    expect(source).toContain('<button type="submit" name="checkout" form="CartForm-{{ section.id }}" class="button">')
+  })
+
+  it('offers the summary sidebar layout as a named preset', () => {
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets).toEqual([{ name: 't:general.main_cart' }, { name: 't:general.main_cart_summary_sidebar', settings: { layout: 'summary_sidebar' } }])
   })
 
   it('announces the updated subtotal on the cart page from a status region the re-render keeps', () => {

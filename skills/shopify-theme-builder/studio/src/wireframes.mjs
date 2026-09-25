@@ -405,7 +405,16 @@ export const wireframes = {
   },
   'main-article': { 't:general.main_article': { wireframe: '3* image / center heading line / 2* text text' } },
   'main-blog': { 't:general.main_blog': { wireframe: 'heading line / 3* image title line x3' } },
-  'main-cart': { 't:general.main_cart': { wireframe: 'heading / 2* image | title line | line / 2* image | title line | line / button' } },
+  'main-cart': {
+    't:general.main_cart': {
+      wireframe: 'heading / 2* image | title line | line / 2* image | title line | line / button',
+      description: 'The items in a table, the subtotal and checkout below',
+    },
+    't:general.main_cart_summary_sidebar': {
+      wireframe: 'heading / 4* image image | title line _ title line | panel line heading line button',
+      description: 'The items beside a sticky summary with checkout',
+    },
+  },
   'main-collection': {
     't:general.collection_product_grid': {
       wireframe: 'heading / 4* line line line | image title line x3',
