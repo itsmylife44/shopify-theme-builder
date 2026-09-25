@@ -2,12 +2,13 @@
 // plugin adds the Node file API over the Theme folder on disk.
 import { execFile } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, watch, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { buffer, json } from 'node:stream/consumers'
 import { fileURLToPath } from 'node:url'
 import { promisify, stripVTControlCharacters } from 'node:util'
+import { root as docsCache } from '@shopify/theme-check-docs-updater'
 import { Severity, check, parseJSON } from '@shopify/theme-check-node'
 import { createServer } from 'vite'
 import { pagePaths, startFrameProxy } from './frame.mjs'
@@ -2083,12 +2084,51 @@ function themeHash(theme) {
   return hash.digest('hex')
 }
 
+/** The docs (Liquid and JSON schemas) Theme Check's version ships with. */
+const bundledDocs = fileURLToPath(new URL('../data', import.meta.resolve('@shopify/theme-check-docs-updater')))
+let docsPinned = false
+
 /**
- * Runs Theme Check on a Theme.
+ * Copies Theme Check's docs from `from` into its cache `to`, each file replaced at once, so a Theme Check run reading the
+ * cache never sees half a file. Throws naming a JSON schema that doesn't load: Theme Check would skip it with an
+ * unhandled rejection instead of an offense.
+ * @param {string} [from]
+ * @param {string} [to]
+ */
+export function pinDocs(from = bundledDocs, to = docsCache) {
+  const docs = new Map(readdirSync(from).map((file) => [file, readFileSync(path.join(from, file), 'utf8')]))
+  for (const [file, text] of docs) {
+    if (!file.startsWith('manifest_')) continue
+    for (const { uri } of JSON.parse(text).schemas) {
+      let schema
+      try {
+        schema = JSON.parse(docs.get(path.basename(uri)) ?? '')
+      } catch {}
+      if (typeof schema !== 'object' || schema === null) throw new Error(`Theme Check can't load the JSON schema ${uri} from ${from}.`)
+    }
+  }
+  mkdirSync(to, { recursive: true })
+  for (const [file, text] of docs) {
+    const temp = path.join(to, `${file}.${process.pid}.tmp`)
+    writeFileSync(temp, text)
+    renameSync(temp, path.join(to, file))
+  }
+}
+
+/**
+ * Runs Theme Check on a Theme, offline on the docs bundled with it.
  * @param {string} theme
  * @returns {Promise<Offense[]>}
  */
 export async function validate(theme) {
+  if (!docsPinned) {
+    pinDocs()
+    // Theme Check's docs updater would download Shopify's latest docs into the cache every run, the cache every Theme
+    // Check process shares: a failed download (GitHub's rate limit) or a file another run is rewriting reads as an empty
+    // schema. Pointed at a folder without docs, it neither downloads nor writes, and Theme Check reads the pinned cache.
+    process.env.SHOPIFY_TLD_ROOT = path.join(docsCache, 'offline')
+    docsPinned = true
+  }
   const offenses = await check(theme)
   return offenses.map((offense) => ({
     file: path.relative(theme, fileURLToPath(offense.uri)),
