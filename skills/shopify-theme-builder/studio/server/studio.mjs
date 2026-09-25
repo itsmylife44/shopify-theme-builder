@@ -1070,26 +1070,48 @@ function checkTemplate(theme, catalog, template) {
     throw new BadRequest(`Shopify rejects an id starting with _, like ${underscored}; use ${underscored.replace(/^_+/, '')}.`)
   }
   checkOrder({ order }, ids, 'each section id of the template')
-  return Object.values(/** @type {Record<string, { type?: unknown, settings?: unknown, blocks?: unknown }>} */ (sections)).map((section) => {
+  const schemes = Object.keys(readBrand(theme).colorSchemes)
+  return Object.entries(/** @type {Record<string, { type?: unknown, settings?: unknown, blocks?: unknown }>} */ (sections)).map(([id, section]) => {
     const schema = readSchema(sectionFile(theme, catalog, section.type, pages.home)) ?? {}
-    checkImages(section.settings, schema.settings, `the ${section.type} section`)
-    for (const block of isObject(section.blocks) ? Object.values(/** @type {object} */ (section.blocks)) : []) {
-      if (isObject(block)) checkImages(block.settings, readBlockSchema(theme, schema, block.type)?.settings, `the ${block.type} block`)
+    checkSettings(section.settings, schema.settings, `the ${section.type} section`, `In section ${id}`, schemes)
+    for (const [blockId, block] of Object.entries(isObject(section.blocks) ? /** @type {object} */ (section.blocks) : {})) {
+      if (isObject(block)) {
+        const blockSchema = readBlockSchema(theme, schema, block.type)
+        checkSettings(block.settings, blockSchema?.settings, `the ${block.type} block`, `In block ${blockId} of section ${id}`, schemes)
+      }
     }
     return /** @type {string} */ (section.type)
   })
 }
 
 /**
- * Checks the image settings among a template's values as a PATCH does; the other values are the template's own.
+ * Checks a template's section or block settings: each one its schema has, and of the types the Studio writes, valid as a PATCH
+ * would take it; a color scheme one of the Brand's.
  * @param {unknown} values
  * @param {SchemaSetting[] | undefined} schemaSettings
- * @param {string} owner
+ * @param {string} owner Like "the hero section".
+ * @param {string} where Like "In section hero", starting the error.
+ * @param {string[]} schemes
  */
-function checkImages(values, schemaSettings, owner) {
-  if (!isObject(values)) return
-  const images = Object.entries(/** @type {object} */ (values)).filter(([key]) => schemaSettings?.some((setting) => setting.id === key && setting.type === 'image_picker'))
-  setValues({}, Object.fromEntries(images), schemaSettings, owner, new Set(['image_picker']))
+function checkSettings(values, schemaSettings, owner, where, schemes) {
+  if (values === undefined) return
+  if (!isObject(values)) throw new BadRequest(`${where}: settings must be an object.`)
+  /** @type {Record<string, unknown>} */
+  const checked = {}
+  for (const [key, value] of Object.entries(/** @type {object} */ (values))) {
+    const setting = schemaSettings?.find((candidate) => candidate.id === key)
+    if (!setting) throw new BadRequest(`${where}: ${key} is not a setting of ${owner}.`)
+    if (setting.type === 'color_scheme' && !schemes.includes(/** @type {string} */ (value))) {
+      throw new BadRequest(`${where}: ${key} must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
+    }
+    if (templateTypes.has(setting.type)) checked[key] = value
+  }
+  try {
+    setValues({}, checked, schemaSettings, owner, templateTypes)
+  } catch (error) {
+    if (error instanceof BadRequest) throw new BadRequest(`${where}: ${error.message}`)
+    throw error
+  }
 }
 
 /**
@@ -1488,6 +1510,9 @@ const styleTypes = new Set([...editableTypes, 'color'])
 const mediaTypes = new Set(['image_picker', 'video', 'video_url'])
 // The setting types a section's or block's PATCH writes.
 const sectionTypes = new Set([...editableTypes, 'image_picker'])
+// The setting types a template's values are checked against as a PATCH checks them. A video, which the Studio doesn't write,
+// and the types it doesn't know pass as they are.
+const templateTypes = new Set([...sectionTypes, 'color'])
 const handle = /^[^\s/]+$/
 // The links a url setting takes: a store path, a web or mail link, or a shopify:// link to a store resource.
 const link = /^(\/|https?:\/\/|mailto:|tel:|shopify:\/\/)\S*$/
