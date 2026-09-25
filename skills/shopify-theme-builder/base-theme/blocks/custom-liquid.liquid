@@ -5,9 +5,16 @@
   {% content_for 'block', type: 'custom-liquid', id: 'custom-liquid' %}
 {% enddoc %}
 
-<div class="custom-liquid-block" {{ block.shopify_attributes }}>
-  {{ block.settings.custom_liquid }}
-</div>
+{% capture content %}{{ block.settings.custom_liquid }}{% endcapture %}
+{% assign content = content | strip %}
+
+{% if content != blank %}
+  <div class="custom-liquid-block" {{ block.shopify_attributes }}>
+    {{ content }}
+  </div>
+{% elsif request.design_mode %}
+  <p class="block-hint text-small" {{ block.shopify_attributes }}>{{ 'blank_block.custom_liquid' | t }}</p>
+{% endif %}
 
 {% schema %}
 {

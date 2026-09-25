@@ -259,5 +259,11 @@
     "choose_options_label": "Choose options for {{ product }}",
     "close": "Close",
     "view_details": "View full details"
+  },
+  "blank_block": {
+    "collapsible_content": "{{ heading }}: add text or connect a metafield. Customers don't see an empty block.",
+    "shipping_note": "Shipping note: add text or connect a metafield. Customers don't see an empty block.",
+    "custom_liquid": "Custom Liquid: add Liquid or HTML. Customers don't see an empty block.",
+    "size_guide": "Size guide: pick a page. Customers don't see the button until one is picked."
   }
 }

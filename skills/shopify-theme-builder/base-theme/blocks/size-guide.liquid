@@ -8,7 +8,7 @@
 
 {% assign guide = block.settings.page %}
 
-{% if guide != blank or request.design_mode %}
+{% if guide != blank %}
   <size-guide class="size-guide" {{ block.shopify_attributes }}>
     <button
       type="button"
@@ -33,6 +33,8 @@
       </div>
     </dialog>
   </size-guide>
+{% elsif request.design_mode %}
+  <p class="block-hint text-small" {{ block.shopify_attributes }}>{{ 'blank_block.size_guide' | t }}</p>
 {% endif %}
 
 {% javascript %}

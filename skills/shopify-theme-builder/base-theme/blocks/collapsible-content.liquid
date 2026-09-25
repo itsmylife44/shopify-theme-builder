@@ -12,15 +12,18 @@
   else
     assign content = block.settings.text
   endif
+  assign content = content | strip
 %}
 
-{% if content != blank or request.design_mode %}
+{% if content != blank %}
   <collapsible-content class="collapsible-content" {{ block.shopify_attributes }}>
     <details>
       <summary class="collapsible-content__summary">{{ block.settings.heading | escape }}</summary>
       <div class="collapsible-content__body rte">{{ content }}</div>
     </details>
   </collapsible-content>
+{% elsif request.design_mode %}
+  <p class="block-hint text-small" {{ block.shopify_attributes }}>{{ 'blank_block.collapsible_content' | t: heading: block.settings.heading }}</p>
 {% endif %}
 
 {% javascript %}
