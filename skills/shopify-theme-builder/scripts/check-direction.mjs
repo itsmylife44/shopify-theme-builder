@@ -80,6 +80,7 @@ export function checkDirection(theme) {
     ...looks.flatMap(([name, values]) => checkMediaTint(name, values)),
     ...checkDistinct(settings.presets, listed),
     ...checkRadii(theme),
+    ...checkLabelsInName(theme),
     ...pages.flatMap(checkRepeats),
     ...pages.flatMap(checkCallsToAction),
     ...pages.flatMap(checkEyebrows),
@@ -208,6 +209,27 @@ function checkDefaultText({ file, sections }, language = 'en') {
         ),
       ),
   )
+}
+
+/**
+ * An accessible label (a locale key ending in `_label`, like `quick_add.add_label`) that doesn't contain the visible
+ * text of its control (the key beside it without `_label`, like `quick_add.add`), in any storefront locale file:
+ * WCAG 2.5.3 Label in Name. Case and spacing don't count.
+ * @param {string} theme
+ * @returns {Finding[]}
+ */
+function checkLabelsInName(theme) {
+  const text = (/** @type {string} */ value) => value.replace(/\s+/g, ' ').trim().toLowerCase()
+  /** @returns {Finding[]} */
+  const walk = (/** @type {string} */ file, /** @type {Record<string, any>} */ node, /** @type {string} */ prefix) =>
+    Object.entries(node).flatMap(([key, value]) => {
+      if (value && typeof value === 'object') return walk(file, value, `${prefix}${key}.`)
+      const control = key.replace(/_label$/, '')
+      const visible = node[control]
+      if (control === key || typeof value !== 'string' || typeof visible !== 'string' || text(value).includes(text(visible))) return []
+      return [finding('label-in-name', file, `${prefix}${key} ("${value}") doesn't contain the visible text of ${prefix}${control} ("${visible}"), which voice control users say to press the button. Start the label with it.`)]
+    })
+  return listFiles(theme, 'locales', (name) => name.endsWith('.json') && !name.endsWith('.schema.json')).flatMap((file) => walk(file, readJSON(theme, file), ''))
 }
 
 /**
