@@ -223,6 +223,33 @@ describe('Studio API: section settings', () => {
     expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
   })
 
+  it.each([
+    ['footer', 'footer', 'newsletter_color_scheme', 'Newsletter band color scheme'],
+    ['home', 'logo-list', 'band_color_scheme', 'Band color scheme'],
+  ])("reads and writes the %s's %s second color scheme, and refuses a scheme the Brand lacks", async (page, type, setting, label) => {
+    const theme = fixtureTheme()
+    for (const file of ['footer.liquid', 'footer-group.json']) copyFileSync(path.join(realCatalog, 'sections', file), path.join(theme, 'sections', file))
+    const studio = await openStudio(theme, { catalog: realCatalog })
+    const id = page === 'footer' ? 'footer' : (await studio.addSection(type)).body.home.at(-1).id
+    const file = page === 'footer' ? 'sections/footer-group.json' : home
+    const url = `api/${page}/sections/${id}`
+
+    const read = await studio.send('GET', url)
+    expect(read.body.settings).toContainEqual({ id: setting, type: 'color_scheme', label, value: 'scheme-2' })
+    expect(read.body.settings.map((each: { id: string }) => each.id)).not.toContain('color_scheme')
+
+    const { status, body } = await studio.send('PATCH', url, { settings: { [setting]: 'scheme-1' } })
+    expect(status).toBe(200)
+    expect(errors(body.validation)).toEqual([])
+    expect(readTemplate(theme, file).sections[id].settings[setting]).toBe('scheme-1')
+
+    const before = readFileSync(path.join(theme, file), 'utf8')
+    const refused = await studio.send('PATCH', url, { settings: { [setting]: 'scheme-9' } })
+    expect(refused.status).toBe(400)
+    expect(refused.body.error).toContain(setting)
+    expect(readFileSync(path.join(theme, file), 'utf8')).toBe(before)
+  })
+
   it("lists every catalog section's name and description", async () => {
     const theme = fixtureTheme()
     const studio = await openStudio(theme, { catalog: realCatalog })

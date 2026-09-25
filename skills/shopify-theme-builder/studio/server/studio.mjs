@@ -1106,13 +1106,10 @@ function checkSettings(values, schemaSettings, owner, where, schemes) {
   for (const [key, value] of Object.entries(/** @type {object} */ (values))) {
     const setting = schemaSettings?.find((candidate) => candidate.id === key)
     if (!setting) throw new BadRequest(`${where}: ${key} is not a setting of ${owner}.`)
-    if (setting.type === 'color_scheme' && !schemes.includes(/** @type {string} */ (value))) {
-      throw new BadRequest(`${where}: ${key} must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
-    }
     if (templateTypes.has(setting.type)) checked[key] = value
   }
   try {
-    setValues({}, checked, schemaSettings, owner, templateTypes)
+    setValues({}, checked, schemaSettings, owner, templateTypes, schemes)
   } catch (error) {
     if (error instanceof BadRequest) throw new BadRequest(`${where}: ${error.message}`)
     throw error
@@ -1485,17 +1482,19 @@ function updateSection(theme, file, id, body) {
   updateJSON(theme, file, (template) => {
     const section = findSection(template, file, id)
     const schema = readSchema(path.join(theme, 'sections', `${section.type}.liquid`)) ?? {}
+    const main = colorSchemeSetting(theme, section.type)
     if (colorScheme !== undefined) {
-      const setting = colorSchemeSetting(theme, section.type)
-      if (!setting) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
-      section.settings = { ...section.settings, [setting.id]: colorScheme }
+      if (!main) throw new BadRequest(`The ${section.type} section has no color scheme setting.`)
+      section.settings = { ...section.settings, [main.id]: colorScheme }
     }
-    if (settings) setValues(section, settings, schema.settings, `the ${section.type} section`, sectionTypes)
+    // The main color scheme is colorScheme, not one of the settings.
+    const others = schema.settings?.filter((/** @type {SchemaSetting} */ setting) => setting.id !== main?.id)
+    if (settings) setValues(section, settings, others, `the ${section.type} section`, sectionTypes, schemes)
     for (const [blockId, values] of Object.entries(/** @type {Record<string, object>} */ (blocks ?? {}))) {
       const block = section.blocks?.[blockId]
       if (!Object.hasOwn(section.blocks ?? {}, blockId)) throw new BadRequest(`The ${id} section has no block ${blockId}.`)
       const blockSchema = readBlockSchema(theme, schema, block.type)
-      setValues(block, values, blockSchema?.settings, `the ${block.type} block`, sectionTypes)
+      setValues(block, values, blockSchema?.settings, `the ${block.type} block`, sectionTypes, schemes)
     }
   })
 }
@@ -1508,13 +1507,15 @@ const listTypes = new Set(['collection_list', 'product_list'])
 // Settings that pick one of their schema's options.
 const optionTypes = new Set(['select', 'radio'])
 const editableTypes = new Set([...textTypes, ...handleTypes, ...listTypes, ...optionTypes, 'url', 'checkbox', 'range', 'number'])
+// A section's or block's settings also hold color schemes: one of the Brand's. A section's main one is its colorScheme.
+const inspectorTypes = new Set([...editableTypes, 'color_scheme'])
 // Besides a section's setting types, the style settings hold a color, hex or empty for none.
 const styleTypes = new Set([...editableTypes, 'color'])
 // Image and video settings, listed apart from the others. The Studio writes an image the shop's Files hold (POST /api/files);
 // a video is picked in the Theme Editor.
 const mediaTypes = new Set(['image_picker', 'video', 'video_url'])
 // The setting types a section's or block's PATCH writes.
-const sectionTypes = new Set([...editableTypes, 'image_picker'])
+const sectionTypes = new Set([...inspectorTypes, 'image_picker'])
 // The setting types a template's values are checked against as a PATCH checks them. A video, which the Studio doesn't write,
 // and the types it doesn't know pass as they are.
 const templateTypes = new Set([...sectionTypes, 'color'])
@@ -1532,8 +1533,9 @@ const maxListItems = 50
  * @param {SchemaSetting[] | undefined} schemaSettings
  * @param {string} owner Names the section or block in errors.
  * @param {Set<string>} types The setting types it writes.
+ * @param {string[]} schemes The Brand's color schemes, which a color_scheme setting takes.
  */
-function setValues(target, values, schemaSettings, owner, types = editableTypes) {
+function setValues(target, values, schemaSettings, owner, types = editableTypes, schemes = []) {
   for (const [key, value] of Object.entries(values)) {
     const setting = schemaSettings?.find((candidate) => candidate.id === key)
     if (!setting || !types.has(setting.type)) throw new BadRequest(`${key} is not a setting the Studio edits in ${owner}.`)
@@ -1541,6 +1543,8 @@ function setValues(target, values, schemaSettings, owner, types = editableTypes)
       if (value !== null && value !== '' && !(typeof value === 'string' && shopImage.test(value))) {
         throw new BadRequest(`${key} must be an image in the shop's Files, like shopify://shop_images/cover.jpg (POST /api/files puts one there), or "" or null to clear it.`)
       }
+    } else if (setting.type === 'color_scheme') {
+      if (typeof value !== 'string' || !schemes.includes(value)) throw new BadRequest(`${key} must be one of the Brand's color schemes: ${schemes.join(', ')}.`)
     } else if (setting.type === 'checkbox') {
       if (typeof value !== 'boolean') throw new BadRequest(`${key} must be true or false.`)
     } else if (setting.type === 'number') {
@@ -1617,7 +1621,7 @@ function readSection(theme, file, id) {
     type: section.type,
     name: translate(schema.name ?? section.type),
     ...(color ? { colorScheme: section.settings?.[color.id] ?? color.default ?? null } : {}),
-    settings: readSettings(schema.settings, section.settings, translate),
+    settings: readSettings(schema.settings?.filter((/** @type {SchemaSetting} */ setting) => setting.id !== color?.id), section.settings, translate, inspectorTypes),
     media: media(schema.settings, section.settings),
     blocks: blockOrder(section).map((blockId) => {
       const block = blocks[blockId]
@@ -1626,7 +1630,7 @@ function readSection(theme, file, id) {
         id: blockId,
         type: block.type,
         name: translate(blockSchema?.name ?? block.type),
-        settings: readSettings(blockSchema?.settings, block.settings, translate),
+        settings: readSettings(blockSchema?.settings, block.settings, translate, inspectorTypes),
         media: media(blockSchema?.settings, block.settings),
       }
     }),
