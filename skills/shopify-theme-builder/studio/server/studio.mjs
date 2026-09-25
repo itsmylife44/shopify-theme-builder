@@ -119,6 +119,7 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       })
       const frame = await startFrameProxy(
         () => (preview.state.status === 'running' ? preview.state.url : undefined),
+        () => preview.check(),
         () => preview.reconnect(),
       )
       const stop = () => preview.stop()
@@ -206,7 +207,11 @@ function studioApi(theme, catalog, { cli, store, storePassword }) {
       })
       route('/api/undo', 'POST', async () => travel(steps.undo))
       route('/api/redo', 'POST', async () => travel(steps.redo))
-      route('/api/preview', 'GET', async () => preview.state)
+      // Checked on each call, so the preview is past the password page when the agent's tools open it next.
+      route('/api/preview', 'GET', async () => {
+        await preview.check()
+        return preview.state
+      })
       route('/api/frame', 'GET', async () => {
         const { state } = preview
         if (state.status !== 'running') throw new Conflict('The preview is not running yet.')

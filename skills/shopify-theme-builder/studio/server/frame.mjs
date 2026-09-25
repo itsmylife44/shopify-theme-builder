@@ -53,13 +53,17 @@ const selectionScript = `<script>
 
 /**
  * Starts the proxy on a free port of 127.0.0.1. `target()` is theme dev's URL, undefined while it isn't running.
- * `onSessionLost()` runs when theme dev's storefront session expired (#113), and returns true when it restarts
- * theme dev; the proxy then answers 503 instead of leaving the preview on the store's password page.
+ * theme dev's storefront session can drop: it then sends the preview to the store's password page (#223), and
+ * `onPasswordPage()` resolves the preview's status once the Studio tried to bring the session back. `running`: the
+ * proxy sends a GET again, once. `reconnecting`: theme dev restarts, and the proxy answers 503 instead of the
+ * password page. The store may also refuse theme dev's token: `onSessionLost()` returns true when it restarts
+ * theme dev for that (#113), and the proxy answers 503 too.
  * @param {() => string | undefined} target
+ * @param {() => Promise<string>} onPasswordPage
  * @param {() => boolean} onSessionLost
  * @returns {Promise<{ url: string, close: () => void }>}
  */
-export function startFrameProxy(target, onSessionLost) {
+export function startFrameProxy(target, onPasswordPage, onSessionLost) {
   const server = createServer((req, res) => {
     const base = target()
     if (!base) {
@@ -70,49 +74,61 @@ export function startFrameProxy(target, onSessionLost) {
     const headers = { ...req.headers, host: upstream.host }
     // An uncompressed answer, so the script can be added to the HTML.
     delete headers['accept-encoding']
-    const proxied = request(upstream, { method: req.method, headers }, (answer) => {
-      // An expired session: the store refuses theme dev's token, or sends it to the password page.
-      const location = answer.headers.location
-      const lost = answer.statusCode === 401 || (location !== undefined && URL.parse(location, upstream)?.pathname === '/password')
-      if (lost && onSessionLost()) {
-        answer.resume()
-        res.writeHead(503, { 'Content-Type': 'text/plain' }).end('The preview is reconnecting to the store.')
-        return
-      }
-      /** @type {import('node:http').OutgoingHttpHeaders} */
-      const out = { ...answer.headers }
-      delete out['x-frame-options']
-      // Only the frame-ancestors directive stops the iframe; the rest of the policy stays.
-      const policy = answer.headers['content-security-policy']
-      if (policy) {
-        const kept = String(policy).split(';').filter((/** @type {string} */ directive) => !/^\s*frame-ancestors\b/i.test(directive)).join(';')
-        if (kept.trim()) out['content-security-policy'] = kept
-        else delete out['content-security-policy']
-      }
-      // A redirect to theme dev's own address would leave the proxy, whose page the iframe can't show.
-      if (location?.startsWith(upstream.origin)) out.location = location.slice(upstream.origin.length) || '/'
-      if (!String(answer.headers['content-type']).startsWith('text/html')) {
-        // Streamed as it comes, like theme dev's hot reload events.
-        res.writeHead(answer.statusCode ?? 502, out)
-        answer.pipe(res)
-        return
-      }
-      const chunks = /** @type {Buffer[]} */ ([])
-      answer.on('data', (chunk) => chunks.push(chunk))
-      answer.on('end', () => {
-        const html = Buffer.concat(chunks).toString('utf8')
-        const at = html.lastIndexOf('</body>')
-        delete out['content-length']
-        delete out['transfer-encoding']
-        res.writeHead(answer.statusCode ?? 502, out)
-        res.end(at === -1 ? html : html.slice(0, at) + selectionScript + html.slice(at))
+    // ponytail: only a request without a body is sent again; a form posted as the session drops lands on the password page.
+    const bodiless = req.method === 'GET' || req.method === 'HEAD'
+    /** @param {boolean} retry */
+    const send = (retry) => {
+      const proxied = request(upstream, { method: req.method, headers }, async (answer) => {
+        const location = answer.headers.location
+        const password = location !== undefined && URL.parse(location, upstream)?.pathname === '/password'
+        const status = password ? await onPasswordPage() : undefined
+        if (status === 'running' && retry) {
+          answer.resume()
+          send(false).end()
+          return
+        }
+        if (status === 'reconnecting' || (answer.statusCode === 401 && onSessionLost())) {
+          answer.resume()
+          res.writeHead(503, { 'Content-Type': 'text/plain' }).end('The preview is reconnecting to the store.')
+          return
+        }
+        /** @type {import('node:http').OutgoingHttpHeaders} */
+        const out = { ...answer.headers }
+        delete out['x-frame-options']
+        // Only the frame-ancestors directive stops the iframe; the rest of the policy stays.
+        const policy = answer.headers['content-security-policy']
+        if (policy) {
+          const kept = String(policy).split(';').filter((/** @type {string} */ directive) => !/^\s*frame-ancestors\b/i.test(directive)).join(';')
+          if (kept.trim()) out['content-security-policy'] = kept
+          else delete out['content-security-policy']
+        }
+        // A redirect to theme dev's own address would leave the proxy, whose page the iframe can't show.
+        if (location?.startsWith(upstream.origin)) out.location = location.slice(upstream.origin.length) || '/'
+        if (!String(answer.headers['content-type']).startsWith('text/html')) {
+          // Streamed as it comes, like theme dev's hot reload events.
+          res.writeHead(answer.statusCode ?? 502, out)
+          answer.pipe(res)
+          return
+        }
+        const chunks = /** @type {Buffer[]} */ ([])
+        answer.on('data', (chunk) => chunks.push(chunk))
+        answer.on('end', () => {
+          const html = Buffer.concat(chunks).toString('utf8')
+          const at = html.lastIndexOf('</body>')
+          delete out['content-length']
+          delete out['transfer-encoding']
+          res.writeHead(answer.statusCode ?? 502, out)
+          res.end(at === -1 ? html : html.slice(0, at) + selectionScript + html.slice(at))
+        })
       })
-    })
-    proxied.on('error', (error) => {
-      if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'text/plain' })
-      res.end(error.message)
-    })
-    req.pipe(proxied)
+      proxied.on('error', (error) => {
+        if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'text/plain' })
+        res.end(error.message)
+      })
+      return proxied
+    }
+    if (bodiless) send(true).end()
+    else req.pipe(send(false))
   })
   return new Promise((resolve) => {
     server.listen(0, '127.0.0.1', () => {

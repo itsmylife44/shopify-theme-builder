@@ -99,14 +99,11 @@ describe('Studio: live preview', () => {
     expect(await (await fetch(`${body.url}/products.json`)).text()).toBe('{"products":[{"handle":"clay-mug"}]}')
   })
 
-  // theme dev's storefront session can expire (#113): the store then answers 401, or redirects to its password page.
-  it.each([
-    ['a 401', (res: import('node:http').ServerResponse) => res.writeHead(401).end()],
-    ['a redirect to the password page', (res: import('node:http').ServerResponse) => res.writeHead(302, { Location: '/password' }).end()],
-  ])('restarts theme dev when its storefront session expires with %s, then serves the preview again', async (_, expire) => {
+  // theme dev's storefront session can expire (#113): the store then answers 401.
+  it('restarts theme dev when the store refuses its storefront session, then serves the preview again', async () => {
     let expired = true
     const themeDev = createHttpServer((req, res) => {
-      if (expired) return expire(res)
+      if (expired) return res.writeHead(401).end()
       res.writeHead(200, { 'Content-Type': 'text/html' }).end('<html><body><p>Shop</p></body></html>')
     })
     await new Promise<void>((resolve) => themeDev.listen(0, '127.0.0.1', resolve))
@@ -134,6 +131,75 @@ describe('Studio: live preview', () => {
     const again = await fetch(`${body.url}/`, { redirect: 'manual' })
     expect(again.status).not.toBe(503)
     expect((await studio.readPreview()).status).toBe('running')
+  })
+
+  /**
+   * A theme dev that sends every client to the password page until the store password is posted to it, which
+   * brings its storefront session back for every client, cookie or not, as Shopify CLI 4.8.2 does (#223).
+   */
+  async function lockedThemeDev(password: string) {
+    const themeDev = {
+      locked: true,
+      posted: [] as string[],
+      url: '',
+    }
+    const server = createHttpServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/password') {
+        let body = ''
+        req.on('data', (chunk) => (body += chunk))
+        req.on('end', () => {
+          themeDev.posted.push(body)
+          const form = new URLSearchParams(body)
+          if (form.get('form_type') === 'storefront_password' && form.get('password') === password) themeDev.locked = false
+          res.writeHead(302, { Location: themeDev.locked ? '/password' : '/' }).end()
+        })
+        return
+      }
+      if (req.url === '/password') return res.writeHead(200, { 'Content-Type': 'text/html' }).end('<html><body><p>Password</p></body></html>')
+      if (themeDev.locked) return res.writeHead(302, { Location: `${themeDev.url}/password` }).end()
+      res.writeHead(200, { 'Content-Type': 'text/html' }).end('<html><body><p>Shop</p></body></html>')
+    })
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+    cleanup.push(() => new Promise((resolve) => server.close(() => resolve())))
+    themeDev.url = `http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}`
+    return themeDev
+  }
+
+  it('posts the store password when the preview sends clients to the password page, so every client gets the storefront', async () => {
+    const themeDev = await lockedThemeDev('secret')
+    const cli = fakeShopify({ output: running.replace('http://127.0.0.1:9292', themeDev.url) })
+    const studio = await openStudio(fixtureTheme(), { cli, storePassword: 'secret' })
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: themeDev.url })
+    expect(themeDev.locked).toBe(false)
+    // Screenshots, axe and Lighthouse open the preview in a fresh browser, with no cookie.
+    expect(await (await fetch(`${themeDev.url}/`)).text()).toContain('<p>Shop</p>')
+
+    // The session drops again: the Studio's iframe gets the storefront all the same, with no restart.
+    const { pid } = await fakeRun(cli)
+    const { body } = await studio.send('GET', 'api/frame')
+    themeDev.locked = true
+    const page = await fetch(`${body.url}/`, { redirect: 'manual' })
+    expect(page.status).toBe(200)
+    expect(await page.text()).toContain('<p>Shop</p>')
+    expect((await fakeRun(cli)).pid).toBe(pid)
+    expect(themeDev.posted.length).toBe(2)
+  })
+
+  it('restarts theme dev once, then reports the password page, when the store refuses the password', async () => {
+    const themeDev = await lockedThemeDev('secret')
+    const cli = fakeShopify({ output: running.replace('http://127.0.0.1:9292', themeDev.url) })
+    const studio = await openStudio(fixtureTheme(), { cli, storePassword: 'wrong' })
+    await expect
+      .poll(() => studio.readPreview())
+      .toMatchObject({ status: 'password-page', message: expect.stringContaining('--store-password') })
+    expect((await fakeRun(cli)).runs).toBe(2)
+    // The iframe gets no password page, and a refused password is no reason for a restart loop.
+    expect((await studio.send('GET', 'api/frame')).status).toBe(409)
+    expect((await studio.readPreview()).status).toBe('password-page')
+    expect((await fakeRun(cli)).runs).toBe(2)
+    // Once the preview serves the storefront again, it is running again.
+    themeDev.locked = false
+    await expect.poll(() => studio.readPreview()).toMatchObject({ status: 'running', url: themeDev.url })
   })
 
   // How Shopify CLI 4.8 reports an upload that failed because its credentials expired (#153).

@@ -157,6 +157,11 @@ export async function withPage(chrome, { url, width, height, mobile }, run, seco
         const { errorText } = await page.send('Page.navigate', { url: next })
         if (errorText) throw new Error(`Chrome couldn't open ${next}: ${errorText}`)
         await sleep(3000)
+        // theme dev sends a fresh browser to the store's password page when its storefront session dropped (#223).
+        const { result } = await page.send('Runtime.evaluate', { expression: 'location.pathname', returnByValue: true })
+        if (result.value === '/password') {
+          throw new Error(`${next} showed the store's password page: call GET /api/preview, which has the Studio post the store password, then run this again.`)
+        }
         // A screenshot doesn't scroll, so images loading lazily below the fold would stay blank.
         await page.send('Runtime.evaluate', { expression: `document.querySelectorAll('img[loading="lazy"]').forEach((img) => { img.loading = 'eager' })` })
         await sleep(2000)
