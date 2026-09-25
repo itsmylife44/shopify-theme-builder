@@ -747,7 +747,22 @@ function updateSettings(theme, change) {
   updateJSON(theme, settingsData, (data) => {
     data.current = currentSettings(data)
     change(data.current)
+    alignColorSchemes(data)
   })
+}
+
+/**
+ * Gives every preset, and the current values, the same color scheme ids, which Shopify requires to upload
+ * config/settings_data.json: one that lacks a scheme id another has gets it as a copy of its own scheme-1, so it looks the same.
+ * @param {any} data
+ */
+function alignColorSchemes(data) {
+  const holders = [...(isObject(data.current) ? [data.current] : []), ...Object.values(data.presets ?? {})].filter((settings) => isObject(settings?.color_schemes))
+  const ids = new Set(holders.flatMap((settings) => Object.keys(settings.color_schemes)))
+  for (const { color_schemes: schemes } of holders) {
+    const main = schemes['scheme-1'] ?? Object.values(schemes)[0]
+    for (const id of ids) schemes[id] ??= structuredClone(main)
+  }
 }
 
 /**
@@ -1045,6 +1060,7 @@ function setDirection(theme, catalog, name, body) {
     for (const setting of style) delete preset[/** @type {string} */ (setting.id)]
     setValues({ settings: preset }, /** @type {object} */ (settings), style, 'the style settings', styleTypes)
     data.presets[name] = preset
+    alignColorSchemes(data)
     current = data.current === name
   })
   for (const type of new Set(types)) copySection(theme, catalog, type)
