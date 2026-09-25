@@ -4474,6 +4474,12 @@ describe('Store decisions', () => {
     }
   })
 
+  it('puts the admin steps inside the question, never only in the message before it', () => {
+    const step = skill.match(/^4\. \*\*Admin steps\*\*[^\n]*/m)?.[0] ?? ''
+    expect(step).toMatch(/inside the question itself/)
+    expect(step).toMatch(/never write them only there or refer to steps "above"/)
+  })
+
   it('names the logo in the read-back only when one was found or given', () => {
     const readBack = brief.match(/^## Reading it back\n([\s\S]*?)(?=^## |$(?![\s\S]))/m)?.[1] ?? ''
     expect(readBack).toMatch(/logo only when[^\n]*found or given[^\n]*"no logo"/)
