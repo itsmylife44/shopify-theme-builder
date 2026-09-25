@@ -1,4 +1,14 @@
 {% comment %}An image beside a heading, text and a button.{% endcomment %}
+{% liquid
+  assign loading = 'lazy'
+  assign fetchpriority = 'auto'
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign loading = 'eager'
+    assign fetchpriority = 'high'
+    assign heading_tag = 'h1'
+  endif
+%}
 <div class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}{% if section.settings.layout == 'full_bleed' %} media-edge{% endif %}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="image-with-text__inner">
     <div class="image-with-text__media">
@@ -6,7 +16,7 @@
         {{
           section.settings.image
           | image_url: width: 1500
-          | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: 'lazy'
+          | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: loading, fetchpriority: fetchpriority
         }}
       {% else %}
         {{ 'image' | placeholder_svg_tag: 'placeholder image-with-text__placeholder' }}
@@ -15,7 +25,7 @@
 
     <div class="image-with-text__content">
       {% if section.settings.heading != blank %}
-        <h2 class="image-with-text__heading">{{ section.settings.heading }}</h2>
+        <{{ heading_tag }} class="image-with-text__heading text-h2">{{ section.settings.heading }}</{{ heading_tag }}>
       {% endif %}
       {% if section.settings.text != blank %}
         <div class="image-with-text__text rte">{{ section.settings.text }}</div>

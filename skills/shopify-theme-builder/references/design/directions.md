@@ -43,7 +43,7 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 
 `card_hover` (the second image or a zoom on hover) doesn't count: phones can't hover. `subtle` motion doesn't count either.
 
-**Selling from the top.** Shoppers tell what a shop sells from the top of its home, so a featured collection, a collection list or a featured product is among its first three sections. The hero's content sits where the sketch puts it, never `middle_center` (the hero preset's, the centered hero of `tells.md`), and the section that opens a page carries its one h1: a hero, slideshow or type banner does so only as the first section.
+**Selling from the top.** Shoppers tell what a shop sells from the top of its home, so a featured collection, a collection list or a featured product is among its first three sections. The hero's content sits where the sketch puts it, never `middle_center` (the hero preset's, the centered hero of `tells.md`), and the section that opens a page carries its one h1 and loads its image first: a hero, slideshow, type banner, image with text, editorial split, lookbook or collection list does so only as the first section, so a home can open on any of them.
 
 **Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy (each section's `spacing`: `none` for a zero-gap gallery, `tight`, `theme` or `loose`, around the Theme's density), image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
 

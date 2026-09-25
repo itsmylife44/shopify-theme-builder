@@ -414,8 +414,8 @@ function checkStrategy(part, { file, sections }) {
   ]
 }
 
-// An h1 tag in a section's or block's Liquid, and the heading tag a hero, slideshow or type banner makes an h1 when
-// it's the page's first section.
+// An h1 tag in a section's or block's Liquid, and the heading tag a section a page can open with (a hero, slideshow,
+// type banner, image with text, editorial split, lookbook or collection list) makes an h1 when it's the page's first.
 const h1 = /<h1[\s>]/g
 const firstH1 = /assign heading_tag = 'h1'/
 
@@ -444,11 +444,11 @@ function checkH1(theme, { file, sections }) {
   const total = counts.reduce((sum, { count }) => sum + count, 0)
   if (total === 1) return []
   if (total === 0) {
-    return [finding('h1', file, 'No h1: a page has exactly one, its main heading. Open the page with a hero, slideshow or type banner, whose heading is then the h1.')]
+    return [finding('h1', file, 'No h1: a page has exactly one, its main heading. Open the page with a hero, slideshow, type banner, image with text, editorial split, lookbook or collection list, whose heading is then the h1.')]
   }
   const ids = counts.flatMap(({ id, count }) => (count > 0 ? [id] : [])).join(', ')
   return [
-    finding('h1', file, `${total} h1 headings (${ids}): a page has exactly one, its main heading. Keep one: a hero, slideshow or type banner has one only as the first section.`),
+    finding('h1', file, `${total} h1 headings (${ids}): a page has exactly one, its main heading. Keep one: a hero, slideshow, type banner, image with text, editorial split, lookbook or collection list has one only as the first section.`),
   ]
 }
 

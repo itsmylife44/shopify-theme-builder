@@ -202,17 +202,23 @@
                 style="--columns: {{ section.settings.columns }};"
               >
                 {% for result in search.results %}
+                  {% liquid
+                    assign card_loading = 'lazy'
+                    if forloop.index <= section.settings.columns
+                      assign card_loading = 'eager'
+                    endif
+                  %}
                   <li class="main-search__card">
                     {% case result.object_type %}
                       {% when 'product' %}
-                        {% render 'product-card', product: result, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
+                        {% render 'product-card', product: result, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy, loading: card_loading %}
                       {% when 'article' %}
                         <a class="main-search__image" href="{{ result.url }}" tabindex="-1" aria-hidden="true">
                           {% if result.image %}
                             {{
                               result.image
                               | image_url: width: 1200
-                              | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
+                              | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: card_loading
                             }}
                           {% else %}
                             {{ 'image' | placeholder_svg_tag: 'placeholder main-search__placeholder' }}

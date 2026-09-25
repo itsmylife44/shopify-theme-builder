@@ -14,11 +14,15 @@
   if section.settings.layout == 'carousel' and count > 1
     assign carousel = true
   endif
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign heading_tag = 'h1'
+  endif
 %}
 <div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="collection-list__inner">
     {% if section.settings.heading != blank %}
-      <h2 class="collection-list__heading">{{ section.settings.heading }}</h2>
+      <{{ heading_tag }} class="collection-list__heading text-h2">{{ section.settings.heading }}</{{ heading_tag }}>
     {% endif %}
 
     {% if carousel %}<collection-list-carousel class="collection-list__carousel">{% endif %}
@@ -33,6 +37,12 @@
       {% if section.settings.collections != blank %}
         {% for collection in section.settings.collections %}
           {% liquid
+            assign loading = 'lazy'
+            assign fetchpriority = 'auto'
+            if forloop.first and section.index == 1
+              assign loading = 'eager'
+              assign fetchpriority = 'high'
+            endif
             assign sizes = '(min-width: 750px) 33vw, 50vw'
             if section.settings.layout == 'large_first' and forloop.first
               assign sizes = '(min-width: 750px) 66vw, 100vw'
@@ -46,7 +56,7 @@
                     {{
                       collection.featured_image
                       | image_url: width: 1200
-                      | image_tag: widths: '300, 450, 600, 900, 1200', sizes: sizes, loading: 'lazy', alt: ''
+                      | image_tag: widths: '300, 450, 600, 900, 1200', sizes: sizes, loading: loading, fetchpriority: fetchpriority, alt: ''
                     }}
                   {% else %}
                     {% assign placeholder = forloop.index0 | modulo: 6 | plus: 1 %}

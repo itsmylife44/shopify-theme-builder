@@ -15,6 +15,7 @@
   @param {number} [placeholder] - Which product placeholder (1 to 6) an example card or a product without an image shows, 1 by default
   @param {boolean} [show_quick_add] - Show an add to cart button, or a link that opens quick add for a product with variants
   @param {string} [anatomy] - minimal, detailed or editorial; theme or blank for the card_anatomy theme setting
+  @param {string} [loading] - eager for a card in the first viewport, like the first row of a collection page; lazy by default
 
   @example
   {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
@@ -22,6 +23,7 @@
 {% enddoc %}
 {% liquid
   assign placeholder = placeholder | default: 1
+  assign loading = loading | default: 'lazy'
   if anatomy == blank or anatomy == 'theme'
     assign anatomy = settings.card_anatomy | default: 'minimal'
   endif
@@ -33,13 +35,13 @@
         {{
           product.featured_image
           | image_url: width: 1200
-          | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy'
+          | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: loading
         }}
         {% if settings.card_hover == 'second_image' and product.media.size > 1 %}
           {{
             product.media[1].preview_image
             | image_url: width: 1200
-            | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: 'lazy', class: 'product-card__image-secondary', alt: ''
+            | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 25vw, 50vw', loading: loading, class: 'product-card__image-secondary', alt: ''
           }}
         {% endif %}
       {% else %}
