@@ -534,7 +534,7 @@ describe('check-direction', () => {
     expect(checkDirection(theme)).toEqual([])
   })
 
-  it('reports a page without exactly one h1: a first hero, slideshow or type banner, a main section or a title block has one', () => {
+  it('reports a page without exactly one h1: a first hero, slideshow, type banner, image with text, editorial split, lookbook or collection list, a main section or a title block has one', () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {
       template.order = ['rows', 'hero', 'story', 'note', 'ticker', 'specs']
@@ -547,14 +547,22 @@ describe('check-direction', () => {
       {
         check: 'h1',
         file: 'templates/index.json',
-        message: 'No h1: a page has exactly one, its main heading. Open the page with a hero, slideshow or type banner, whose heading is then the h1.',
+        message: 'No h1: a page has exactly one, its main heading. Open the page with a hero, slideshow, type banner, image with text, editorial split, lookbook or collection list, whose heading is then the h1.',
       },
       {
         check: 'h1',
         file: 'templates/product.json',
-        message: '2 h1 headings (banner, main): a page has exactly one, its main heading. Keep one: a hero, slideshow or type banner has one only as the first section.',
+        message: '2 h1 headings (banner, main): a page has exactly one, its main heading. Keep one: a hero, slideshow, type banner, image with text, editorial split, lookbook or collection list has one only as the first section.',
       },
     ])
+  })
+
+  it('counts the heading of an image with text, editorial split, lookbook or collection list that opens the page as its h1', () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.order = ['story', 'hero', 'rows', 'note', 'ticker', 'specs']
+    })
+    expect(checkDirection(theme).filter((finding) => finding.check === 'h1')).toEqual([])
   })
 
   it('reports a Committed or Full Direction whose home puts no section on the accent scheme', () => {

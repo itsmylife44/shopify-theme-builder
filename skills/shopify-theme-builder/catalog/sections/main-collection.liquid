@@ -195,8 +195,14 @@
                 {% endfor %}
               {% else %}
                 {% for product in collection.products %}
+                  {% liquid
+                    assign card_loading = 'lazy'
+                    if forloop.index <= section.settings.columns
+                      assign card_loading = 'eager'
+                    endif
+                  %}
                   <li>
-                    {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
+                    {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy, loading: card_loading %}
                   </li>
                 {% endfor %}
               {% endif %}

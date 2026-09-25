@@ -3770,7 +3770,18 @@ describe('Image loading', () => {
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
   const stylesheet = (source: string) => source.match(/{% stylesheet %}([\s\S]*?){% endstylesheet %}/)?.[1] ?? ''
 
-  it.each(['hero', 'slideshow', 'main-product'])('loads the first viewport image of %s first: high fetch priority, never lazy, never animated', (name) => {
+  // The sections a page can open with: each makes its heading the page's h1 as the first section, h2 otherwise.
+  const openers = ['hero', 'slideshow', 'type-banner', 'image-with-text', 'editorial-split', 'lookbook', 'collection-list']
+
+  it.each(openers)('makes the heading of %s the page heading only as the first section', (name) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(source).toMatch(/assign heading_tag = 'h2'\s+if [^\n]*section\.index == 1\s+(?:assign (?!heading_tag)[^\n]+\s+)*assign heading_tag = 'h1'/)
+    // The heading keeps its size whichever level it takes.
+    expect(source).toMatch(/<{{ heading_tag }} class="[^"]*\btext-(?:display|h2|{{ section\.settings\.size }})[\s"]/)
+    expect(source).not.toMatch(/<h[12][\s>]/)
+  })
+
+  it.each(['hero', 'slideshow', 'main-product', 'image-with-text', 'editorial-split', 'lookbook', 'collection-list'])('loads the first viewport image of %s first: high fetch priority, never lazy, never animated', (name) => {
     const source = read(`catalog/sections/${name}.liquid`)
     // The branch that gives the image high priority also loads it eagerly.
     expect(source).toMatch(/\n\s*if [^\n]+\n\s*assign loading = 'eager'\n\s*assign fetchpriority = 'high'\n/)
@@ -3778,6 +3789,20 @@ describe('Image loading', () => {
     expect(call).toContain('loading: loading')
     expect(call).toContain('fetchpriority: fetchpriority')
     expect(stylesheet(source)).not.toMatch(/animation|@keyframes/)
+  })
+
+  it('lets a product card load eagerly, which the collection and search pages ask for their first row', () => {
+    const card = read('base-theme/snippets/product-card.liquid')
+    expect(card).toMatch(/@param {string} \[loading\] - /)
+    expect(card).toContain("assign loading = loading | default: 'lazy'")
+    for (const [call] of card.matchAll(/product(?:\.featured_image|\.media\[1\]\.preview_image)\s*\| image_url[^}]*}}/g)) {
+      expect(call, call).toContain('loading: loading')
+    }
+    for (const name of ['main-collection', 'main-search']) {
+      const source = read(`catalog/sections/${name}.liquid`)
+      expect(source, name).toMatch(/assign card_loading = 'lazy'\s+if forloop\.index <= section\.settings\.columns\s+assign card_loading = 'eager'/)
+      expect(source, name).toMatch(/{% render 'product-card', product: (product|result), [^%]*loading: card_loading %}/)
+    }
   })
 
   it.each([

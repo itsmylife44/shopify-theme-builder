@@ -1,8 +1,18 @@
 {% comment %}An image with product hotspots that each open a small product card, for shoppable lookbooks.{% endcomment %}
+{% liquid
+  assign loading = 'lazy'
+  assign fetchpriority = 'auto'
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign loading = 'eager'
+    assign fetchpriority = 'high'
+    assign heading_tag = 'h1'
+  endif
+%}
 <div class="lookbook full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}>
   <div class="lookbook__inner">
     {% if section.settings.heading != blank %}
-      <h2 class="lookbook__heading">{{ section.settings.heading | escape }}</h2>
+      <{{ heading_tag }} class="lookbook__heading text-h2">{{ section.settings.heading | escape }}</{{ heading_tag }}>
     {% endif %}
 
     <div class="lookbook__media">
@@ -11,7 +21,7 @@
           {{
             section.settings.image
             | image_url: width: 2400
-            | image_tag: widths: '750, 1100, 1500, 2200, 2400', sizes: '(min-width: 1200px) 1100px, 100vw', loading: 'lazy'
+            | image_tag: widths: '750, 1100, 1500, 2200, 2400', sizes: '(min-width: 1200px) 1100px, 100vw', loading: loading, fetchpriority: fetchpriority
           }}
         {% else %}
           {{ 'lifestyle-2' | placeholder_svg_tag: 'placeholder lookbook__placeholder' }}

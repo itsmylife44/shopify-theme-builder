@@ -1,4 +1,14 @@
 {% comment %}A tall image beside a long text column, with a drop cap or a pull quote, for brand stories.{% endcomment %}
+{% liquid
+  assign loading = 'lazy'
+  assign fetchpriority = 'auto'
+  assign heading_tag = 'h2'
+  if section.index == 1
+    assign loading = 'eager'
+    assign fetchpriority = 'high'
+    assign heading_tag = 'h1'
+  endif
+%}
 <div class="editorial-split full-width editorial-split--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="editorial-split__inner">
     <div class="editorial-split__media">
@@ -6,7 +16,7 @@
         {{
           section.settings.image
           | image_url: width: 1500
-          | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 40vw, 100vw', loading: 'lazy'
+          | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 40vw, 100vw', loading: loading, fetchpriority: fetchpriority
         }}
       {% else %}
         {{ 'image' | placeholder_svg_tag: 'placeholder editorial-split__placeholder' }}
@@ -15,7 +25,7 @@
 
     <div class="editorial-split__content">
       {% if section.settings.heading != blank %}
-        <h2 class="editorial-split__heading">{{ section.settings.heading }}</h2>
+        <{{ heading_tag }} class="editorial-split__heading text-h2">{{ section.settings.heading }}</{{ heading_tag }}>
       {% endif %}
       {% if section.settings.text != blank %}
         <div class="editorial-split__text{% if section.settings.drop_cap %} editorial-split__text--drop-cap{% endif %}">
