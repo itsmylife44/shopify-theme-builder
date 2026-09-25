@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Featured product layouts: image left (the default, as before), image right, full bleed (the image runs to the edge of the page, the details in a narrow column) or with thumbnails (every image of the product, switched from a thumbnail strip below the main one). Each layout is also a named preset, like "Featured product: with thumbnails", and stacks on mobile.
+
 - 404 page layouts: centered (the default, as before), split with an image in the image ratio box beside the message, with suggestions (four products of a collection under the search, or the shop's collections when none is set), or a big "404" in display type beside the message. Each layout is also a named preset, like "Main 404: big number", and stacks on mobile.
 
 - A team section for the people behind the shop: a heading, a text and a person per block (a portrait, a name, a role, an optional short line and a link on the name), as photo cards (the default, three across in the image ratio), round portraits (small, four across, centered), an inline list (a small portrait beside each name, three columns) or cards. Each layout is a named preset, like "Team: round portraits", and stacks on mobile; the section goes on the home and on pages.

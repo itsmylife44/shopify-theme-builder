@@ -1612,10 +1612,50 @@ describe('Featured product', () => {
 
   it('is a catalog section with a description, a color scheme and a preset', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
-    expect(source).toContain('class="featured-product full-width color-{{ section.settings.color_scheme }}"')
+    expect(source).toContain('color-{{ section.settings.color_scheme }}')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.featured_product' }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.featured_product' })
     expect(schema.enabled_on).toBeUndefined()
+  })
+
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('lays the product out with the image left by default, image right, full bleed or with thumbnails', () => {
+    expect(source).toContain(
+      'class="featured-product full-width featured-product--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}{% if section.settings.layout == \'full_bleed\' %} media-edge{% endif %}"',
+    )
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'image_left' })
+    expect(values(settings.layout)).toEqual(['image_left', 'image_right', 'full_bleed', 'with_thumbnails'])
+    expect(desktop).toMatch(/\.featured-product__inner {\s*grid-template-columns: 1fr 1fr;/)
+    expect(desktop).toMatch(/\.featured-product--image_right \.featured-product__gallery {\s*order: 1;/)
+  })
+
+  it('runs the full-bleed image to the edge of the page, square, with the details in a narrow column', () => {
+    expect(css).toMatch(/\.featured-product--full_bleed \.featured-product__inner {[^}]*grid-column: 1 \/ -1;[^}]*padding-block: 0;/)
+    expect(css).toMatch(/\.featured-product:not\(\.featured-product--full_bleed\) \.featured-product__media {\s*border-radius: var\(--style-border-radius-media\);/)
+    expect(css).toMatch(/\.featured-product--full_bleed \.featured-product__details {[^}]*max-width: var\(--width-narrow\);/)
+  })
+
+  it('shows every image of the product with a thumbnail strip below the main one that switches it', () => {
+    expect(source).toMatch(/{% for media in product\.media %}[\s\S]*<div class="featured-product__image"{% unless media\.id == featured_media\.id %} hidden{% endunless %}>/)
+    expect(source).toContain('<ul class="featured-product__thumbnails" role="list" aria-label="{{ \'product.media_thumbnails\' | t }}">')
+    expect(source).toContain("aria-label=\"{{ 'product.show_media' | t: index: forloop.index, count: forloop.length }}\"")
+    expect(source).toMatch(/image_tag: alt: '', sizes: '5rem', loading: 'lazy'/)
+    expect(css).toMatch(/\.featured-product__thumbnail :is\(img, svg\) {[^}]*aspect-ratio: var\(--image-ratio\);/)
+    expect(css).toMatch(/\.featured-product__thumbnail\[aria-current='true'\] {[^}]*opacity: 1;/)
+    expect(source).toMatch(/closest\('\.featured-product__thumbnail'\)/)
+  })
+
+  it('offers each other layout as a named preset', () => {
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets).toEqual([
+      { name: 't:general.featured_product' },
+      { name: 't:general.featured_product_image_right', settings: { layout: 'image_right' } },
+      { name: 't:general.featured_product_full_bleed', settings: { layout: 'full_bleed' } },
+      { name: 't:general.featured_product_with_thumbnails', settings: { layout: 'with_thumbnails' } },
+    ])
   })
 
   it('shows the picked product with its media, price, variant picker and add to cart, and a placeholder when none is picked', () => {
@@ -3227,7 +3267,7 @@ describe('Style system', () => {
     const faded = [...stylesheets, { file: 'critical.css', css: critical }].flatMap(({ css }) =>
       [...css.matchAll(/([^{}]+){[^{}]*opacity: var\(--opacity-muted\)/g)].map(([, selector]) => selector.trim()),
     )
-    expect(faded.sort()).toEqual(['.main-product__thumbnail', '.quick-add__option-label--unavailable', '.variant-picker__option-label--unavailable'])
+    expect(faded.sort()).toEqual(['.featured-product__thumbnail', '.main-product__thumbnail', '.quick-add__option-label--unavailable', '.variant-picker__option-label--unavailable'])
     expect(critical).toMatch(/\.product-card__vendor,\s*\.product-card__rating,\s*\.product-card__compare-at {\s*color: var\(--color-foreground-muted\);/)
   })
 
