@@ -404,7 +404,17 @@ export const wireframes = {
     't:general.main_404_big_number': { wireframe: 'display | heading text input button', description: 'A big 404 beside the message and search' },
   },
   'main-article': { 't:general.main_article': { wireframe: '3* image / center heading line / 2* text text' } },
-  'main-blog': { 't:general.main_blog': { wireframe: 'heading line / 3* image title line x3' } },
+  'main-blog': {
+    't:general.main_blog': { wireframe: 'heading line / 3* image title line x3', description: 'Article cards in a grid, each with an image' },
+    't:general.main_blog_list': {
+      wireframe: 'heading line / 2* image | line title text / 2* image | line title text / 2* image | line title text',
+      description: 'One article a row, with a small image beside its text',
+    },
+    't:general.main_blog_featured_first': {
+      wireframe: 'heading line / 3* image | title line text / 2* image title x3',
+      description: 'The latest article full width, then the others in a grid',
+    },
+  },
   'main-cart': {
     't:general.main_cart': {
       wireframe: 'heading / 2* image | title line | line / 2* image | title line | line / button',

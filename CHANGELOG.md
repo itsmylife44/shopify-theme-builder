@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Blog page layouts: a grid of cards (the default, as before), a list (one article a row, a small image beside its date, title and excerpt) or featured first (the latest article full width, its image beside its text, then the grid). Each layout is also a named preset, like "Main blog: featured first", and stacks on mobile.
+
 - Cart page layouts: stacked (the default, as before) or summary sidebar (the items on one side, the subtotal, free-shipping bar, tax note, order note and checkout buttons in a sticky summary beside them). The summary sidebar is also a named preset, "Main cart: summary sidebar", and stacks on mobile, the summary after the items.
 
 - Featured product layouts: image left (the default, as before), image right, full bleed (the image runs to the edge of the page, the details in a narrow column) or with thumbnails (every image of the product, switched from a thumbnail strip below the main one). Each layout is also a named preset, like "Featured product: with thumbnails", and stacks on mobile.

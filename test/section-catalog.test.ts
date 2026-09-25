@@ -489,7 +489,7 @@ describe('Blog page', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
     expect(source).toContain('color-{{ section.settings.color_scheme }}')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.main_blog' }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.main_blog' })
   })
 
   it('shows the articles as cards with image, title, date, excerpt and the author as a setting, paginated', () => {
@@ -508,6 +508,41 @@ describe('Blog page', () => {
     expect(source).toContain('{% for tag in blog.all_tags %}')
     expect(source).toContain('current_tags contains tag')
     expect(source).toContain('{{ blog.url }}/tagged/{{ tag | handle }}')
+  })
+
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('lays the articles out as a grid by default, a list or the latest article first', () => {
+    expect(source).toContain('class="main-blog main-blog--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'grid' })
+    expect(values(settings.layout)).toEqual(['grid', 'list', 'featured_first'])
+    expect(settings.columns).toMatchObject({ visible_if: "{{ section.settings.layout != 'list' }}" })
+  })
+
+  it('lists one article a row with a small image beside its date, title and excerpt', () => {
+    expect(css).toMatch(/\.main-blog--list \.main-blog__card {[^}]*display: grid;[^}]*grid-template-columns: 6rem 1fr;/)
+    expect(desktop).toMatch(/\.main-blog--list \.main-blog__grid {\s*grid-template-columns: 1fr;/)
+    expect(desktop).toMatch(/\.main-blog--list \.main-blog__card {[^}]*grid-template-columns: 12rem 1fr;/)
+    expect(css).toMatch(/\.main-blog--list \.main-blog__meta {\s*order: -1;/)
+    expect(css).toMatch(/\.main-blog__image {[^}]*aspect-ratio: var\(--image-ratio\);/)
+  })
+
+  it('shows the latest article full width on the first page, then the grid, stacked on mobile', () => {
+    expect(source).toMatch(/if layout == 'featured_first' and forloop\.first and paginate\.current_page == 1\s+assign featured = true/)
+    expect(source).toContain('<li class="main-blog__card{% if featured %} main-blog__card--featured{% endif %}">')
+    expect(desktop).toMatch(/\.main-blog--featured_first \.main-blog__card--featured {[^}]*grid-column: 1 \/ -1;[^}]*grid-template-columns: 3fr 2fr;/)
+    expect(source).toContain("assign card_sizes = '(min-width: 750px) 60vw, 100vw'")
+  })
+
+  it('offers each other layout as a named preset', () => {
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets).toEqual([
+      { name: 't:general.main_blog' },
+      { name: 't:general.main_blog_list', settings: { layout: 'list' } },
+      { name: 't:general.main_blog_featured_first', settings: { layout: 'featured_first' } },
+    ])
   })
 
   it('is copied into every new Theme by the skill', () => {
