@@ -23,7 +23,7 @@
       <fieldset class="buy-buttons__selling-plans">
         <legend>{{ 'product.purchase_options' | t }}</legend>
         {% unless product.requires_selling_plan %}
-          <label class="buy-buttons__selling-plan">
+          <label for="{{ section.id }}-selling-plan" class="buy-buttons__selling-plan">
             <input
               id="{{ section.id }}-selling-plan"
               type="radio"
@@ -43,7 +43,7 @@
             <fieldset class="buy-buttons__selling-plans">
               <legend class="text-small">{{ group.name | escape }}</legend>
               {% for allocation in group_allocations %}
-                <label class="buy-buttons__selling-plan">
+                <label for="{{ section.id }}-selling-plan-{{ allocation.selling_plan.id }}" class="buy-buttons__selling-plan">
                   <input
                     id="{{ section.id }}-selling-plan-{{ allocation.selling_plan.id }}"
                     type="radio"
@@ -63,9 +63,9 @@
       </fieldset>
     {% endif %}
     {{ form | payment_terms }}
-    <label class="buy-buttons__quantity">
+    <label for="{{ form_id }}-quantity" class="buy-buttons__quantity">
       {{ 'product.quantity' | t }}
-      <input type="number" name="quantity" min="1" value="1">
+      <input id="{{ form_id }}-quantity" type="number" name="quantity" min="1" value="1">
     </label>
     {% if product.gift_card? %}
       {% liquid
@@ -73,44 +73,48 @@
         assign latest_send_date = 'now' | date: '%s' | plus: 7776000 | date: '%Y-%m-%d'
       %}
       <gift-card-recipient class="buy-buttons__recipient">
-        <label class="buy-buttons__recipient-toggle">
-          <input type="checkbox" aria-controls="{{ section.id }}-recipient">
+        <label for="{{ section.id }}-recipient-toggle" class="buy-buttons__recipient-toggle">
+          <input id="{{ section.id }}-recipient-toggle" type="checkbox" aria-controls="{{ section.id }}-recipient">
           {{ 'product.recipient.send_to_recipient' | t }}
         </label>
         <fieldset id="{{ section.id }}-recipient" class="buy-buttons__recipient-fields" hidden disabled>
           <legend class="visually-hidden">{{ 'product.recipient.send_to_recipient' | t }}</legend>
           <input type="hidden" name="properties[__shopify_send_gift_card_to_recipient]" value="true">
           <input type="hidden" name="properties[__shopify_offset]" value="">
-          <label>
+          <label for="{{ section.id }}-recipient-email">
             {{ 'product.recipient.email' | t }}
             <input
+              id="{{ section.id }}-recipient-email"
               type="email"
               name="properties[Recipient email]"
               required
               autocomplete="off"
             >
           </label>
-          <label>
+          <label for="{{ section.id }}-recipient-name">
             {{ 'product.recipient.name' | t }}
             <input
+              id="{{ section.id }}-recipient-name"
               type="text"
               name="properties[Recipient name]"
               maxlength="255"
               autocomplete="off"
             >
           </label>
-          <label>
+          <label for="{{ section.id }}-recipient-message">
             {{ 'product.recipient.message' | t }}
             <textarea
+              id="{{ section.id }}-recipient-message"
               name="properties[Message]"
               maxlength="200"
               rows="3"
             ></textarea>
             <small>{{ 'product.recipient.message_info' | t }}</small>
           </label>
-          <label>
+          <label for="{{ section.id }}-recipient-send-on">
             {{ 'product.recipient.send_on' | t }}
             <input
+              id="{{ section.id }}-recipient-send-on"
               type="date"
               name="properties[Send on]"
               min="{{ today }}"

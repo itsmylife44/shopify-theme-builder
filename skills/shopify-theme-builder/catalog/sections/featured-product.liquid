@@ -61,16 +61,16 @@
           {% if product.has_only_default_variant %}
             <input type="hidden" name="id" value="{{ current_variant.id }}">
           {% else %}
-            <label class="featured-product__field">
+            <label for="{{ section.id }}-variant" class="featured-product__field">
               {{ product.options | join: ' / ' | escape }}
-              <select name="id">
+              <select id="{{ section.id }}-variant" name="id">
                 {{ variant_options }}
               </select>
             </label>
           {% endif %}
-          <label class="featured-product__field">
+          <label for="{{ section.id }}-quantity" class="featured-product__field">
             {{ 'product.quantity' | t }}
-            <input class="featured-product__quantity" type="number" name="quantity" min="1" value="1">
+            <input id="{{ section.id }}-quantity" class="featured-product__quantity" type="number" name="quantity" min="1" value="1">
           </label>
           <button
             type="submit"

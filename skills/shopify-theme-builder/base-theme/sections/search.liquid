@@ -9,12 +9,13 @@
   <h1>{{ 'search.title' | t }}</h1>
 
   <form action="{{ routes.search_url }}" method="get" role="search" class="search__form">
+    <label for="Search-{{ section.id }}" class="visually-hidden">{{ 'search.title' | t }}</label>
     <input
+      id="Search-{{ section.id }}"
       type="search"
       name="q"
       value="{{ search.terms | escape }}"
       placeholder="{{ 'search.placeholder' | t }}"
-      aria-label="{{ 'search.title' | t }}"
     >
     <button type="submit" class="button">{{ 'search.submit' | t }}</button>
   </form>

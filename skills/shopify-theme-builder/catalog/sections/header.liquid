@@ -192,13 +192,13 @@
           </summary>
           <predictive-search class="header__search-panel" data-url="{{ routes.predictive_search_url }}">
             <form action="{{ routes.search_url }}" method="get" role="search">
+              <label for="HeaderSearch" class="visually-hidden">{{ 'header.search' | t }}</label>
               <input
                 id="HeaderSearch"
                 type="search"
                 name="q"
                 value="{{ search.terms | escape }}"
                 placeholder="{{ 'search.placeholder' | t }}"
-                aria-label="{{ 'header.search' | t }}"
                 autocomplete="off"
                 role="combobox"
                 aria-expanded="false"

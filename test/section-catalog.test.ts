@@ -257,7 +257,7 @@ describe('Cart drawer', () => {
     expect(header).toContain('data-change-url="{{ routes.cart_change_url }}.js"')
     expect(header).toContain('sections: this.dataset.sections')
     expect(header).toContain("querySelector('.header__cart').replaceWith(")
-    expect(cart).toMatch(/<input\s+type="number"\s+name="updates\[\]"[^>]*data-line="{{ forloop\.index }}"/)
+    expect(cart).toMatch(/<input[^>]*\stype="number"\s+name="updates\[\]"[^>]*data-line="{{ forloop\.index }}"/)
     expect(cart).toMatch(/href="{{ item\.url_to_remove }}"\s+data-line="{{ forloop\.index }}"/)
   })
 
@@ -1032,6 +1032,41 @@ describe('Keyboard navigation', () => {
     const css = readFileSync(path.join(baseTheme, 'assets/critical.css'), 'utf8')
     expect(css).toMatch(/\n\.skip-to-content:not\(:focus\) {[^}]*clip-path: inset\(50%\)/)
     expect(css).toMatch(/\n:focus-visible,[^{]*{\s*outline: var\(--focus-ring-width\) solid var\(--color-foreground\);\s*outline-offset: var\(--focus-ring-offset\);\s*}/)
+  })
+})
+
+describe('Form fields', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const files = ['base-theme', 'catalog'].flatMap((dir) =>
+    readdirSync(path.join(skillDir, dir), { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => path.join(dir, file)),
+  )
+  const markup = (file: string) =>
+    readFileSync(path.join(skillDir, file), 'utf8').replace(/{% (schema|javascript|stylesheet) %}[\s\S]*?{% end\1 %}/g, '')
+  const fields = (source: string) =>
+    [...source.matchAll(/<(?:input|select|textarea)\b(?:[^>{]|{{[\s\S]*?}}|{%[\s\S]*?%})*>/g)]
+      .map(([tag]) => tag)
+      .filter((tag) => !/type="(hidden|submit|button|image|reset)"/.test(tag))
+
+  it('gives every input, select and textarea an id and a <label for> it, never only a placeholder or aria-label (Theme Store requirement)', () => {
+    const unlabelled = files.flatMap((file) => {
+      const source = markup(file)
+      const labelled = new Set([...source.matchAll(/<label\b[^>]*?\sfor="([^"]+)"/g)].map((m) => m[1]))
+      return fields(source)
+        .filter((tag) => !labelled.has(tag.match(/\sid="([^"]+)"/)?.[1] ?? ''))
+        .map((tag) => `${file}: ${tag.replace(/\s+/g, ' ')}`)
+    })
+    expect(unlabelled).toEqual([])
+  })
+
+  it.each(['catalog/sections/newsletter.liquid', 'catalog/sections/footer.liquid'])('labels the newsletter email in %s, visually hidden, with email autocomplete', (file) => {
+    const source = markup(file)
+    const email = fields(source).find((tag) => tag.includes('name="contact[email]"'))!
+    expect(email).toContain('autocomplete="email"')
+    expect(email).not.toContain('aria-label')
+    const id = email.match(/\sid="([^"]+)"/)![1]
+    expect(source).toContain(`<label for="${id}" class="visually-hidden">{{ 'footer.newsletter_email' | t }}</label>`)
   })
 })
 
@@ -2737,7 +2772,7 @@ describe('Touch targets and text measure', () => {
 
   it('gives menu links and every label around a checkbox or radio button the 24px floor', () => {
     const labels = markup.flatMap(({ source }) =>
-      [...source.matchAll(/<label class="([\w-]+)"[^>]*>\s*<input[^>]*type="(checkbox|radio)"/g)].map((m) => `.${m[1]}`),
+      [...source.matchAll(/<label\b[^>]*?\sclass="([\w-]+)"[^>]*>\s*<input[^>]*type="(checkbox|radio)"/g)].map((m) => `.${m[1]}`),
     )
     expect(labels).toContain('.main-collection__filter-value')
     for (const selector of ['.header__menu-link', ...labels]) expect(target(selector, 'block'), selector).toBeGreaterThanOrEqual(24)

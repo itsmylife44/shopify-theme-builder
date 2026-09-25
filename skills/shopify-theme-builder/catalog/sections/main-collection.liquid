@@ -53,9 +53,10 @@
                     {% case filter.type %}
                       {% when 'price_range' %}
                         <div class="main-collection__price-range">
-                          <label>
+                          <label for="{{ section.id }}-{{ filter.min_value.param_name | handleize }}">
                             {{ 'collection.price_from' | t }}
                             <input
+                              id="{{ section.id }}-{{ filter.min_value.param_name | handleize }}"
                               type="number"
                               name="{{ filter.min_value.param_name }}"
                               min="0"
@@ -67,9 +68,10 @@
                               {% endif %}
                             >
                           </label>
-                          <label>
+                          <label for="{{ section.id }}-{{ filter.max_value.param_name | handleize }}">
                             {{ 'collection.price_to' | t }}
                             <input
+                              id="{{ section.id }}-{{ filter.max_value.param_name | handleize }}"
                               type="number"
                               name="{{ filter.max_value.param_name }}"
                               min="0"
@@ -84,8 +86,9 @@
                         </div>
                       {% else %}
                         {% for filter_value in filter.values %}
-                          <label class="main-collection__filter-value">
+                          <label for="{{ section.id }}-{{ filter.param_name | handleize }}-{{ forloop.index }}" class="main-collection__filter-value">
                             <input
+                              id="{{ section.id }}-{{ filter.param_name | handleize }}-{{ forloop.index }}"
                               type="checkbox"
                               name="{{ filter_value.param_name }}"
                               value="{{ filter_value.value }}"
@@ -106,9 +109,9 @@
             {% endif %}
 
             {% if section.settings.enable_sorting %}
-              <label class="main-collection__sort">
+              <label for="{{ section.id }}-sort-by" class="main-collection__sort">
                 {{ 'collection.sort_by' | t }}
-                <select name="sort_by">
+                <select id="{{ section.id }}-sort-by" name="sort_by">
                   {% for option in collection.sort_options %}
                     <option
                       value="{{ option.value | escape }}"

@@ -28,13 +28,14 @@
       {% assign form_id = 'Newsletter-' | append: section.id %}
       {% form 'customer', id: form_id, class: 'newsletter__form' %}
         <input type="hidden" name="contact[tags]" value="newsletter">
+        <label for="{{ form_id }}-email" class="visually-hidden">{{ 'footer.newsletter_email' | t }}</label>
         <input
+          id="{{ form_id }}-email"
           type="email"
           name="contact[email]"
           autocomplete="email"
           required
           placeholder="{{ 'footer.newsletter_email' | t }}"
-          aria-label="{{ 'footer.newsletter_email' | t }}"
         >
         <button type="submit" class="button">{{ section.settings.button_label | escape }}</button>
         {% if form.posted_successfully? %}
