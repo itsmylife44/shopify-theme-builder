@@ -1,11 +1,14 @@
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  BoldIcon,
   CircleCheckIcon,
   CompassIcon,
   DownloadIcon,
   ExternalLinkIcon,
+  ItalicIcon,
   LayoutListIcon,
+  LinkIcon,
   LoaderCircleIcon,
   MonitorIcon,
   PaletteIcon,
@@ -60,7 +63,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
+import { richtextLink, sanitizeRichtext } from '@/richtext.mjs'
 import { layoutWireframe, wireframes, type PresetWireframe, type Tone } from '@/wireframes.mjs'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; state: ThemeState }
@@ -824,34 +827,13 @@ function SectionPicker({
   )
 }
 
-// richtext settings hold HTML paragraphs; the inspector edits them as plain paragraphs split by blank lines.
-const paragraphsOnly = /^\s*(<p>[\s\S]*?<\/p>\s*)*$/
-const toParagraphs = (html: string) =>
-  html
-    .trim()
-    .replace(/^<p>|<\/p>$/g, '')
-    .split(/<\/p>\s*<p>/)
-    .map((paragraph) => paragraph.replaceAll('<br>', '\n'))
-    .join('\n\n')
-const fromParagraphs = (text: string) =>
-  text
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .map((paragraph) => `<p>${paragraph.replaceAll('\n', '<br>')}</p>`)
-    .join('')
-
 type Value = Setting['value']
-const isParagraphs = (setting: Setting) => setting.type === 'richtext' && typeof setting.value === 'string' && paragraphsOnly.test(setting.value)
 
-/** A setting's value as the inspector edits it, and back. */
-function editable(setting: Setting) {
-  return isParagraphs(setting) ? toParagraphs(setting.value as string) : setting.value
-}
+/** A setting's value as the inspector saves it. */
 function stored(setting: Setting, value: Value) {
   // A list typed by hand is its handles separated by commas.
   if (Array.isArray(setting.value) && typeof value === 'string') return value.split(',').map((item) => item.trim()).filter(Boolean)
-  return isParagraphs(setting) ? fromParagraphs(value as string) : value
+  return value
 }
 
 // The settings that pick from the store, and what they pick.
@@ -994,7 +976,7 @@ function Inspector({
         key={key}
         id={`setting-${key}`}
         setting={setting}
-        value={live.value(field, editable(setting))}
+        value={live.value(field, setting.value)}
         store={store}
         error={live.error(field)}
         onChange={(next, delay) => live.change(field, next, (value) => [url, patch(value)], delay)}
@@ -1260,8 +1242,8 @@ function SettingField({
     // Without the store's list, handles are typed, separated by commas.
     const text = Array.isArray(value) ? value.join(', ') : (value as string)
     control = <Input id={id} value={text} placeholder="handle-one, handle-two" onChange={(event) => type(event.target.value)} onBlur={onFlush} />
-  } else if (setting.type === 'richtext') {
-    control = <Textarea id={id} value={value as string} rows={3} onChange={(event) => type(event.target.value)} onBlur={onFlush} />
+  } else if (setting.type === 'richtext' || setting.type === 'inline_richtext') {
+    control = <RichTextEditor id={id} value={value as string} inline={setting.type === 'inline_richtext'} onChange={type} onFlush={onFlush} />
   } else {
     const placeholder = setting.type === 'url' ? '/collections/all or https://…' : kind ? 'handle' : undefined
     control = <Input id={id} value={value as string} placeholder={placeholder} onChange={(event) => type(event.target.value)} onBlur={onFlush} />
@@ -1274,6 +1256,90 @@ function SettingField({
       {control}
       {refused}
     </Field>
+  )
+}
+
+/**
+ * Edits a richtext setting's paragraphs, or an inline_richtext setting's line, with bold, italic and links, and gives
+ * back the sanitized HTML Shopify takes as it's typed.
+ */
+function RichTextEditor({
+  id,
+  value,
+  inline,
+  onChange,
+  onFlush,
+}: {
+  id: string
+  value: string
+  inline: boolean
+  onChange: (value: string) => void
+  onFlush: () => void
+}) {
+  const editor = useRef<HTMLDivElement>(null)
+  // The HTML last given back: the editor keeps its own markup while that value comes back, and shows any other, like an undo.
+  const shown = useRef<string | null>(null)
+  useEffect(() => {
+    if (editor.current && value !== shown.current) {
+      editor.current.innerHTML = sanitizeRichtext(value, inline)
+      shown.current = value
+    }
+  }, [value, inline])
+
+  function input() {
+    shown.current = sanitizeRichtext(editor.current?.innerHTML ?? '', inline)
+    onChange(shown.current)
+  }
+
+  // document.execCommand is deprecated but still the only built-in way to format a contenteditable's selection.
+  function format(command: 'bold' | 'italic') {
+    document.execCommand(command)
+  }
+
+  function addLink() {
+    const url = prompt('Link to (like /pages/contact, https://… or mailto:…). Leave empty to remove the link.')
+    if (url === null) return
+    const trimmed = url.trim()
+    if (trimmed === '') document.execCommand('unlink')
+    // A link the sanitizer wouldn't keep, like kadenz.example, is a web link.
+    else document.execCommand('createLink', false, richtextLink.test(trimmed) ? trimmed : `https://${trimmed}`)
+  }
+
+  const tool = (label: string, icon: React.ReactNode, onClick: () => void) => (
+    // A toolbar button keeps the editor's selection: pressing it doesn't take the focus.
+    <Button type="button" size="icon-xs" variant="ghost" aria-label={label} title={label} onMouseDown={(event) => event.preventDefault()} onClick={onClick}>
+      {icon}
+    </Button>
+  )
+  return (
+    <div className="rounded-lg border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
+      <div role="toolbar" aria-label="Formatting" aria-controls={id} className="flex gap-0.5 border-b border-input p-1">
+        {tool('Bold', <BoldIcon />, () => format('bold'))}
+        {tool('Italic', <ItalicIcon />, () => format('italic'))}
+        {tool('Link', <LinkIcon />, addLink)}
+      </div>
+      <div
+        ref={editor}
+        id={id}
+        role="textbox"
+        aria-multiline={!inline}
+        aria-labelledby={`${id}-label`}
+        contentEditable
+        suppressContentEditableWarning
+        className={`px-2.5 py-2 text-base outline-none md:text-sm [&_a]:underline [&_p+p]:mt-2 ${inline ? 'min-h-8' : 'min-h-16'}`}
+        onInput={input}
+        onBlur={onFlush}
+        onKeyDown={(event) => {
+          // An inline rich text is one line.
+          if (inline && event.key === 'Enter') event.preventDefault()
+        }}
+        onPaste={(event) => {
+          // Pasted text comes without its formatting.
+          event.preventDefault()
+          document.execCommand('insertText', false, event.clipboardData.getData('text/plain'))
+        }}
+      />
+    </div>
   )
 }
 
