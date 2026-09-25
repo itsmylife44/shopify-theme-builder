@@ -4,10 +4,11 @@
 
 **Describe your shop in one message. Your coding agent designs, builds, checks and delivers a real Shopify theme.**
 
-An open-source agent skill for Claude Code, Codex, Cursor and other coding agents. It turns your website, a screenshot or a moodboard into three complete theme designs, lets you pick one in a live Studio, writes every page in your shop's language, and hands you a theme that passes Theme Check and an accessibility audit, uploaded unpublished.
+An open-source Claude Code plugin and agent skill for Codex, Cursor and other coding agents. It turns your website, a screenshot or a moodboard into three complete theme designs, lets you pick one in a live Studio, writes every page in your shop's language, and hands you a theme that passes Theme Check and an accessibility audit, uploaded unpublished.
 
 [![CI](https://github.com/itsmylife44/shopify-theme-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/itsmylife44/shopify-theme-builder/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757.svg)](#quickstart)
 [![Agent skill](https://img.shields.io/badge/agent%20skill-npx%20skills%20add-black.svg)](https://github.com/vercel-labs/skills)
 [![Online Store 2.0](https://img.shields.io/badge/Shopify-Online%20Store%202.0-95BF47.svg)](https://shopify.dev/docs/storefronts/themes)
 
@@ -19,7 +20,16 @@ An open-source agent skill for Claude Code, Codex, Cursor and other coding agent
 
 ## Quickstart
 
-**1. Install the skill** in the folder where you run your agent:
+**1. Install it.**
+
+**Claude Code**: install the plugin from inside a session:
+
+```text
+/plugin marketplace add itsmylife44/shopify-theme-builder
+/plugin install shopify-theme-builder@shopify-theme-builder
+```
+
+**Codex, Cursor, OpenCode and other agents**: install the skill in the folder where you run your agent:
 
 ```sh
 npx skills add itsmylife44/shopify-theme-builder
@@ -203,6 +213,17 @@ The agent checks all of these first, plus the Studio's dependencies, and tells y
 
 ## Install and update
 
+### Claude Code plugin
+
+```text
+/plugin marketplace add itsmylife44/shopify-theme-builder
+/plugin install shopify-theme-builder@shopify-theme-builder
+```
+
+The plugin is available in every project. Update it with `claude plugin update shopify-theme-builder@shopify-theme-builder`, then start a new session.
+
+### Any agent, with the skills CLI
+
 ```sh
 npx skills add itsmylife44/shopify-theme-builder
 ```
@@ -210,15 +231,6 @@ npx skills add itsmylife44/shopify-theme-builder
 This installs the skill into the current project for the agents the [skills CLI](https://github.com/vercel-labs/skills) detects. Add `-g` to install it for every project.
 
 To update it, run `npx skills update -p` in that project (or `npx skills update -g` for a global install). The update replaces the skill's folder, so the agent reinstalls the Studio's dependencies the next time it runs.
-
-**In Claude Code**, you can install it as a plugin instead, from inside a session:
-
-```text
-/plugin marketplace add itsmylife44/shopify-theme-builder
-/plugin install shopify-theme-builder@shopify-theme-builder
-```
-
-Update it with `claude plugin update shopify-theme-builder@shopify-theme-builder`, then start a new session.
 
 ## FAQ
 
