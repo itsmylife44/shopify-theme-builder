@@ -77,6 +77,9 @@
     "announcement": "Announcement",
     "collection_list": "Collection list",
     "featured_product": "Featured product",
+    "featured_product_image_right": "Featured product: image right",
+    "featured_product_full_bleed": "Featured product: full bleed",
+    "featured_product_with_thumbnails": "Featured product: with thumbnails",
     "slideshow": "Slideshow",
     "slide": "Slide",
     "multicolumn": "Multicolumn",
@@ -469,7 +472,10 @@
       "round_portraits": "Round portraits",
       "inline_list": "Inline list",
       "suggestions": "With suggestions",
-      "big_number": "Big number"
+      "big_number": "Big number",
+      "image_left": "Image left",
+      "image_right": "Image right",
+      "with_thumbnails": "With thumbnails"
     },
     "cart_type": {
       "drawer": "Drawer",

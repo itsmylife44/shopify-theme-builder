@@ -1,21 +1,61 @@
-{% comment %}One product with its media, price, variant picker and add to cart button, on any page.{% endcomment %}
+{% comment %}One product with its media, price, variant picker and add to cart button, image left or right, full bleed or with thumbnails, on any page.{% endcomment %}
 {% liquid
   assign product = section.settings.product
   assign current_variant = product.selected_or_first_available_variant
   assign featured_media = current_variant.featured_media | default: product.featured_media
+  assign thumbnails = false
+  if section.settings.layout == 'with_thumbnails'
+    assign thumbnails = true
+  endif
 %}
 
-<div class="featured-product full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="featured-product full-width featured-product--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}{% if section.settings.layout == 'full_bleed' %} media-edge{% endif %}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <featured-product class="featured-product__inner">
-    <div class="featured-product__media">
-      {% if featured_media %}
-        {{
-          featured_media.preview_image
-          | image_url: width: 1500
-          | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: 'lazy'
-        }}
-      {% else %}
-        {{ 'product-1' | placeholder_svg_tag: 'placeholder featured-product__placeholder' }}
+    <div class="featured-product__gallery">
+      <div class="featured-product__media">
+        {% if featured_media %}
+          {% for media in product.media %}
+            {% unless media.id == featured_media.id or thumbnails %}
+              {% continue %}
+            {% endunless %}
+            <div class="featured-product__image"{% unless media.id == featured_media.id %} hidden{% endunless %}>
+              {{
+                media.preview_image
+                | image_url: width: 1500
+                | image_tag: widths: '375, 550, 750, 1100, 1500', sizes: '(min-width: 750px) 50vw, 100vw', loading: 'lazy'
+              }}
+            </div>
+          {% endfor %}
+        {% else %}
+          {{ 'product-1' | placeholder_svg_tag: 'placeholder featured-product__placeholder' }}
+        {% endif %}
+      </div>
+      {% if thumbnails and product.media.size > 1 %}
+        <ul class="featured-product__thumbnails" role="list" aria-label="{{ 'product.media_thumbnails' | t }}">
+          {% for media in product.media %}
+            <li>
+              <button
+                type="button"
+                class="featured-product__thumbnail"
+                data-index="{{ forloop.index0 }}"
+                aria-label="{{ 'product.show_media' | t: index: forloop.index, count: forloop.length }}"
+                {% if media.id == featured_media.id %}
+                  aria-current="true"
+                {% endif %}
+              >
+                {{ media.preview_image | image_url: width: 160 | image_tag: alt: '', sizes: '5rem', loading: 'lazy' }}
+              </button>
+            </li>
+          {% endfor %}
+        </ul>
+      {% elsif thumbnails and product == blank %}
+        <ul class="featured-product__thumbnails" role="list" aria-hidden="true">
+          {% for i in (1..4) %}
+            <li class="featured-product__thumbnail">
+              {{ 'product-' | append: i | placeholder_svg_tag: 'placeholder' }}
+            </li>
+          {% endfor %}
+        </ul>
       {% endif %}
     </div>
 
@@ -107,6 +147,13 @@
         if (event.target.name !== 'id') return;
         this.querySelector('.featured-product__price').innerHTML = event.target.selectedOptions[0].dataset.price;
       });
+      this.addEventListener('click', (event) => {
+        const thumbnail = event.target.closest('.featured-product__thumbnail');
+        if (!thumbnail?.dataset.index) return;
+        this.querySelectorAll('.featured-product__image').forEach((image, index) => (image.hidden = index !== Number(thumbnail.dataset.index)));
+        this.querySelectorAll('.featured-product__thumbnail').forEach((other) => other.removeAttribute('aria-current'));
+        thumbnail.setAttribute('aria-current', 'true');
+      });
       this.addEventListener('submit', (event) => {
         const drawer = document.querySelector('cart-drawer');
         if (!drawer?.add) return;
@@ -132,18 +179,45 @@
     padding-block: var(--section-spacing-start) var(--section-spacing);
   }
 
+  /* Full bleed: the image runs to the edge of the page, the details keep the page margin. */
+  .featured-product--full_bleed .featured-product__inner {
+    grid-column: 1 / -1;
+    gap: 0;
+    padding-block: 0;
+  }
+
+  .featured-product--full_bleed .featured-product__details {
+    padding: var(--section-spacing) var(--page-margin);
+  }
+
   @media (min-width: 750px) {
     .featured-product__inner {
       grid-template-columns: 1fr 1fr;
       align-items: center;
       gap: var(--space-2xl);
     }
+
+    .featured-product--image_right .featured-product__gallery {
+      order: 1;
+    }
+
+    .featured-product--full_bleed .featured-product__details {
+      max-width: var(--width-narrow);
+      padding: var(--section-spacing) var(--space-2xl);
+    }
+  }
+
+  .featured-product__gallery {
+    min-width: 0;
   }
 
   .featured-product__media {
     overflow: hidden;
-    border-radius: var(--style-border-radius-media);
     background-color: var(--media-background);
+  }
+
+  .featured-product:not(.featured-product--full_bleed) .featured-product__media {
+    border-radius: var(--style-border-radius-media);
   }
 
   .featured-product__media img,
@@ -155,6 +229,50 @@
     padding: var(--media-inset);
     object-fit: var(--media-fit);
     mix-blend-mode: var(--media-blend);
+  }
+
+  .featured-product__thumbnails {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 4 * var(--space-xs)) / 4.5);
+    gap: var(--space-xs);
+    margin: 0;
+    padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  @media (min-width: 750px) {
+    .featured-product__thumbnails {
+      grid-auto-columns: calc((100% - 6 * var(--space-xs)) / 6.5);
+    }
+  }
+
+  .featured-product__thumbnail {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: var(--style-border-radius-media);
+    background: none;
+    cursor: pointer;
+    opacity: var(--opacity-muted);
+  }
+
+  .featured-product__thumbnail[aria-current='true'] {
+    outline: var(--focus-ring-width) solid currentcolor;
+    opacity: 1;
+  }
+
+  .featured-product__thumbnail :is(img, svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--image-ratio);
+    object-fit: var(--media-fit);
+    border-radius: var(--style-border-radius-media);
+    background-color: var(--media-background);
   }
 
   .featured-product__details,
@@ -227,6 +345,18 @@
       "default": "card"
     },
     {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "image_left", "label": "t:options.layout.image_left" },
+        { "value": "image_right", "label": "t:options.layout.image_right" },
+        { "value": "full_bleed", "label": "t:options.layout.full_bleed" },
+        { "value": "with_thumbnails", "label": "t:options.layout.with_thumbnails" }
+      ],
+      "default": "image_left"
+    },
+    {
       "type": "product",
       "id": "product",
       "label": "t:labels.product"
@@ -267,6 +397,18 @@
   "presets": [
     {
       "name": "t:general.featured_product"
+    },
+    {
+      "name": "t:general.featured_product_image_right",
+      "settings": { "layout": "image_right" }
+    },
+    {
+      "name": "t:general.featured_product_full_bleed",
+      "settings": { "layout": "full_bleed" }
+    },
+    {
+      "name": "t:general.featured_product_with_thumbnails",
+      "settings": { "layout": "with_thumbnails" }
     }
   ]
 }

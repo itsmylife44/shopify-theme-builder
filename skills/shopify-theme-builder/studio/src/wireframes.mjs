@@ -313,7 +313,21 @@ export const wireframes = {
       description: 'Three large cards with big names and no button',
     },
   },
-  'featured-product': { 't:general.featured_product': { wireframe: 'image | heading line button text' } },
+  'featured-product': {
+    't:general.featured_product': { wireframe: 'image | heading line button text', description: 'The product image on the left, its details beside it' },
+    't:general.featured_product_image_right': {
+      wireframe: 'heading line button text | image',
+      description: 'The details on the left, the product image on the right',
+    },
+    't:general.featured_product_full_bleed': {
+      wireframe: 'bleed image | heading line button text',
+      description: 'Image to the edge of the page, details in a narrow column',
+    },
+    't:general.featured_product_with_thumbnails': {
+      wireframe: 'image thumbs | heading line button text',
+      description: 'The main image with thumbnails below it, details beside',
+    },
+  },
   hero: {
     't:general.hero': {
       wireframe: 'image@ml panel heading text button',
