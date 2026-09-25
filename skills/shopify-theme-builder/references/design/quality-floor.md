@@ -33,7 +33,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - Buttons, menu and close icons, and variant options are at least 44px square on mobile; any other control at least 24px.
 - Running text stays under about 70 characters a line.
 - Headings go in order (one `h1` per page, no skipped levels), and every image the Creator placed has alt text.
-- The menu opens with the keyboard, and the focus ring shows on every control.
+- The menu opens with the keyboard, and the focus ring shows on every control. The menu drawer, cart drawer and quick add open with Enter, take focus inside, close with Escape and give focus back (`check-a11y.mjs`).
 - Every input, select and textarea has an `id` and a `<label for>` it, visually hidden (`visually-hidden`) where the design shows none, never only a placeholder or an `aria-label`; an email field takes `autocomplete="email"` (the newsletter forms).
 - No select submits or navigates on change, which an arrow key would trigger (WCAG F37): the country and language selectors open a list whose every choice is a button.
 - Content a script swaps is announced (WCAG 4.1.3): a visually hidden `role="status"` region says the new price and availability after a variant change, and "Cart updated, subtotal X" after a cart change.
