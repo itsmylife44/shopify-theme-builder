@@ -2111,6 +2111,51 @@ describe('FAQ', () => {
   })
 })
 
+describe('Logo list', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/logo-list.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+  const logos = (count: number) => Array.from({ length: count }, () => ({ type: 'logo' }))
+
+  it('lays the logos out in a row by default, on tiles beside the heading, or on a band', () => {
+    expect(source).toContain('class="logo-list logo-list--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'row' })
+    expect(values(settings.layout)).toEqual(['row', 'tile_grid', 'accent_band'])
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets[0]).toEqual({ name: 't:general.logo_list', blocks: logos(4) })
+  })
+
+  it('puts the heading and a short text on the start side of a 3 × 2 grid of tiles, stacked on mobile', () => {
+    expect(settings.text).toMatchObject({ type: 'richtext', label: 't:labels.text', visible_if: "{{ section.settings.layout == 'tile_grid' }}" })
+    expect(source).toMatch(/{% if layout == 'tile_grid' and section\.settings\.text != blank %}\s*<div class="logo-list__text rte">{{ section\.settings\.text }}<\/div>/)
+    expect(css).toMatch(/\.logo-list--tile_grid \.logo-list__item {[^}]*padding: var\(--card-padding\);[^}]*border: var\(--card-border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-cards\);[^}]*background-color: var\(--card-background\);/)
+    expect(css).toMatch(/\.logo-list--tile_grid \.logo-list__items {[^}]*display: grid;[^}]*grid-template-columns: repeat\(2, 1fr\);/)
+    expect(desktop).toMatch(/\.logo-list--tile_grid \.logo-list__inner {[^}]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 2fr\);/)
+    expect(desktop).toMatch(/\.logo-list--tile_grid \.logo-list__items {[^}]*grid-template-columns: repeat\(3, 1fr\);/)
+    expect(source).toContain('data-reveal-stagger')
+  })
+
+  it('sets the logos in one row on a full-width band in its own color scheme, the heading above', () => {
+    expect(settings.band_color_scheme).toMatchObject({
+      type: 'color_scheme',
+      label: 't:labels.band_color_scheme',
+      visible_if: "{{ section.settings.layout == 'accent_band' }}",
+    })
+    expect(source).toContain('<div class="logo-list__band color-{{ section.settings.band_color_scheme }}">')
+    expect(css).toMatch(/\.logo-list__band {[^}]*grid-column: 1 \/ -1;[^}]*grid-template-columns: var\(--content-grid\);/)
+    expect(desktop).toMatch(/\.logo-list__band \.logo-list__items {[^}]*grid-auto-flow: column;/)
+  })
+
+  it('offers each other layout as a named preset, with a logo for each of its cells', () => {
+    expect(schema.presets.slice(1)).toEqual([
+      { name: 't:general.logo_list_tile_grid', settings: { layout: 'tile_grid' }, blocks: logos(6) },
+      { name: 't:general.logo_list_accent_band', settings: { layout: 'accent_band' }, blocks: logos(5) },
+    ])
+  })
+})
+
 describe('Editorial split', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
