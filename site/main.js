@@ -16,7 +16,7 @@ for (const button of document.querySelectorAll('.copy')) {
 }
 
 // The demo loops for more than 5 seconds, so it gets a pause button (WCAG 2.2.2) and starts paused under reduced motion.
-const video = document.querySelector('.hero__media video')
+const video = document.querySelector('.video video')
 const pause = document.querySelector('[data-pause]')
 const setPaused = (paused) => {
   if (paused) video.pause()
