@@ -248,6 +248,47 @@
               </load-more>
             {% endif %}
           {% endpaginate %}
+
+          {% if search.results_count == 0 and active_filters == blank %}
+            {% assign suggestion = section.settings.no_results_collection %}
+            <div class="main-search__suggestions">
+              <div class="main-search__tips">
+                <h2 class="text-h5">{{ 'search.tips_title' | t }}</h2>
+                <ul>
+                  <li>{{ 'search.tips.spelling' | t }}</li>
+                  <li>{{ 'search.tips.fewer_words' | t }}</li>
+                  <li>{{ 'search.tips.other_words' | t }}</li>
+                </ul>
+              </div>
+
+              {% capture suggestions %}
+                {% if suggestion != blank and suggestion.products_count > 0 %}
+                  <ul class="main-search__grid" role="list" style="--columns: {{ section.settings.columns }};">
+                    {% for product in suggestion.products limit: section.settings.columns %}
+                      <li>
+                        {% render 'product-card', product: product, show_quick_add: section.settings.show_quick_add, anatomy: section.settings.card_anatomy %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% elsif collections.size > 0 %}
+                  <ul class="main-search__collections" role="list">
+                    {% for collection in collections limit: 12 %}
+                      <li>
+                        <a href="{{ collection.url }}">{{ collection.title | escape }}</a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              {% endcapture %}
+
+              {% if suggestions != blank %}
+                {% if section.settings.no_results_heading != blank %}
+                  <h2 class="main-search__suggestions-title">{{ section.settings.no_results_heading | escape }}</h2>
+                {% endif %}
+                {{ suggestions }}
+              {% endif %}
+            </div>
+          {% endif %}
         </div>
       </facet-filters>
     {% elsif request.design_mode %}
@@ -650,6 +691,41 @@
     margin: 0;
   }
 
+  .main-search__suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .main-search__tips :is(h2, ul),
+  .main-search__suggestions-title {
+    margin: 0;
+  }
+
+  .main-search__tips ul {
+    padding-inline-start: var(--space-lg);
+  }
+
+  .main-search__collections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-search__collections a {
+    display: flex;
+    align-items: center;
+    min-block-size: var(--target-size-min);
+    padding: var(--space-2xs) var(--space-sm);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-badges);
+    color: inherit;
+    text-decoration: none;
+  }
+
 
   .main-search__more {
     display: flex;
@@ -826,6 +902,18 @@
       "id": "show_quick_add",
       "label": "t:labels.show_quick_add",
       "default": true
+    },
+    {
+      "type": "collection",
+      "id": "no_results_collection",
+      "label": "t:labels.no_results_collection",
+      "info": "t:info.main_search_no_results_collection"
+    },
+    {
+      "type": "text",
+      "id": "no_results_heading",
+      "label": "t:labels.no_results_heading",
+      "default": "Explore the shop"
     },
     {
       "type": "select",

@@ -300,6 +300,20 @@ describe('Search page', () => {
     expect(source).toContain('{% case result.object_type %}')
   })
 
+  it('with no results and no filters applied, suggests the chosen collection (or a list of collections) under a heading, with search tips', () => {
+    const locale = JSON.parse(readFileSync(path.join(skillDir, 'base-theme/locales/en.default.json'), 'utf8'))
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'no_results_collection', type: 'collection' }))
+    expect(schema.settings).toContainEqual(expect.objectContaining({ id: 'no_results_heading', type: 'text' }))
+    const empty = source.slice(source.indexOf('{% if search.results_count == 0 and active_filters == blank %}'))
+    expect(empty).not.toBe(source)
+    expect(empty).toContain('{{ section.settings.no_results_heading | escape }}')
+    expect(empty).toContain("{% for product in suggestion.products limit: section.settings.columns %}")
+    expect(empty).toContain("{% render 'product-card', product: product,")
+    expect(empty).toContain('{% for collection in collections limit: 12 %}')
+    expect(empty).toContain("{{ 'search.tips_title' | t }}")
+    expect(Object.keys(locale.search.tips)).toEqual(['spelling', 'fewer_words', 'other_words'])
+  })
+
   it('is copied into every new Theme by the skill', () => {
     expect(starterFiles).toContain('sections/main-search.liquid')
     expect(starterFiles).toContain('templates/search.json')
