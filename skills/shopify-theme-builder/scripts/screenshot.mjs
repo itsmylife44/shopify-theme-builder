@@ -1,23 +1,28 @@
 #!/usr/bin/env node
 // Takes a full-page screenshot of a page of the preview, for the review (references/design/review.md). Usage:
 //   node <skill-dir>/scripts/screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--parts | --part-height <px> | --hover <selector>]
+//   node <skill-dir>/scripts/screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> … [--width 1440] [--mobile] [--parts]
 // It drives the system's Google Chrome (or Chromium, or Microsoft Edge; CHROME_PATH names another) headless over the
 // DevTools Protocol, with reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the
-// network (theme dev's hot reload never goes idle), prints the page's scrollWidth, and stops within 60 seconds.
+// network (theme dev's hot reload never goes idle), prints the page's scrollWidth, and stops within 60 seconds (20 more for each other page with --pages).
 // With --parts it also writes the page in parts, <out>-1.png, <out>-2.png, …, each small enough for a model to read.
 // With --hover it moves the mouse over the first visible element the selector matches, and captures the viewport
-// around it instead, to show its hover state.
+// around it instead, to show its hover state. With --pages it captures several pages of <base-url> in one Chrome session,
+// each to <out-dir>/<page-slug>-<width>.png, so no shell loop is needed.
 import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-/** @typedef {{ url: string, out: string, width: number, height: number, mobile: boolean, partHeight: number | undefined, hover: string | undefined }} Options */
+/** @typedef {{ pages: { url: string, out: string }[], width: number, height: number, mobile: boolean, partHeight: number | undefined, hover: string | undefined }} Options */
 
 const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--parts | --part-height <px> | --hover <selector>]
+       node screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> … [--width 1440] [--mobile] [--parts | --part-height <px>]
   <url>          a page of the preview, like http://127.0.0.1:9292/products/<handle>
+  --pages        capture each of these paths of <base-url> in one run, to <out-dir>/<page-slug>-<width>.png, like
+                 home-1440.png for / and products-<handle>-1440.png
   --width        the viewport's width in pixels (default 1440, 390 with --mobile)
   --mobile       emulate a 390 by 844 phone with touch
   --parts        also write the page top to bottom in parts, <out>-1.png, <out>-2.png, …, twice the viewport tall
@@ -33,21 +38,25 @@ const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobi
 export function parseArguments(args) {
   let parsed
   try {
-    parsed = parseArgs({ args, allowPositionals: true, options: { width: { type: 'string' }, mobile: { type: 'boolean', default: false }, parts: { type: 'boolean', default: false }, 'part-height': { type: 'string' }, hover: { type: 'string' } } })
+    parsed = parseArgs({ args, allowPositionals: true, options: { width: { type: 'string' }, mobile: { type: 'boolean', default: false }, parts: { type: 'boolean', default: false }, 'part-height': { type: 'string' }, hover: { type: 'string' }, pages: { type: 'boolean', default: false } } })
   } catch (error) {
     throw new Error(`${/** @type {Error} */ (error).message}\n${usage}`)
   }
   const { values, positionals } = parsed
-  const [url, out] = positionals
+  const [url, out, ...paths] = positionals
   const mobile = values.mobile ?? false
   const width = Number(values.width ?? (mobile ? 390 : 1440))
   const height = mobile ? 844 : 900
   const partHeight = values['part-height'] !== undefined ? Number(values['part-height']) : values.parts ? 2 * height : undefined
-  if (positionals.length !== 2 || !/^https?:\/\//.test(url) || !Number.isInteger(width) || width <= 0) throw new Error(usage)
+  const valid = values.pages ? paths.length > 0 && paths.every((page) => page.startsWith('/')) : positionals.length === 2
+  if (!valid || !/^https?:\/\//.test(url ?? '') || !Number.isInteger(width) || width <= 0) throw new Error(usage)
   if (partHeight !== undefined && (!Number.isInteger(partHeight) || partHeight <= 0)) throw new Error(usage)
   const hover = values.hover
-  if (hover !== undefined && (!hover.trim() || partHeight !== undefined)) throw new Error(usage)
-  return { url, out, width, height, mobile, partHeight, hover }
+  if (hover !== undefined && (!hover.trim() || partHeight !== undefined || values.pages)) throw new Error(usage)
+  const pages = values.pages
+    ? paths.map((page) => ({ url: new URL(page, url).href, out: path.join(out, `${page.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home'}-${width}.png`) }))
+    : [{ url, out }]
+  return { pages, width, height, mobile, partHeight, hover }
 }
 
 /**
@@ -112,12 +121,12 @@ function candidates(platform, env) {
 /**
  * Opens `url` in the browser at `chrome`, headless, in a viewport `width` by `height` (a touch phone when `mobile`), with
  * reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the network (theme dev's hot
- * reload never goes idle), loads lazy images, and hands the page's DevTools session to `run`. Chrome is killed after
- * `seconds` whatever hangs, and when `run` is done.
+ * reload never goes idle), loads lazy images, and hands the page's DevTools session to `run`, with `open`, which takes
+ * the same tab to another URL the same way. Chrome is killed after `seconds` whatever hangs, and when `run` is done.
  * @template T
  * @param {string} chrome
  * @param {{ url: string, width: number, height: number, mobile: boolean }} viewport
- * @param {(page: { send: (method: string, params?: object) => Promise<any> }) => Promise<T>} run
+ * @param {(page: { send: (method: string, params?: object) => Promise<any> }, open: (url: string) => Promise<void>) => Promise<T>} run
  * @param {number} [seconds]
  * @returns {Promise<T>}
  */
@@ -128,6 +137,7 @@ export async function withPage(chrome, { url, width, height, mobile }, run, seco
     ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--mute-audio', 'about:blank'],
     { stdio: ['ignore', 'ignore', 'pipe'] },
   )
+  let current = url
   const exited = new Promise((resolve) => browser.once('exit', resolve))
   // Whatever hangs (the preview never answering, Chrome stuck), kill Chrome: every pending step then fails.
   let timedOut = false
@@ -141,18 +151,23 @@ export async function withPage(chrome, { url, width, height, mobile }, run, seco
       await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile })
       if (mobile) await page.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
       await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
-      const { errorText } = await page.send('Page.navigate', { url })
-      if (errorText) throw new Error(`Chrome couldn't open ${url}: ${errorText}`)
-      await sleep(3000)
-      // A screenshot doesn't scroll, so images loading lazily below the fold would stay blank.
-      await page.send('Runtime.evaluate', { expression: `document.querySelectorAll('img[loading="lazy"]').forEach((img) => { img.loading = 'eager' })` })
-      await sleep(2000)
-      return await run(page)
+      /** @param {string} next */
+      const open = async (next) => {
+        current = next
+        const { errorText } = await page.send('Page.navigate', { url: next })
+        if (errorText) throw new Error(`Chrome couldn't open ${next}: ${errorText}`)
+        await sleep(3000)
+        // A screenshot doesn't scroll, so images loading lazily below the fold would stay blank.
+        await page.send('Runtime.evaluate', { expression: `document.querySelectorAll('img[loading="lazy"]').forEach((img) => { img.loading = 'eager' })` })
+        await sleep(2000)
+      }
+      await open(url)
+      return await run(page, open)
     } finally {
       page.close()
     }
   } catch (error) {
-    throw timedOut ? new Error(`Nothing from ${url} within ${seconds} seconds: is the preview running?`) : error
+    throw timedOut ? new Error(`Nothing from ${current} within ${seconds} seconds: is the preview running?`) : error
   } finally {
     clearTimeout(deadline)
     browser.kill()
@@ -163,45 +178,71 @@ export async function withPage(chrome, { url, width, height, mobile }, run, seco
 }
 
 /**
- * Captures the page with the browser at `chrome` and writes the PNG to `out`.
+ * Captures each page with the browser at `chrome`, in one session, and writes each PNG to its `out`.
  * @param {string} chrome
  * @param {Options} options
+ * @param {number} seconds
+ * @returns {Promise<{ out: string, scrollWidth: number, parts: string[] }[]>}
+ */
+function capture(chrome, options, seconds) {
+  const { pages, width, partHeight, hover } = options
+  return withPage(
+    chrome,
+    { ...options, url: pages[0].url },
+    async (page, open) => {
+      const shots = []
+      for (const [index, { url, out }] of pages.entries()) {
+        if (index > 0) await open(url)
+        mkdirSync(path.dirname(out), { recursive: true })
+        shots.push({ out, ...(await capturePage(page, url, out, width, partHeight, hover)) })
+      }
+      return shots
+    },
+    seconds,
+  )
+}
+
+/**
+ * Captures the page open in `page` and writes the PNG to `out`.
+ * @param {{ send: (method: string, params?: object) => Promise<any> }} page
+ * @param {string} url
+ * @param {string} out
+ * @param {number} width
+ * @param {number | undefined} partHeight
+ * @param {string | undefined} hover
  * @returns {Promise<{ scrollWidth: number, parts: string[] }>}
  */
-function capture(chrome, options) {
-  const { url, out, width, partHeight, hover } = options
-  return withPage(chrome, options, async (page) => {
-    const { result } = await page.send('Runtime.evaluate', { expression: 'document.documentElement.scrollWidth', returnByValue: true })
-    if (hover !== undefined) {
-      const { result: center } = await page.send('Runtime.evaluate', {
-        expression: `(() => {
-          const element = [...document.querySelectorAll(${JSON.stringify(hover)})].find((match) => match.checkVisibility())
-          if (!element) return null
-          element.scrollIntoView({ block: 'center' })
-          const box = element.getBoundingClientRect()
-          return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-        })()`,
-        returnByValue: true,
-      })
-      if (!center.value) throw new Error(`Nothing visible on ${url} matches ${hover}`)
-      await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...center.value })
-      await sleep(1000)
-      const { data } = await page.send('Page.captureScreenshot', { format: 'png' })
-      writeFileSync(out, Buffer.from(data, 'base64'))
-      return { scrollWidth: result.value, parts: [] }
-    }
-    const { cssContentSize } = await page.send('Page.getLayoutMetrics')
-    const pageHeight = Math.ceil(cssContentSize.height)
-    /** @param {string} file @param {number} y @param {number} clipHeight */
-    const shoot = async (file, y, clipHeight) => {
-      const { data } = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y, width, height: clipHeight, scale: 1 } })
-      writeFileSync(file, Buffer.from(data, 'base64'))
-    }
-    await shoot(out, 0, pageHeight)
-    const parts = partHeight === undefined ? [] : partClips(pageHeight, partHeight, out)
-    for (const part of parts) await shoot(part.out, part.y, part.height)
-    return { scrollWidth: result.value, parts: parts.map((part) => part.out) }
-  })
+async function capturePage(page, url, out, width, partHeight, hover) {
+  const { result } = await page.send('Runtime.evaluate', { expression: 'document.documentElement.scrollWidth', returnByValue: true })
+  if (hover !== undefined) {
+    const { result: center } = await page.send('Runtime.evaluate', {
+      expression: `(() => {
+        const element = [...document.querySelectorAll(${JSON.stringify(hover)})].find((match) => match.checkVisibility())
+        if (!element) return null
+        element.scrollIntoView({ block: 'center' })
+        const box = element.getBoundingClientRect()
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+      })()`,
+      returnByValue: true,
+    })
+    if (!center.value) throw new Error(`Nothing visible on ${url} matches ${hover}`)
+    await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...center.value })
+    await sleep(1000)
+    const { data } = await page.send('Page.captureScreenshot', { format: 'png' })
+    writeFileSync(out, Buffer.from(data, 'base64'))
+    return { scrollWidth: result.value, parts: [] }
+  }
+  const { cssContentSize } = await page.send('Page.getLayoutMetrics')
+  const pageHeight = Math.ceil(cssContentSize.height)
+  /** @param {string} file @param {number} y @param {number} clipHeight */
+  const shoot = async (file, y, clipHeight) => {
+    const { data } = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y, width, height: clipHeight, scale: 1 } })
+    writeFileSync(file, Buffer.from(data, 'base64'))
+  }
+  await shoot(out, 0, pageHeight)
+  const parts = partHeight === undefined ? [] : partClips(pageHeight, partHeight, out)
+  for (const part of parts) await shoot(part.out, part.y, part.height)
+  return { scrollWidth: result.value, parts: parts.map((part) => part.out) }
 }
 
 /**
@@ -280,16 +321,19 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     process.exit(2)
   }
   const chrome = findChromeOrExit()
-  // The last resort, should cleaning up after the capture's own 45-second deadline hang too: it takes about 6 seconds.
+  // 45 seconds for the first page, 20 more for each other one.
+  const seconds = 45 + 20 * (options.pages.length - 1)
+  // The last resort, should cleaning up after the capture's own deadline hang too: it takes about 6 seconds.
   setTimeout(() => {
-    console.error(`No screenshot of ${options.url} within 60 seconds.`)
+    console.error(`No screenshot of ${options.pages.map(({ url }) => url).join(', ')} within ${seconds + 15} seconds.`)
     process.exit(1)
-  }, 58_000).unref()
+  }, (seconds + 13) * 1000).unref()
   try {
-    const { scrollWidth, parts } = await capture(chrome, options)
-    const overflow = scrollWidth > options.width ? `, wider than the ${options.width}px viewport: something overflows horizontally` : ''
-    console.log(`${options.out}: ${options.width}px wide${options.mobile ? ', mobile' : ''}; scrollWidth ${scrollWidth}${overflow}`)
-    for (const part of parts) console.log(part)
+    for (const { out, scrollWidth, parts } of await capture(chrome, options, seconds)) {
+      const overflow = scrollWidth > options.width ? `, wider than the ${options.width}px viewport: something overflows horizontally` : ''
+      console.log(`${out}: ${options.width}px wide${options.mobile ? ', mobile' : ''}; scrollWidth ${scrollWidth}${overflow}`)
+      for (const part of parts) console.log(part)
+    }
     process.exit(0)
   } catch (error) {
     console.error(/** @type {Error} */ (error).message)

@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- `screenshot.mjs --pages`: `node <skill-dir>/scripts/screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> /collections/<handle> [--mobile] [--parts]` captures several pages in one Chrome session, each to `<out-dir>/<page-slug>-<width>.png`, and prints each one's paths and `scrollWidth`. The review takes its screenshots with one call per width, so the agent writes no shell loop (a zsh loop variable named `path` broke every command after it).
+
 - Blog page layouts: a grid of cards (the default, as before), a list (one article a row, a small image beside its date, title and excerpt) or featured first (the latest article full width, its image beside its text, then the grid). Each layout is also a named preset, like "Main blog: featured first", and stacks on mobile.
 
 - Cart page layouts: stacked (the default, as before) or summary sidebar (the items on one side, the subtotal, free-shipping bar, tax note, order note and checkout buttons in a sticky summary beside them). The summary sidebar is also a named preset, "Main cart: summary sidebar", and stacks on mobile, the summary after the items.
