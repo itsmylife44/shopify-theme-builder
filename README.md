@@ -58,7 +58,7 @@ Customers: people setting up a first home who'd rather buy fewer, better things.
 It should feel: calm, warm, handmade. Not glossy luxury, not rustic kitsch.
 Inspiration outside ceramics: Japanese cookbook layouts, Kinfolk magazine.
 Store: we don't have one yet, create a development store in Italy.
-Selling: Italy and the rest of the EU, in Italian and English, prices in EUR including VAT.
+Selling: Italy and the rest of the EU, in English (the default) and Italian, prices in EUR including VAT.
 Buying facts: shipping €6.90, free over €80, 2–4 days in Italy, returns within 14 days.
 ```
 
