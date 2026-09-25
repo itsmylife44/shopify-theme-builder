@@ -4480,6 +4480,51 @@ describe('Store decisions', () => {
     expect(step).toMatch(/never write them only there or refer to steps "above"/)
   })
 
+  it('asks one store auth for every scope, the sample products and their publishing included', () => {
+    const scopes = [...skill.matchAll(/shopify store auth --store <shop>\.myshopify\.com --scopes (\S+?)`?(?:\s|$)/g)].map(([, s]) => s)
+    expect(scopes.length).toBeGreaterThan(1)
+    for (const s of scopes) {
+      expect(s).toBe(
+        'read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales,write_products,write_publications',
+      )
+    }
+  })
+
+  it('creates the development store without Shopify demo data, whose snowboards would fill every Direction', () => {
+    expect(skill).toMatch(/shopify store create dev --name "<name>" --organization-id <id> --plan basic --country <code> --json/)
+    expect(skill).not.toMatch(/store create dev[^\n`]*--demo-data/)
+  })
+
+  it('proposes sample products from the brief when the store has none of its own, created only once confirmed', () => {
+    const sample = line('Sample products')
+    expect(sample).toMatch(/no products of the Creator's own/)
+    expect(sample).toMatch(/4 to 6/)
+    expect(sample).toMatch(/name, price, short description and type/)
+    expect(sample).toMatch(/confirms, edits or declines/)
+    const setup = skill.match(/^\*\*Set up the store\*\*([\s\S]*?)^\*\*Done\*\*/m)?.[1] ?? ''
+    expect(setup).toMatch(/only the ones the Creator confirmed/)
+    for (const call of ['productSet(', 'collectionCreate(', 'publishablePublish(', 'publications(first: 20)']) {
+      expect(setup).toContain(call)
+    }
+    expect(setup).toContain('`sample-products`')
+  })
+
+  it('adds a brief photo to the sample product it shows, and otherwise leaves it without', () => {
+    expect(skill).toMatch(/sample product[^\n]*productUpdate\(product: \{id: \$id\}, media: \$media\)/)
+  })
+
+  it('points every product and collection setting at the sample collection and its products', () => {
+    const pointing = skill.match(/^   Point the sections at the store:[^\n]*/m)?.[0] ?? ''
+    expect(pointing).toMatch(/every `collection` setting takes `sample-products`[^\n]*every `product` setting one of its products/)
+    const directions = skill.match(/^   2\. For each Direction:[^\n]*/m)?.[0] ?? ''
+    expect(directions).toMatch(/`collection`, `collection_list`, `product` and `product_list` settings[^\n]*`sample-products` and its products/)
+  })
+
+  it('lists the sample products in the hand-off as placeholders to replace', () => {
+    const handOff = skill.match(/^## 5\. Hand-off\n([\s\S]*?)^## /m)?.[1] ?? ''
+    expect(handOff).toMatch(/sample products[^\n]*placeholders to replace/)
+  })
+
   it('names the logo in the read-back only when one was found or given', () => {
     const readBack = brief.match(/^## Reading it back\n([\s\S]*?)(?=^## |$(?![\s\S]))/m)?.[1] ?? ''
     expect(readBack).toMatch(/logo only when[^\n]*found or given[^\n]*"no logo"/)
