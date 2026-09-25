@@ -3987,6 +3987,9 @@ describe('Image loading', () => {
     // The desktop image stays the <img>, with its priority and its own sizes; a mobile image alone stands in for it.
     expect(picture).toMatch(/\| image_tag:[^}]*sizes: sizes,[^}]*fetchpriority: fetchpriority/)
     expect(source).toContain(`assign image = ${owner}.settings.image | default: ${owner}.settings.image_mobile`)
+    // The <picture> steps out of the layout, so the <img> still fills the media box at every height (#199).
+    const media = name === 'hero' ? 'hero__media' : 'slideshow__media'
+    expect(source).toMatch(new RegExp(`\\.${media} > picture {\\s*display: contents;`))
   })
 
   // The catalog's sections and the Base Theme snippets they render.

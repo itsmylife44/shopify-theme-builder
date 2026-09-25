@@ -181,6 +181,7 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Fixed
 
+- A full-screen hero or slideshow fills its whole height on phones again. The `<picture>` added for the mobile image took the Base Theme's `picture { display: block; height: auto }`, so the image stopped at its own ratio and left an empty band under it. The `<picture>` now steps out of the layout (`display: contents`).
 - The `og:image` link uses `https:` instead of `http:`.
 
 - The layout preloads the heading font variant the page actually uses: with a Heading weight other than the font's own, it preloaded the base weight while the `@font-face` loaded the other, so the preload was wasted and headings swapped font late. `snippets/css-variables.liquid` computes the variant once and, rendered with `preload: true` (as `layout/theme.liquid` does), preloads it with the body font's base weight.
