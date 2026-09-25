@@ -3334,7 +3334,13 @@ describe('Card and media settings', () => {
     expect(setting('media_tint')).toMatchObject({ type: 'color' })
     expect(setting('media_tint').default).toBeUndefined()
     expect(variables).toContain("--media-background: {{ settings.media_tint | default: 'transparent' }};")
-    expect(variables).toMatch(/--media-blend: {% if settings\.media_tint != blank %}multiply{% else %}normal{% endif %};/)
+    expect(variables).toContain('--media-blend: {{ media_blend }};')
+  })
+
+  it('multiplies product images only with a light tint, so a dark one never turns photos black', () => {
+    expect(variables).toMatch(
+      /assign media_blend = 'normal'\s+if settings\.media_tint != blank\s+assign tint_brightness = settings\.media_tint \| color_brightness\s+if tint_brightness > 150\s+assign media_blend = 'multiply'\s+endif\s+endif/,
+    )
   })
 
   it('shapes the product card image from the media settings', () => {

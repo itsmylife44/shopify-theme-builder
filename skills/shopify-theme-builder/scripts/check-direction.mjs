@@ -76,6 +76,7 @@ export function checkDirection(theme) {
     ...checkContrast(settings),
     ...checkFonts(theme, settings),
     ...looks.flatMap(([name, values]) => checkHierarchy(name, values)),
+    ...looks.flatMap(([name, values]) => checkMediaTint(name, values)),
     ...checkDistinct(settings.presets, listed),
     ...checkRadii(theme),
     ...pages.flatMap(checkRepeats),
@@ -495,6 +496,26 @@ function checkHierarchy(name, { type_display_size: display, type_body_size: body
       'hierarchy',
       settingsData,
       `${name}: the display (${display}px) is ${shown}× the body (${body}px). Set type_display_size to ${3 * body} or more (the best themes run 4× to 13×), or give the flat scale a reason in DIRECTION.md.`,
+    ),
+  ]
+}
+
+/**
+ * Framed product images on a dark tint: css-variables.liquid multiplies an image only with a light tint (Liquid's
+ * color_brightness over 150), so on a dark one the white box of a cut-out photo shows.
+ * @param {string} name
+ * @param {Record<string, any>} values
+ * @returns {Finding[]}
+ */
+function checkMediaTint(name, { media_treatment: treatment, media_tint: tint }) {
+  if (treatment !== 'framed' || !/^#[0-9a-f]{6}$/i.test(tint ?? '')) return []
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(tint.slice(i, i + 2), 16))
+  if ((r * 299 + g * 587 + b * 114) / 1000 > 150) return []
+  return [
+    finding(
+      'media',
+      settingsData,
+      `${name}: media_tint ${tint} is dark, so framed product photos sit on it unblended and their white box shows. Set a light tint (brightness over 150), or media_treatment full_bleed.`,
     ),
   ]
 }

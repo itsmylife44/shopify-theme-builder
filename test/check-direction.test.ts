@@ -494,6 +494,32 @@ describe('check-direction', () => {
     expect(checkDirection(theme)).toEqual([])
   })
 
+  it('reports a Direction that frames product images on a dark tint', () => {
+    const theme = sampleTheme()
+    setSettings(theme, (settings) => {
+      settings.media_treatment = 'framed'
+      settings.media_tint = '#25282C'
+    })
+    expect(checkDirection(theme)).toEqual([
+      {
+        check: 'media',
+        file: 'config/settings_data.json',
+        message: 'Press Cloth: media_tint #25282C is dark, so framed product photos sit on it unblended and their white box shows. Set a light tint (brightness over 150), or media_treatment full_bleed.',
+      },
+    ])
+
+    // A light tint, or full-bleed media on the dark one, is fine.
+    setSettings(theme, (settings) => {
+      settings.media_tint = '#F4EFE8'
+    })
+    expect(checkDirection(theme)).toEqual([])
+    setSettings(theme, (settings) => {
+      settings.media_tint = '#25282C'
+      settings.media_treatment = 'full_bleed'
+    })
+    expect(checkDirection(theme)).toEqual([])
+  })
+
   it("reports a hero with its content centered, the template's default hero", () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/index.json', (template) => {
