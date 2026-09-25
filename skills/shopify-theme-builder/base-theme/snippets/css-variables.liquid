@@ -7,12 +7,28 @@
     assign heading_font = settings.type_heading_font | font_modify: 'weight', heading_weight | default: settings.type_heading_font
   endif
   case settings.type_heading_tracking
+    when 'tighter'
+      assign heading_tracking = '-0.04em'
     when 'tight'
       assign heading_tracking = '-0.02em'
     when 'wide'
       assign heading_tracking = '0.06em'
+    when 'wider'
+      assign heading_tracking = '0.12em'
     else
       assign heading_tracking = 'normal'
+  endcase
+  # The heading line height moves display and heading line heights together, a tenth a step.
+  case settings.type_heading_line_height
+    when 'tight'
+      assign line_height_display = 1
+      assign line_height_heading = 1.1
+    when 'loose'
+      assign line_height_display = 1.2
+      assign line_height_heading = 1.3
+    else
+      assign line_height_display = 1.1
+      assign line_height_heading = 1.2
   endcase
 
   # A button weight other than the body font's own loads that weight of the body font when the family has it.
@@ -139,8 +155,8 @@
     --font-size-h6: var(--font-size-body);
     --font-size-small: calc(var(--font-size-body) * 0.875);
     --font-size-label: calc(var(--font-size-body) * 0.75);
-    --line-height-display: 1.1;
-    --line-height-heading: 1.2;
+    --line-height-display: {{ line_height_display }};
+    --line-height-heading: {{ line_height_heading }};
     --line-height-body: 1.5;
     {% comment %}
       Spacing: padding, margins and gaps take a step of this scale. Sections pad their top with
@@ -185,6 +201,7 @@
     --button-border-width: var(--border-width);
     --button-radius: {{ radius_buttons }};
     --button-text-transform: {{ settings.button_text_case }};
+    --button-letter-spacing: {% if settings.button_text_case == 'uppercase' %}0.06em{% else %}normal{% endif %};
     --button-font-weight: {{ button_weight }};
     {% comment %}
       Product cards: the shared .product-card in critical.css. A bordered card sets a border width, a card on a

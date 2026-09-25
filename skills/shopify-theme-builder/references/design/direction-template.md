@@ -14,7 +14,7 @@
 
 <Thesis: one sentence the whole Theme follows, then the category default it refuses.>
 
-- Type: <heading font handle>, because <reason from the brief>; <body font handle>, because <reason>; <accent font handle>, because <reason>; <scale, weight, case and tracking>
+- Type: <heading font handle>, because <reason from the brief>; <body font handle>, because <reason>; <accent font handle>, because <reason>; <scale, weight, case, tracking and line height>
 - Color: <restrained, committed, full or drenched>; <4 to 6 named hex values, each with its job>
 - Shape: <square, soft or round>; <border width>; <buttons: filled or outline, case, weight>
 - Spacing: <compact, normal or airy>; <page width>
