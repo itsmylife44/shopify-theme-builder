@@ -165,7 +165,11 @@
     "image_gallery_strip": "Image gallery: strip",
     "blog_posts_featured": "Blog posts: featured and list",
     "blog_posts_thumbnails": "Blog posts: list with thumbnails",
-    "blog_posts_text_list": "Blog posts: text list"
+    "blog_posts_text_list": "Blog posts: text list",
+    "call_to_action": "Call to action",
+    "call_to_action_split": "Call to action: split with an image",
+    "call_to_action_over_image": "Call to action: over an image",
+    "call_to_action_inline": "Call to action: inline row"
   },
   "labels": {
     "accent": "Accent",
@@ -444,7 +448,8 @@
       "bento": "Bento",
       "strip": "Strip",
       "featured": "Featured and list",
-      "thumbnails": "List with thumbnails"
+      "thumbnails": "List with thumbnails",
+      "over_image": "Over an image"
     },
     "cart_type": {
       "drawer": "Drawer",

@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A call to action section: a heading, a text and one or two buttons, as a centered band (the default preset puts it on the inverse scheme), split with an image, over an image (a banner with an overlay like the hero's) or an inline row with the heading on one side and the buttons on the other. Each layout is a named preset, like "Call to action: over an image", and stacks on mobile; the section goes on the home and on pages.
+
 - Blog posts layouts: article cards (the default, as before), the latest article large with the next ones listed beside it, a list with a small image, the date, the title and the excerpt on each row, or a text list of titles and dates divided by rules, for journals without photos. Each layout is also a named preset, like "Blog posts: featured and list", and stacks on mobile.
 
 - Image gallery layouts: an equal grid (the default, as before), a bento (every fifth image large, two rows and two columns big, the others around it; two columns on mobile), or a strip (tall images in one full-width row that scrolls and snaps, with previous and next buttons). Each layout is also a named preset, like "Image gallery: bento"; the strip's preset starts with portrait images.

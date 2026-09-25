@@ -1,0 +1,314 @@
+{% comment %}A heading, text and one or two buttons that ask for the next step, on a band, beside or over an image.{% endcomment %}
+{% liquid
+  assign layout = section.settings.layout
+  assign overlay_opacity = section.settings.overlay_opacity | divided_by: 100.0
+  assign sizes = '(min-width: 750px) 50vw, 100vw'
+  if layout == 'over_image'
+    assign sizes = '100vw'
+  endif
+%}
+
+<div
+  class="call-to-action call-to-action--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"
+  data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}
+  style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %}; --overlay-opacity: {{ overlay_opacity }};"
+>
+  <div class="call-to-action__inner">
+    {% if layout == 'split' or layout == 'over_image' %}
+      <div class="call-to-action__media">
+        {% if section.settings.image != blank %}
+          {{
+            section.settings.image
+            | image_url: width: 2200
+            | image_tag: widths: '375, 550, 750, 1100, 1500, 2200', sizes: sizes, loading: 'lazy'
+          }}
+        {% else %}
+          {{ 'image' | placeholder_svg_tag: 'placeholder call-to-action__placeholder' }}
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="call-to-action__content">
+      {% if section.settings.heading != blank or section.settings.text != blank %}
+        <div class="call-to-action__copy">
+          {% if section.settings.heading != blank %}
+            <h2 class="call-to-action__heading">{{ section.settings.heading }}</h2>
+          {% endif %}
+          {% if section.settings.text != blank %}
+            <div class="call-to-action__text rte">{{ section.settings.text }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if section.settings.button_label != blank or section.settings.button_label_2 != blank %}
+        <div class="call-to-action__buttons">
+          {% if section.settings.button_label != blank %}
+            <a
+              class="button"
+              href="{{ section.settings.button_link | default: routes.all_products_collection_url }}"
+            >
+              {{- section.settings.button_label | escape -}}
+            </a>
+          {% endif %}
+          {% if section.settings.button_label_2 != blank %}
+            <a
+              class="button--secondary"
+              href="{{ section.settings.button_link_2 | default: routes.collections_url }}"
+            >
+              {{- section.settings.button_label_2 | escape -}}
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  .call-to-action {
+    display: grid;
+    grid-template-columns: var(--content-grid);
+  }
+
+  .call-to-action__inner {
+    grid-column: 2;
+    display: grid;
+    align-items: center;
+    gap: var(--space-xl);
+    padding-block: var(--section-spacing-start) var(--section-spacing);
+  }
+
+  .call-to-action__content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-lg);
+  }
+
+  .call-to-action__copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    max-width: var(--width-text);
+  }
+
+  .call-to-action__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .call-to-action--centered .call-to-action__content,
+  .call-to-action--over_image .call-to-action__content,
+  .call-to-action--centered .call-to-action__copy,
+  .call-to-action--over_image .call-to-action__copy {
+    align-items: center;
+    text-align: center;
+  }
+
+  .call-to-action--centered .call-to-action__buttons,
+  .call-to-action--over_image .call-to-action__buttons {
+    justify-content: center;
+  }
+
+  .call-to-action__media {
+    overflow: hidden;
+    border-radius: var(--style-border-radius-media);
+  }
+
+  .call-to-action--split .call-to-action__media {
+    aspect-ratio: var(--image-ratio);
+  }
+
+  .call-to-action__media img,
+  .call-to-action__placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* A banner: the image and the text share one cell, and the image covers it however tall the text makes it. */
+  .call-to-action--over_image .call-to-action__media,
+  .call-to-action--over_image .call-to-action__content {
+    grid-area: 1 / 1;
+  }
+
+  .call-to-action--over_image .call-to-action__media {
+    position: relative;
+    align-self: stretch;
+    min-block-size: 24rem;
+  }
+
+  .call-to-action--over_image .call-to-action__media img,
+  .call-to-action--over_image .call-to-action__placeholder {
+    position: absolute;
+    inset: 0;
+  }
+
+  .call-to-action--over_image .call-to-action__media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-background);
+    opacity: var(--overlay-opacity);
+    pointer-events: none;
+  }
+
+  .call-to-action--over_image .call-to-action__content {
+    position: relative;
+    justify-self: center;
+    padding: var(--space-2xl) var(--space-lg);
+  }
+
+  @media (min-width: 750px) {
+    .call-to-action--split .call-to-action__inner {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2xl);
+    }
+
+    .call-to-action--inline .call-to-action__content {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-2xl);
+    }
+
+    .call-to-action--inline .call-to-action__buttons {
+      flex-shrink: 0;
+    }
+
+    .call-to-action--over_image .call-to-action__content {
+      padding: var(--space-2xl);
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "t:general.call_to_action",
+  "tag": "section",
+  "enabled_on": {
+    "templates": ["index", "page"]
+  },
+  "settings": [
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:labels.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "centered", "label": "t:options.layout.centered" },
+        { "value": "split", "label": "t:options.layout.split" },
+        { "value": "over_image", "label": "t:options.layout.over_image" },
+        { "value": "inline", "label": "t:options.layout.inline" }
+      ],
+      "default": "centered"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.layout == 'split' or section.settings.layout == 'over_image' }}"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "t:labels.overlay_opacity",
+      "info": "t:info.hero_overlay_opacity",
+      "visible_if": "{{ section.settings.layout == 'over_image' }}",
+      "min": 0,
+      "max": 90,
+      "step": 10,
+      "unit": "%",
+      "default": 30
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "t:labels.heading",
+      "default": "Ready when you are"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "t:labels.text",
+      "default": "<p>Tell customers what to do next and why it's worth it.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "t:labels.button_label",
+      "default": "Shop now"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "t:labels.button_link"
+    },
+    {
+      "type": "text",
+      "id": "button_label_2",
+      "label": "t:labels.button_label_2"
+    },
+    {
+      "type": "url",
+      "id": "button_link_2",
+      "label": "t:labels.button_link_2"
+    },
+    {
+      "type": "select",
+      "id": "spacing",
+      "label": "t:labels.section_spacing",
+      "options": [
+        { "value": "none", "label": "t:options.spacing.none" },
+        { "value": "tight", "label": "t:options.spacing.tight" },
+        { "value": "theme", "label": "t:options.spacing.theme" },
+        { "value": "loose", "label": "t:options.spacing.loose" }
+      ],
+      "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:general.call_to_action",
+      "settings": { "color_scheme": "scheme-2" }
+    },
+    {
+      "name": "t:general.call_to_action_split",
+      "settings": { "layout": "split" }
+    },
+    {
+      "name": "t:general.call_to_action_over_image",
+      "settings": { "layout": "over_image", "overlay_opacity": 40 }
+    },
+    {
+      "name": "t:general.call_to_action_inline",
+      "settings": { "layout": "inline", "spacing": "tight" }
+    }
+  ]
+}
+{% endschema %}

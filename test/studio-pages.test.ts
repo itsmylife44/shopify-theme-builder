@@ -103,7 +103,7 @@ describe('Studio API: home page', () => {
   })
 
   const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
-  const homeTypes = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'press-quotes', 'logo-list', 'testimonials', 'faq', 'newsletter', 'custom-liquid']
+  const homeTypes = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'press-quotes', 'logo-list', 'testimonials', 'faq', 'newsletter', 'call-to-action', 'custom-liquid']
 
   it('offers every real catalog home section', async () => {
     const studio = await openStudio(fixtureTheme(), { catalog: realCatalog })
@@ -111,13 +111,14 @@ describe('Studio API: home page', () => {
   })
 
   // Five sections per test: each write runs Theme Check.
-  it.each([0, 5, 10, 15, 20].map((start) => homeTypes.slice(start, start + 5)))(
+  it.each([0, 5, 10, 15, 20, 25].map((start) => homeTypes.slice(start, start + 5)))(
     'adds the real catalog home sections %s, %s, %s, %s and %s with a color scheme and a clean Theme Check',
     async (...types) => {
       const studio = await openStudio(fixtureTheme(), { catalog: realCatalog })
       let body
       for (const type of types) ({ body } = await studio.addSection(type))
-      expect(body.home.slice(1)).toEqual(types.map((type) => expect.objectContaining({ type, colorScheme: 'scheme-1' })))
+      // The call to action's first preset puts its centered band on the inverse scheme.
+      expect(body.home.slice(1)).toEqual(types.map((type) => expect.objectContaining({ type, colorScheme: type === 'call-to-action' ? 'scheme-2' : 'scheme-1' })))
       expect(errors(body.validation)).toEqual([])
     },
   )
@@ -276,6 +277,11 @@ describe('Studio API: the other pages', () => {
       expect(on).toEqual(type === 'contact-form' ? ['page', 'contact'] : [page])
     }
     expect(catalog.page).toContain('hero')
+  })
+
+  it('offers the call to action on the home and the page templates only', async () => {
+    const catalog = catalogTypes(await (await openStudio(fixtureTheme(), { catalog: realCatalog })).readTheme())
+    expect(pageNames.filter((page) => catalog[page].includes('call-to-action'))).toEqual(['home', 'page', 'contact'])
   })
 
   it.each(Object.entries(mains))('composes the %s page from its catalog main section %s with a clean Theme Check', async (page, type) => {

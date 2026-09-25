@@ -215,6 +215,24 @@ export const wireframes = {
       description: 'Titles and dates only, divided by rules',
     },
   },
+  'call-to-action': {
+    't:general.call_to_action': {
+      wireframe: 'bleed center panel heading text buttons',
+      description: 'Heading, text and buttons centered on a colored band',
+    },
+    't:general.call_to_action_split': {
+      wireframe: 'image | heading text buttons',
+      description: 'Image on one side, text and buttons on the other',
+    },
+    't:general.call_to_action_over_image': {
+      wireframe: 'image@mc heading text buttons',
+      description: 'Text and buttons centered over an image',
+    },
+    't:general.call_to_action_inline': {
+      wireframe: '_ / heading | _ | buttons / _',
+      description: 'Heading on one side, buttons on the other, one row',
+    },
+  },
   'collection-list': {
     't:general.collection_list': {
       wireframe: 'heading / 3* image title x3',
