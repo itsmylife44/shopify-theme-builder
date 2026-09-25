@@ -1,5 +1,5 @@
 {% comment %}An image beside a heading, text and a button.{% endcomment %}
-<div class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}{% if section.settings.layout == 'full_bleed' %} media-edge{% endif %}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="image-with-text full-width image-with-text--{{ section.settings.layout }} image-with-text--image-{{ section.settings.image_position }} color-{{ section.settings.color_scheme }}{% if section.settings.layout == 'full_bleed' %} media-edge{% endif %}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="image-with-text__inner">
     <div class="image-with-text__media">
       {% if section.settings.image != blank %}
@@ -208,6 +208,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "presets": [

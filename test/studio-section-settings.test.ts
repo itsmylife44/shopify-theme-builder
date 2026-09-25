@@ -46,6 +46,7 @@ describe('Studio API: section settings', () => {
           { value: 'loose', label: 'Loose' },
         ],
       },
+      { id: 'reveal', type: 'checkbox', label: 'Reveal on scroll', value: false },
     ])
     expect(body.blocks).toHaveLength(3)
     expect(body.blocks[0]).toEqual({

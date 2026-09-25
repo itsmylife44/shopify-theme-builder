@@ -15,7 +15,7 @@
     assign carousel = true
   endif
 %}
-<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="collection-list full-width collection-list--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="collection-list__inner">
     {% if section.settings.heading != blank %}
       <h2 class="collection-list__heading">{{ section.settings.heading }}</h2>
@@ -25,6 +25,7 @@
     <ul
       id="CollectionList-{{ section.id }}"
       class="collection-list__grid"
+      data-reveal-stagger
       role="list"
       style="--columns: {{ section.settings.columns }};"
       {% if carousel %}tabindex="0"{% endif %}
@@ -353,6 +354,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "presets": [

@@ -1,5 +1,5 @@
 {% comment %}An email signup under a heading and text.{% endcomment %}
-<div class="newsletter full-width newsletter--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="newsletter full-width newsletter--{{ section.settings.layout }} color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="newsletter__inner">
     {% if section.settings.layout == 'split' %}
       <div class="newsletter__media">
@@ -208,6 +208,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": false
     }
   ],
   "presets": [

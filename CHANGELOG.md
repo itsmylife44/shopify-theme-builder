@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Motion with more than one timing: hovers take 0.2s (subtle) or 0.25s (expressive), sections reveal over 0.6s or 0.8s with an entering easing that decelerates hard, and the cards of a featured collection, related products, collection list, blog posts, multicolumn and image gallery fade in 60ms after each other. Each band section has a Reveal on scroll setting (`reveal`), on by default for image-led sections and off for type-led ones, so not every section fades alike; the `main-*` sections and custom Liquid no longer fade in. With expressive motion, the hero's and the shown slide's images slowly zoom to 1.06 over 8 seconds. All of it stays off under reduced motion.
+
 - Headings reach the archetypes' type values: a new Heading line height setting (`type_heading_line_height`) sets display and headings to 1.0 and 1.1 (`tight`), 1.1 and 1.2 (`normal`, the default, as before) or 1.2 and 1.3 (`loose`), and Heading letter spacing gains `tighter` (−0.04em) and `wider` (0.12em). Uppercase buttons are tracked 0.06em. The Studio's Style tab and `PUT /api/style` edit the new setting, and the Direction guide maps each archetype to these values.
 
 - A size guide for the product page: the new `size-guide` theme block, which the main product takes after the variant picker, opens a shop page picked in its settings (the size chart) in a `<dialog>`, and shows nothing until one is picked. The agent adds it when the buying facts say the products come in sizes. The Studio edits `page` settings by handle and lists the store's pages in `GET /api/store`.

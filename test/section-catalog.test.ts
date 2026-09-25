@@ -3272,18 +3272,21 @@ describe('Motion', () => {
     expect(setting('motion').default).toBe('subtle')
   })
 
-  it('sets 0.25s fades for subtle, 1s rises and a slow image zoom for expressive, and nothing for none', () => {
+  it('sets 0.2s hovers and 0.6s fades for subtle, 0.25s hovers, 0.8s rises and slow image zooms for expressive, and nothing for none', () => {
     expect(variables).toMatch(
-      /case settings\.motion\s+when 'none'\s+assign motion_duration = '0s'\s+assign motion_duration_reveal = '0s'\s+assign motion_duration_zoom = '0s'\s+assign motion_easing = 'ease'\s+assign motion_rise = '0'\s+when 'expressive'\s+assign motion_duration = '0\.3s'\s+assign motion_duration_reveal = '1s'\s+assign motion_duration_zoom = '1\.5s'\s+assign motion_easing = 'cubic-bezier\(0\.165, 0\.84, 0\.44, 1\)'\s+assign motion_rise = '2rem'\s+else\s+assign motion_duration = '0\.25s'\s+assign motion_duration_reveal = '0\.25s'\s+assign motion_duration_zoom = '0\.25s'\s+assign motion_easing = 'ease-out'\s+assign motion_rise = '0'\s+endcase/,
+      /case settings\.motion\s+when 'none'\s+assign motion_duration = '0s'\s+assign motion_duration_reveal = '0s'\s+assign motion_duration_zoom = '0s'\s+assign motion_duration_hero_zoom = '0s'\s+assign motion_easing = 'ease'\s+assign motion_rise = '0'\s+assign motion_hero_zoom = '1'\s+when 'expressive'\s+assign motion_duration = '0\.25s'\s+assign motion_duration_reveal = '0\.8s'\s+assign motion_duration_zoom = '1\.5s'\s+assign motion_duration_hero_zoom = '8s'\s+assign motion_easing = 'cubic-bezier\(0\.165, 0\.84, 0\.44, 1\)'\s+assign motion_rise = '2rem'\s+assign motion_hero_zoom = '1\.06'\s+else\s+assign motion_duration = '0\.2s'\s+assign motion_duration_reveal = '0\.6s'\s+assign motion_duration_zoom = '0\.25s'\s+assign motion_duration_hero_zoom = '0s'\s+assign motion_easing = 'ease-out'\s+assign motion_rise = '0'\s+assign motion_hero_zoom = '1'\s+endcase/,
     )
-    for (const name of ['duration', 'duration-reveal', 'duration-zoom', 'easing', 'rise']) {
-      expect(variables).toContain(`--motion-${name}: {{ motion_${name.replace('-', '_')} }};`)
+    for (const name of ['duration', 'duration-reveal', 'duration-zoom', 'duration-hero-zoom', 'easing', 'rise', 'hero-zoom']) {
+      expect(variables).toContain(`--motion-${name}: {{ motion_${name.replaceAll('-', '_')} }};`)
     }
+    // Entering elements decelerate hard (Material 3's emphasized decelerate), and grid items follow each other by 60ms.
+    expect(variables).toContain('--motion-easing-enter: cubic-bezier(0.05, 0.7, 0.1, 1);')
+    expect(variables).toContain('--motion-stagger: 60ms;')
   })
 
-  it('turns every duration and the rise off under reduced motion', () => {
+  it('turns every duration, the rise, the stagger and the hero zoom off under reduced motion', () => {
     expect(variables).toMatch(
-      /@media \(prefers-reduced-motion: reduce\) {\s*:root {\s*--motion-duration: 0s;\s*--motion-duration-reveal: 0s;\s*--motion-duration-zoom: 0s;\s*--motion-rise: 0;\s*}\s*}/,
+      /@media \(prefers-reduced-motion: reduce\) {\s*:root {\s*--motion-duration: 0s;\s*--motion-duration-reveal: 0s;\s*--motion-duration-zoom: 0s;\s*--motion-duration-hero-zoom: 0s;\s*--motion-rise: 0;\s*--motion-stagger: 0s;\s*--motion-hero-zoom: 1;\s*}\s*}/,
     )
   })
 
@@ -3293,29 +3296,81 @@ describe('Motion', () => {
     expect(layout).toMatch(/{% if settings\.motion != 'none' %}\s*<script src="{{ 'reveal\.js' \| asset_url }}" defer><\/script>\s*{% endif %}/)
   })
 
-  it('reveals the sections of the page with an IntersectionObserver, never under reduced motion', () => {
+  it('reveals the sections that opt in with an IntersectionObserver, never under reduced motion', () => {
     expect(reveal).toMatch(/if \(!matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.matches\)/)
     expect(reveal).toContain('new IntersectionObserver(')
-    expect(reveal).toContain("document.querySelectorAll('main > .shopify-section')")
+    expect(reveal).toContain("document.querySelectorAll('main > .shopify-section:has(> [data-reveal])')")
   })
 
   it('never hides a section in view on load, so the first viewport, and its hero or LCP image, never animates', () => {
     // The first observation of each section only hides those out of view; later ones reveal them.
-    expect(reveal).toMatch(/if \(isIntersecting\) observer\.unobserve\(target\);\s*else target\.classList\.add\('reveal'\);/)
+    expect(reveal).toMatch(/if \(isIntersecting\) observer\.unobserve\(target\);\s*else hide\(target\);/)
     expect(reveal).toMatch(/else if \(isIntersecting\) {\s*target\.classList\.add\('reveal--visible'\);\s*observer\.unobserve\(target\);/)
+    expect(reveal).toMatch(/const hide = \(section\) => {\s*section\.classList\.add\('reveal'\);/)
   })
 
-  it('fades, and rises, the revealed sections and eases the card hover from the motion variables, only without reduced motion', () => {
+  it('numbers the items of a staggered grid, up to the ninth, so later ones wait longer', () => {
+    expect(reveal).toMatch(/for \(const grid of section\.querySelectorAll\('\[data-reveal-stagger\]'\)\) {\s*\[\.\.\.grid\.children\]\.forEach\(\(item, index\) => item\.style\.setProperty\('--reveal-order', Math\.min\(index, 8\)\)\);/)
+  })
+
+  // Image-led sections reveal by default; type-led ones, and a marquee that already moves, only when the Merchant asks.
+  const imageLed = ['blog-posts', 'collection-list', 'editorial-split', 'featured-collection', 'featured-product', 'hero', 'image-gallery', 'image-with-text', 'lookbook', 'multicolumn', 'process-steps', 'related-products', 'slideshow', 'video']
+  const typeLed = ['comparison-table', 'faq', 'logo-list', 'marquee', 'newsletter', 'press-quotes', 'rich-text', 'spec-tiles', 'testimonials', 'timeline', 'type-banner']
+  const schemaOf = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+
+  it.each([...imageLed.map((name) => [name, true]), ...typeLed.map((name) => [name, false])])('lets the Merchant reveal the %s section on scroll, on by default: %s', (name, on) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    expect(schemaOf(source).settings).toContainEqual({ type: 'checkbox', id: 'reveal', label: 't:labels.reveal', default: on })
+    expect(source).toContain('data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}')
+  })
+
+  it('offers no reveal on the sections a page opens with, the groups and custom Liquid', () => {
+    const others = readdirSync(path.join(skillDir, 'catalog/sections'))
+      .filter((file) => file.endsWith('.liquid'))
+      .map((file) => file.slice(0, -7))
+      .filter((name) => ![...imageLed, ...typeLed].includes(name))
+    expect(others).toContain('main-product')
+    for (const name of others) {
+      const source = read(`catalog/sections/${name}.liquid`)
+      expect(source, name).not.toContain('data-reveal')
+      expect(schemaOf(source).settings?.map((s: { id?: string }) => s.id) ?? [], name).not.toContain('reveal')
+    }
+    expect(JSON.parse(read('base-theme/locales/en.default.schema.json')).labels.reveal).toBeTruthy()
+  })
+
+  it.each(['blog-posts', 'collection-list', 'featured-collection', 'image-gallery', 'multicolumn', 'related-products'])('staggers the items of the %s grid', (name) => {
+    expect(read(`catalog/sections/${name}.liquid`)).toMatch(/class="[a-z-]+__grid[^"]*"\s+data-reveal-stagger/)
+  })
+
+  it('fades, and rises, the revealed sections and their staggered grid items, entering with the entering easing, and eases the card hover from the motion variables, only without reduced motion', () => {
     const css = noPreference(critical)
-    expect(css).toMatch(/\.reveal {\s*opacity: 0;\s*translate: 0 var\(--motion-rise\);\s*}/)
+    expect(css).toMatch(/\.reveal,\s*\.reveal \[data-reveal-stagger\] > \* {\s*opacity: 0;\s*translate: 0 var\(--motion-rise\);\s*}/)
     expect(css).toMatch(
-      /\.reveal--visible {\s*opacity: 1;\s*translate: none;\s*transition:\s*opacity var\(--motion-duration-reveal\) var\(--motion-easing\),\s*translate var\(--motion-duration-reveal\) var\(--motion-easing\);\s*}/,
+      /\.reveal--visible,\s*\.reveal--visible \[data-reveal-stagger\] > \* {\s*opacity: 1;\s*translate: none;\s*transition:\s*opacity var\(--motion-duration-reveal\) var\(--motion-easing-enter\),\s*translate var\(--motion-duration-reveal\) var\(--motion-easing-enter\);\s*}/,
     )
+    expect(css).toMatch(/\.reveal--visible \[data-reveal-stagger\] > \* {\s*transition-delay: calc\(var\(--reveal-order, 0\) \* var\(--motion-stagger\)\);\s*}/)
     expect(css).toMatch(
       /\.product-card__image img {\s*transition:\s*transform var\(--motion-duration-zoom\) var\(--motion-easing\),\s*opacity var\(--motion-duration\) var\(--motion-easing\);\s*}/,
     )
     // Outside that block, nothing in critical.css transitions or animates.
     expect(critical.replace(/@media \(prefers-reduced-motion: no-preference\) {[\s\S]*?\n}/g, '')).not.toMatch(/transition|animation/)
+  })
+
+  it.each([
+    ['hero', '.hero__media img', '.hero__media img'],
+    ['slideshow', '.slideshow__slide:not([inert]) .slideshow__media img', '.slideshow__media img'],
+  ])('slowly zooms the %s image to the hero zoom from its first frame, only without reduced motion', (name, zoomed, eased) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    const css = source.match(/{% stylesheet %}([\s\S]*?){% endstylesheet %}/)![1]
+    const block = css.match(/@media \(prefers-reduced-motion: no-preference\) {([\s\S]*?)\n {2}}/)![1]
+    const escape = (selector: string) => selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    expect(block).toMatch(new RegExp(`${escape(zoomed)} {[^}]*scale: var\\(--motion-hero-zoom\\);`))
+    expect(block).toMatch(new RegExp(`${escape(eased)} {[^}]*transition: scale var\\(--motion-duration-hero-zoom\\) ease-out;`))
+    // The zoom starts on load too: the image's first style is unzoomed.
+    expect(block).toMatch(new RegExp(`@starting-style {\\s*${escape(zoomed)} {\\s*scale: 1;`))
+    // The zoomed image stays inside its box, beside the text of a split layout too.
+    expect(css).toMatch(new RegExp(`\\.${name}__media {\\s*position: absolute;\\s*inset: 0;\\s*overflow: hidden;`))
+    expect(css.replace(/@media \(prefers-reduced-motion: no-preference\) {[\s\S]*?\n {2}}/, '')).not.toContain('--motion-hero-zoom')
   })
 
   it('labels the motion setting with translation keys the schema locale has', () => {

@@ -5,7 +5,7 @@
   assign featured_media = current_variant.featured_media | default: product.featured_media
 %}
 
-<div class="featured-product full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+<div class="featured-product full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <featured-product class="featured-product__inner">
     <div class="featured-product__media">
       {% if featured_media %}
@@ -248,6 +248,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "blocks": [

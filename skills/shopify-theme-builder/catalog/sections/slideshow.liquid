@@ -8,7 +8,7 @@
 {% if section.blocks.size > 0 %}
   <slide-show
     class="slideshow full-width media-edge slideshow--{{ section.settings.height }} color-{{ section.settings.color_scheme }}"
-    data-spacing="{{ section.settings.spacing }}"
+    data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}
     role="region"
     aria-roledescription="carousel"
     aria-label="{{ 'slideshow.label' | t }}"
@@ -192,6 +192,7 @@
   .slideshow__media {
     position: absolute;
     inset: 0;
+    overflow: hidden;
   }
 
   .slideshow__image {
@@ -298,6 +299,23 @@
   .slideshow__control[data-paused] .slideshow__icon-pause,
   .slideshow__control:not([data-paused]) .slideshow__icon-play {
     display: none;
+  }
+
+  /* With expressive motion, the slide shown slowly zooms in, from its first frame, and eases back once it leaves. */
+  @media (prefers-reduced-motion: no-preference) {
+    .slideshow__slide:not([inert]) .slideshow__media img {
+      scale: var(--motion-hero-zoom);
+    }
+
+    .slideshow__media img {
+      transition: scale var(--motion-duration-hero-zoom) ease-out;
+    }
+
+    @starting-style {
+      .slideshow__slide:not([inert]) .slideshow__media img {
+        scale: 1;
+      }
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -447,6 +465,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": true
     }
   ],
   "blocks": [

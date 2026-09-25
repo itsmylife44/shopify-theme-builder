@@ -8,7 +8,7 @@
 
 <div
   class="type-banner full-width color-{{ section.settings.color_scheme }}"
-  data-spacing="{{ section.settings.spacing }}"
+  data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %}
   style="--text-align: {{ section.settings.alignment | replace: 'left', 'start' | replace: 'right', 'end' }};"
 >
   <div class="type-banner__inner">
@@ -144,6 +144,12 @@
         { "value": "loose", "label": "t:options.spacing.loose" }
       ],
       "default": "theme"
+    },
+    {
+      "type": "checkbox",
+      "id": "reveal",
+      "label": "t:labels.reveal",
+      "default": false
     }
   ],
   "presets": [
