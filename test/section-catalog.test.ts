@@ -1936,9 +1936,8 @@ describe('Image gallery', () => {
 
   it('is a catalog section with a description, a color scheme and a preset with images', () => {
     expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
-    expect(source).toContain('class="image-gallery full-width color-{{ section.settings.color_scheme }}"')
     expect(schema.settings).toContainEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
-    expect(schema.presets).toEqual([{ name: 't:general.image_gallery', blocks: [{ type: 'image' }, { type: 'image' }, { type: 'image' }] }])
+    expect(schema.presets[0]).toEqual({ name: 't:general.image_gallery', blocks: [{ type: 'image' }, { type: 'image' }, { type: 'image' }] })
     expect(schema.enabled_on).toBeUndefined()
   })
 
@@ -1952,6 +1951,50 @@ describe('Image gallery', () => {
     expect(source).toContain('<figcaption')
     expect(source).toContain('href="{{ block.settings.link }}"')
     expect(source).toContain("{{ 'image' | placeholder_svg_tag")
+  })
+
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+  const images = (count: number) => Array.from({ length: count }, () => ({ type: 'image' }))
+
+  it('lays the images out in an equal grid by default, as a bento or as a scrolling strip', () => {
+    expect(source).toContain('class="image-gallery image-gallery--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'grid' })
+    expect(values(settings.layout)).toEqual(['grid', 'bento', 'strip'])
+    expect(settings.columns).toMatchObject({ visible_if: "{{ section.settings.layout == 'grid' }}" })
+  })
+
+  it('gives every fifth image, from the first, a large tile two rows and two columns big in the bento, across the row on mobile', () => {
+    expect(css).toMatch(/\.image-gallery--bento \.image-gallery__item:nth-child\(5n \+ 1\) {[^}]*grid-column: 1 \/ -1;/)
+    expect(desktop).toMatch(/\.image-gallery--bento \.image-gallery__grid {[^}]*grid-template-columns: repeat\(4, 1fr\);[^}]*grid-auto-flow: dense;/)
+    expect(desktop).toMatch(/\.image-gallery--bento \.image-gallery__item:nth-child\(5n \+ 1\) {[^}]*grid-column: span 2;[^}]*grid-row: span 2;/)
+    // The large tile fills its two rows whatever the image ratio (unless no image follows it), and loads an image twice as wide.
+    expect(desktop).toMatch(/\.image-gallery--bento \.image-gallery__item:nth-child\(5n \+ 1\):not\(:last-child\) {\s*--image-ratio: auto;\s*}/)
+    expect(desktop).toMatch(/\.image-gallery--bento \.image-gallery__item:nth-child\(5n \+ 1\):not\(:last-child\) \.image-gallery__media {[^}]*flex: 1;[^}]*contain: size;/)
+    expect(source).toContain("assign sizes = '(min-width: 750px) 50vw, 100vw'")
+  })
+
+  it('scrolls the images in a full-bleed strip, snapped, with previous and next buttons that mirror right to left', () => {
+    expect(css).toMatch(/\.image-gallery--strip \.image-gallery__inner {[^}]*grid-column: 1 \/ -1;/)
+    expect(css).toMatch(/\.image-gallery--strip \.image-gallery__grid {[^}]*grid-auto-flow: column;[^}]*overflow-x: auto;[^}]*scroll-snap-type: x mandatory;[^}]*padding-inline: calc\(\(100% - var\(--content-width\)\) \/ 2\);[^}]*scroll-padding-inline: calc\(\(100% - var\(--content-width\)\) \/ 2\);/)
+    expect(css).toMatch(/\.image-gallery--strip \.image-gallery__item {[^}]*scroll-snap-align: start;/)
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\) {\s*\.image-gallery--strip \.image-gallery__grid {\s*scroll-behavior: smooth;/)
+    expect(css).toMatch(/\.image-gallery__control svg:dir\(rtl\) {\s*scale: -1 1;/)
+    // The row takes the keyboard's arrows, and each button says what it does.
+    expect(source).toMatch(/<ul\s+id="ImageGallery-{{ section\.id }}"[\s\S]*?{% if strip %}tabindex="0"{% endif %}/)
+    expect(source).toContain('<image-gallery-strip class="image-gallery__strip">')
+    for (const step of ['previous', 'next']) expect(source).toContain(`aria-label="{{ 'image_gallery.${step}' | t }}"`)
+    expect(source).toContain("getComputedStyle(this).direction === 'rtl' ? -1 : 1")
+  })
+
+  it('offers each other layout as a named preset, the strip with tall images', () => {
+    // A Theme made before the layouts keeps its look: the first preset sets no layout.
+    expect(schema.presets).toEqual([
+      { name: 't:general.image_gallery', blocks: images(3) },
+      { name: 't:general.image_gallery_bento', settings: { layout: 'bento' }, blocks: images(5) },
+      { name: 't:general.image_gallery_strip', settings: { layout: 'strip', image_ratio: 'portrait' }, blocks: images(6) },
+    ])
   })
 })
 

@@ -1,17 +1,40 @@
-{% comment %}A grid of images, each with an optional caption and link.{% endcomment %}
-<div class="image-gallery full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
+{% comment %}Images in an equal grid, a bento of mixed sizes or a scrolling strip, each with an optional caption and link.{% endcomment %}
+{% liquid
+  assign layout = section.settings.layout
+  assign strip = false
+  if layout == 'strip' and section.blocks.size > 1
+    assign strip = true
+  endif
+%}
+<div class="image-gallery image-gallery--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}"{% if section.settings.reveal %} data-reveal{% endif %} style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};">
   <div class="image-gallery__inner">
     {% if section.settings.heading != blank %}
       <h2 class="image-gallery__heading">{{ section.settings.heading }}</h2>
     {% endif %}
 
+    {% if strip %}<image-gallery-strip class="image-gallery__strip">{% endif %}
     <ul
+      id="ImageGallery-{{ section.id }}"
       class="image-gallery__grid"
       data-reveal-stagger
       role="list"
       style="--columns: {{ section.settings.columns }};"
+      {% if strip %}tabindex="0"{% endif %}
     >
       {% for block in section.blocks %}
+        {% liquid
+          assign sizes = '(min-width: 750px) 33vw, 50vw'
+          if layout == 'bento'
+            assign position = forloop.index0 | modulo: 5
+            if position == 0
+              assign sizes = '(min-width: 750px) 50vw, 100vw'
+            else
+              assign sizes = '(min-width: 750px) 25vw, 50vw'
+            endif
+          elsif layout == 'strip'
+            assign sizes = '(min-width: 750px) 28vw, 75vw'
+          endif
+        %}
         <li class="image-gallery__item" {{ block.shopify_attributes }}>
           <figure class="image-gallery__figure">
             {% if block.settings.link != blank %}
@@ -22,7 +45,7 @@
                 {{
                   block.settings.image
                   | image_url: width: 1200
-                  | image_tag: widths: '300, 450, 600, 900, 1200', sizes: '(min-width: 750px) 33vw, 50vw', loading: 'lazy'
+                  | image_tag: widths: '300, 450, 600, 900, 1200', sizes: sizes, loading: 'lazy'
                 }}
               {% else %}
                 {{ 'image' | placeholder_svg_tag: 'placeholder image-gallery__placeholder' }}
@@ -38,6 +61,33 @@
         </li>
       {% endfor %}
     </ul>
+    {% if strip %}
+      <div class="image-gallery__controls">
+        <button
+          type="button"
+          class="image-gallery__control"
+          data-step="-1"
+          aria-controls="ImageGallery-{{ section.id }}"
+          aria-label="{{ 'image_gallery.previous' | t }}"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m12 5-5 5 5 5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="image-gallery__control"
+          data-step="1"
+          aria-controls="ImageGallery-{{ section.id }}"
+          aria-label="{{ 'image_gallery.next' | t }}"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="var(--icon-stroke-width)" d="m8 5 5 5-5 5" />
+          </svg>
+        </button>
+      </div>
+      </image-gallery-strip>
+    {% endif %}
   </div>
 </div>
 
@@ -70,9 +120,42 @@
     list-style: none;
   }
 
+  /* Bento: every fifth image, from the first, large; across the row on mobile, two rows and two columns of four on desktop. */
+  .image-gallery--bento .image-gallery__item:nth-child(5n + 1) {
+    grid-column: 1 / -1;
+  }
+
   @media (min-width: 750px) {
     .image-gallery__grid {
       grid-template-columns: repeat(var(--columns), 1fr);
+    }
+
+    .image-gallery--bento .image-gallery__grid {
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-flow: dense;
+    }
+
+    .image-gallery--bento .image-gallery__item:nth-child(5n + 1) {
+      display: flex;
+      grid-column: span 2;
+      grid-row: span 2;
+    }
+
+    .image-gallery--bento .image-gallery__item:nth-child(5n + 1) .image-gallery__figure,
+    .image-gallery--bento .image-gallery__item:nth-child(5n + 1) .image-gallery__link {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    /* The large tile takes no ratio of its own: it fills the two rows its neighbours, at the image ratio, set. */
+    .image-gallery--bento .image-gallery__item:nth-child(5n + 1):not(:last-child) {
+      --image-ratio: auto;
+    }
+
+    .image-gallery--bento .image-gallery__item:nth-child(5n + 1):not(:last-child) .image-gallery__media {
+      flex: 1;
+      contain: size;
     }
   }
 
@@ -109,7 +192,101 @@
   .image-gallery__caption {
     margin-block-start: var(--space-xs);
   }
+
+  /* Strip: tall images in one row across the full width, snapped as customers scroll or step, the first at the content's edge. */
+  .image-gallery--strip .image-gallery__inner {
+    grid-column: 1 / -1;
+  }
+
+  .image-gallery--strip .image-gallery__heading {
+    max-width: var(--content-width);
+  }
+
+  .image-gallery__strip {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    width: 100%;
+  }
+
+  .image-gallery--strip .image-gallery__grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 75%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-inline: calc((100% - var(--content-width)) / 2);
+    scroll-padding-inline: calc((100% - var(--content-width)) / 2);
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .image-gallery--strip .image-gallery__grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .image-gallery--strip .image-gallery__item {
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 750px) {
+    .image-gallery--strip .image-gallery__grid {
+      grid-auto-columns: 28%;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .image-gallery--strip .image-gallery__grid {
+      scroll-behavior: smooth;
+    }
+  }
+
+  .image-gallery__controls {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xs);
+  }
+
+  .image-gallery__control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--target-size);
+    min-block-size: var(--target-size);
+    padding: var(--space-xs);
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .image-gallery__control svg {
+    width: 1.5rem;
+  }
+
+  .image-gallery__control svg:dir(rtl) {
+    scale: -1 1;
+  }
 {% endstylesheet %}
+
+{% javascript %}
+  class ImageGalleryStrip extends HTMLElement {
+    connectedCallback() {
+      this.list = this.querySelector('.image-gallery__grid');
+      this.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-step]');
+        if (!button) return;
+        // One image's width and its gap; right to left, forward scrolls toward negative scrollLeft.
+        const [first, second] = this.list.children;
+        const distance = Math.abs(second.offsetLeft - first.offsetLeft);
+        const direction = getComputedStyle(this).direction === 'rtl' ? -1 : 1;
+        this.list.scrollBy(Number(button.dataset.step) * distance * direction, 0);
+      });
+    }
+  }
+
+  if (!customElements.get('image-gallery-strip')) customElements.define('image-gallery-strip', ImageGalleryStrip);
+{% endjavascript %}
 
 {% schema %}
 {
@@ -122,6 +299,17 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "grid", "label": "t:options.layout.grid" },
+        { "value": "bento", "label": "t:options.layout.bento" },
+        { "value": "strip", "label": "t:options.layout.strip" }
+      ],
+      "default": "grid"
     },
     {
       "type": "select",
@@ -149,7 +337,8 @@
       "min": 2,
       "max": 5,
       "step": 1,
-      "default": 3
+      "default": 3,
+      "visible_if": "{{ section.settings.layout == 'grid' }}"
     },
     {
       "type": "select",
@@ -197,6 +386,29 @@
     {
       "name": "t:general.image_gallery",
       "blocks": [
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" }
+      ]
+    },
+    {
+      "name": "t:general.image_gallery_bento",
+      "settings": { "layout": "bento" },
+      "blocks": [
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" }
+      ]
+    },
+    {
+      "name": "t:general.image_gallery_strip",
+      "settings": { "layout": "strip", "image_ratio": "portrait" },
+      "blocks": [
+        { "type": "image" },
+        { "type": "image" },
+        { "type": "image" },
         { "type": "image" },
         { "type": "image" },
         { "type": "image" }
