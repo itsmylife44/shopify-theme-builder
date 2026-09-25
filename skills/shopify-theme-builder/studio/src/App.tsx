@@ -861,9 +861,10 @@ const storeKinds: Record<string, keyof StoreResources> = {
   product: 'products',
   product_list: 'products',
   link_list: 'menus',
+  page: 'pages',
 }
 
-/** The store's collections, products and menus, fetched once `needed`, or why they can't be listed. */
+/** The store's collections, products, menus and pages, fetched once `needed`, or why they can't be listed. */
 function useStore(needed: boolean) {
   const [store, setStore] = useState<StoreResources | { error: string } | null>(null)
   useEffect(() => {
@@ -1038,7 +1039,7 @@ function Inspector({
           <Separator />
           {store && 'error' in store ? (
             <Alert>
-              <AlertTitle>The store's collections, products and menus are not listed</AlertTitle>
+              <AlertTitle>The store's collections, products, menus and pages are not listed</AlertTitle>
               <AlertDescription>{store.error} Until then, type their handles.</AlertDescription>
             </Alert>
           ) : null}
@@ -1276,7 +1277,7 @@ function SettingField({
   )
 }
 
-/** Picks one of the store's collections, products or menus by handle, or several for a list setting. */
+/** Picks one of the store's collections, products, menus or pages by handle, or several for a list setting. */
 function StorePicker({
   id,
   value,

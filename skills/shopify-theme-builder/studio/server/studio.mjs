@@ -1475,7 +1475,7 @@ function updateSection(theme, file, id, body) {
 // The setting types the Studio edits as text. richtext holds HTML paragraphs, inline_richtext inline HTML.
 const textTypes = new Set(['text', 'inline_richtext', 'richtext'])
 // Settings that name a store resource by its handle, and the lists of handles.
-const handleTypes = new Set(['collection', 'product', 'link_list'])
+const handleTypes = new Set(['collection', 'product', 'link_list', 'page'])
 const listTypes = new Set(['collection_list', 'product_list'])
 // Settings that pick one of their schema's options.
 const optionTypes = new Set(['select', 'radio'])
@@ -1803,15 +1803,17 @@ function listCustomSections(theme, catalog, template) {
   )
 }
 
-// The Studio needs read_products for collections and products, read_online_store_navigation for menus and write_files
-// for images. The rest are the agent's up-front store setup (SKILL.md step 1): pages to link menu items to, the menus,
-// the languages. One command grants them all, so authenticating again for the Studio never drops the agent's scopes.
+// The Studio needs read_products for collections and products, read_online_store_navigation for menus,
+// read_online_store_pages for pages and write_files for images. The rest are the agent's up-front store setup
+// (SKILL.md step 1): the menus, the languages. One command grants them all, so authenticating again for the Studio
+// never drops the agent's scopes.
 const storeScopes =
   'read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales'
 const storeQuery = `{
   collections(first: 250, sortKey: TITLE) { nodes { handle title productsCount { count } } }
   products(first: 250, sortKey: TITLE) { nodes { handle title } }
   menus(first: 250) { nodes { handle title } }
+  pages(first: 250) { nodes { handle title } }
 }`
 
 /**
@@ -1899,11 +1901,11 @@ function attachment(name) {
 /**
  * @typedef {{ handle: string, title: string }} StoreResource
  * @typedef {StoreResource & { products: number }} StoreCollection A collection with its product count.
- * @typedef {{ collections: StoreCollection[], products: StoreResource[], menus: StoreResource[] }} StoreResources
+ * @typedef {{ collections: StoreCollection[], products: StoreResource[], menus: StoreResource[], pages: StoreResource[] }} StoreResources
  */
 
 /**
- * Reads the store's collections, products and menus with the Admin API (ADR-0006). The answer is kept a minute,
+ * Reads the store's collections, products, menus and pages with the Admin API (ADR-0006). The answer is kept a minute,
  * so the inspector opens fast.
  * @param {string} cli
  * @param {string} store
@@ -1944,6 +1946,7 @@ async function readStore(cli, store) {
     })),
     products: list(data.products),
     menus: list(data.menus),
+    pages: list(data.pages),
   }
 }
 

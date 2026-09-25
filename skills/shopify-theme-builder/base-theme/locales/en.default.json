@@ -170,7 +170,8 @@
       "send_on": "Send on (optional)",
       "send_on_info": "Leave empty to send it now, or pick a date within 90 days"
     },
-    "free_shipping_over": "Free shipping on orders over {{ amount }}."
+    "free_shipping_over": "Free shipping on orders over {{ amount }}.",
+    "close_size_guide": "Close size guide"
   },
   "search": {
     "article": "Article",

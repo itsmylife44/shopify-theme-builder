@@ -11,7 +11,8 @@ describe('Studio API: store resource settings', () => {
     '{"type": "product_list", "id": "products", "label": "Products", "limit": 2},' +
     '{"type": "collection_list", "id": "collections", "label": "Collections"},' +
     '{"type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu"},' +
-    '{"type": "product", "id": "product", "label": "Product"}' +
+    '{"type": "product", "id": "product", "label": "Product"},' +
+    '{"type": "page", "id": "page", "label": "Page"}' +
     '], "presets": [{"name": "Picks"}]}{% endschema %}\n'
 
   async function withSection(type: string) {
@@ -36,6 +37,7 @@ describe('Studio API: store resource settings', () => {
       { id: 'collections', type: 'collection_list', label: 'Collections', value: [] },
       { id: 'menu', type: 'link_list', label: 'Menu', value: 'main-menu' },
       { id: 'product', type: 'product', label: 'Product', value: '' },
+      { id: 'page', type: 'page', label: 'Page', value: '' },
     ])
   })
 
@@ -50,11 +52,12 @@ describe('Studio API: store resource settings', () => {
 
   it('clears a store resource setting with an empty value', async () => {
     const { theme, id, patch } = await withSection('picks')
-    await patch({ product: 'mug', products: ['mug', 'plate'], menu: 'footer' })
-    expect(readTemplate(theme).sections[id].settings).toMatchObject({ product: 'mug', products: ['mug', 'plate'], menu: 'footer' })
-    expect((await patch({ product: '', products: [] })).status).toBe(200)
+    await patch({ product: 'mug', products: ['mug', 'plate'], menu: 'footer', page: 'size-guide' })
+    expect(readTemplate(theme).sections[id].settings).toMatchObject({ product: 'mug', products: ['mug', 'plate'], menu: 'footer', page: 'size-guide' })
+    expect((await patch({ product: '', products: [], page: '' })).status).toBe(200)
     const { settings } = readTemplate(theme).sections[id]
     expect(settings).not.toHaveProperty('product')
+    expect(settings).not.toHaveProperty('page')
     expect(settings).not.toHaveProperty('products')
   })
 
@@ -75,6 +78,7 @@ describe('Studio API: store resource settings', () => {
     ['picks', { products: 'mug' }, 'products'],
     ['picks', { products: ['a', 'b', 'c'] }, 'products'],
     ['picks', { collections: ['ok', 'no way'] }, 'collections'],
+    ['picks', { page: 'size guide' }, 'page'],
   ])('refuses %s %j', async (type, change, named) => {
     const { theme, patch } = await withSection(type)
     const before = readFileSync(path.join(theme, home), 'utf8')
@@ -84,7 +88,7 @@ describe('Studio API: store resource settings', () => {
     expect(readFileSync(path.join(theme, home), 'utf8')).toBe(before)
   })
 
-  it("lists the store's collections, products and menus through the Shopify CLI's stored auth, read-only", async () => {
+  it("lists the store's collections, products, menus and pages through the Shopify CLI's stored auth, read-only", async () => {
     const cli = fakeShopify({
       store: {
         collections: {
@@ -95,6 +99,7 @@ describe('Studio API: store resource settings', () => {
         },
         products: { nodes: [{ handle: 'mug', title: 'Mug' }] },
         menus: { nodes: [{ handle: 'main-menu', title: 'Main menu' }] },
+        pages: { nodes: [{ handle: 'size-guide', title: 'Size guide' }] },
       },
     })
     const studio = await openStudio(fixtureTheme(), { cli })
@@ -107,6 +112,7 @@ describe('Studio API: store resource settings', () => {
       ],
       products: [{ handle: 'mug', title: 'Mug' }],
       menus: [{ handle: 'main-menu', title: 'Main menu' }],
+      pages: [{ handle: 'size-guide', title: 'Size guide' }],
     })
     const [args]: string[][] = JSON.parse(readFileSync(path.join(path.dirname(cli), 'store.json'), 'utf8'))
     expect(args.slice(0, 4)).toEqual(['store', 'execute', '--store', 'example.myshopify.com'])

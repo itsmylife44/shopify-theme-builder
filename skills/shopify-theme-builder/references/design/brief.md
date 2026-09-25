@@ -28,7 +28,7 @@ The facts a shopper needs before they buy, which the Theme shows next to the buy
 | **Shipping costs** | What shipping costs, and the order total from which it's free, if there is one | The `free_shipping_threshold` theme setting (`PUT /api/style`, a number in the store currency): the cart page and drawer show "€X to free shipping" or "Free shipping" with a progress bar, and the shipping note shows "Free shipping on orders over €X". Its amount matches the store's shipping rates (Shopify admin › Settings › Shipping and delivery), which the checkout charges |
 | **Delivery times** | How long an order takes to arrive, per market | The shipping note's `text` and the "Shipping and returns" collapsible block |
 | **Returns** | The returns window and who pays the return | The shipping note's `text` and the "Shipping and returns" collapsible block |
-| **Sizing** | For clothing, shoes or anything sized: how it fits, and a size chart if there is one | A collapsible block on the product page |
+| **Sizing** | For clothing, shoes or anything sized: how it fits, and the shop page with its size chart, if there is one | The `size-guide` block after the variant picker, which opens the size chart page in a dialog, and how it fits in a collapsible block on the product page |
 | **Reviews** | Whether the shop uses a reviews app, and which | Its app block on the product page, and the rating on detailed product cards |
 
 Write only what the Creator confirmed. A fact they don't know yet stays out of the text, and goes in the hand-off's list of what's missing; never a placeholder, and never the catalog's example text (the checker reports it as `default-text`).

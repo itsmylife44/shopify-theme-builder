@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- A size guide for the product page: the new `size-guide` theme block, which the main product takes after the variant picker, opens a shop page picked in its settings (the size chart) in a `<dialog>`, and shows nothing until one is picked. The agent adds it when the buying facts say the products come in sizes. The Studio edits `page` settings by handle and lists the store's pages in `GET /api/store`.
+
 - The product page's variant picker names the selected value next to each option, like "Color: Sage", so a swatch's color is named on screen, and updates it when the variant changes.
 
 - A sticky buy bar on the product page on mobile: below 750px, once the main add to cart scrolls away, a bar with the product's title, the selected variant's price and an add to cart button slides in at the bottom of the screen, above the safe area and without sliding under reduced motion. It submits the buy buttons form, so it opens the cart drawer like the main button. The main product's new Sticky add to cart bar setting (`sticky_buy_bar`, on by default) turns it off.
