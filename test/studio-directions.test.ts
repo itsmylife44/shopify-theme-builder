@@ -84,6 +84,28 @@ describe('Studio API: Directions', () => {
     expect(contrast().filter(({ message }) => message.startsWith('scheme-1: text'))).toEqual([])
   })
 
+  it('keeps the same color scheme ids in every preset when one Direction adds a scheme, as Shopify requires to upload them', async () => {
+    const theme = fixtureTheme()
+    const studio = await openStudio(theme)
+    await studio.setBrand({ colorSchemes: { 'scheme-1': { background: '#F5F0E8', text: '#222222' } } })
+    await studio.send('PUT', 'api/directions/Quiet', { template: heroHome })
+    await studio.setBrand({ colorSchemes: { 'scheme-1': { background: '#FFFFFF', text: '#111111' } } })
+    await studio.send('PUT', 'api/directions/Loud', { template: heroHome })
+
+    // The third Direction has one more scheme than the others.
+    await studio.setBrand({ colorSchemes: { 'scheme-3': { background: '#8C2F1B', text: '#FFFFFF' } } })
+    const { status, body } = await studio.send('PUT', 'api/directions/Bold', { template: { sections: { hero: { type: 'hero', settings: { color_scheme: 'scheme-3' } } }, order: ['hero'] } })
+    expect(status).toBe(200)
+    const data = readSettingsData(theme)
+    expect(Object.keys(data.presets.Bold.color_schemes)).toEqual(['scheme-1', 'scheme-2', 'scheme-3'])
+    expect(data.presets.Bold.color_schemes['scheme-3'].settings).toMatchObject({ background: '#8C2F1B' })
+    // The others get it as a copy of their own scheme-1, so they look the same.
+    expect(data.presets.Quiet.color_schemes['scheme-3']).toEqual(data.presets.Quiet.color_schemes['scheme-1'])
+    expect(data.presets.Quiet.color_schemes['scheme-1'].settings).toMatchObject({ background: '#F5F0E8' })
+    expect(data.presets.Loud.color_schemes['scheme-3']).toEqual(data.presets.Loud.color_schemes['scheme-1'])
+    expect(errors(body.validation)).toEqual([])
+  })
+
   it.each([
     ['a name of three words', 'Very Quiet Press', { template: heroHome }],
     ['a name of 30 characters', 'A'.repeat(30), { template: heroHome }],
