@@ -260,6 +260,24 @@ describe('check-direction', () => {
     ])
   })
 
+  it("reports a locale's accessible label that doesn't contain its control's visible text, as WCAG Label in Name asks", () => {
+    const theme = sampleTheme()
+    const german = readJSON(theme, 'locales/en.default.json')
+    german.quick_add = { ...german.quick_add, add: 'Hinzufügen', add_label: '{{ product }} in den Warenkorb', choose_options: 'Optionen wählen', choose_options_label: 'Optionen wählen: {{ product }}' }
+    writeJSON(theme, 'locales/de.json', german)
+    expect(checkDirection(theme)).toEqual([
+      {
+        check: 'label-in-name',
+        file: 'locales/de.json',
+        message: 'quick_add.add_label ("{{ product }} in den Warenkorb") doesn\'t contain the visible text of quick_add.add ("Hinzufügen"), which voice control users say to press the button. Start the label with it.',
+      },
+    ])
+
+    german.quick_add.add_label = 'hinzufügen: {{ product }}'
+    writeJSON(theme, 'locales/de.json', german)
+    expect(checkDirection(theme)).toEqual([])
+  })
+
   it("reports a section group's guidance text left as its default, in any language", () => {
     const theme = sampleTheme()
     // A Theme made from an older catalog, whose footer text block shipped a guidance sentence as its default.
