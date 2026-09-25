@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shopify Theme Builder: a coding-agent plugin that builds your Shopify theme</title>
+  <meta name="description" content="An open-source Claude Code plugin and agent skill. Describe your shop in one message: your agent writes three theme designs, you pick one in a live Studio, and it builds, checks and delivers a real Shopify theme, unpublished.">
+  <link rel="canonical" href="https://itsmylife44.github.io/shopify-theme-builder/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Shopify Theme Builder">
+  <meta property="og:description" content="Describe your shop. Your coding agent designs, builds, checks and delivers a real Shopify theme.">
+  <meta property="og:url" content="https://itsmylife44.github.io/shopify-theme-builder/">
+  <meta property="og:image" content="https://itsmylife44.github.io/shopify-theme-builder/assets/social-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#F5EFE6">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23A4441F'/%3E%3Cpath d='M9 22V10h8a4 4 0 0 1 0 8h-8' fill='none' stroke='%23F5EFE6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Shopify Theme Builder",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Linux, Windows",
+    "license": "https://opensource.org/licenses/MIT",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "codeRepository": "https://github.com/itsmylife44/shopify-theme-builder",
+    "description": "An open-source Claude Code plugin and agent skill that builds a custom Shopify Online Store 2.0 theme from one prompt."
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="wordmark" href="#top" aria-label="Shopify Theme Builder, back to top">
+        <svg aria-hidden="true" viewBox="0 0 32 32" width="28" height="28"><rect width="32" height="32" rx="8" class="wordmark__tile"/><path d="M9 22V10h8a4 4 0 0 1 0 8h-8" fill="none" class="wordmark__glyph" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Theme Builder</span>
+      </a>
+      <nav aria-label="Main">
+        <ul class="nav">
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#directions">Directions</a></li>
+          <li><a href="#studio">Studio</a></li>
+          <li><a href="#quality">Quality</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+      <a class="button button--small button--secondary" href="https://github.com/itsmylife44/shopify-theme-builder">
+        <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="container hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow">Open-source Claude Code plugin · agent skill</p>
+          <h1 id="hero-title" class="display">Describe your shop. <em>Get a real Shopify theme.</em></h1>
+          <p class="lede">Your coding agent writes three complete designs, you pick one in a live Studio, and it builds every page in your shop's language. Checked, accessible, and uploaded unpublished.</p>
+
+          <div class="install" id="install">
+            <p class="install__label" id="install-cc">In Claude Code</p>
+            <div class="command">
+              <pre tabindex="0" aria-labelledby="install-cc"><code>/plugin marketplace add itsmylife44/shopify-theme-builder
+/plugin install shopify-theme-builder@shopify-theme-builder</code></pre>
+              <button class="copy" type="button" data-copy="/plugin marketplace add itsmylife44/shopify-theme-builder&#10;/plugin install shopify-theme-builder@shopify-theme-builder" aria-label="Copy the Claude Code install commands">Copy</button>
+            </div>
+            <p class="install__label" id="install-any">Codex, Cursor, OpenCode and other agents</p>
+            <div class="command">
+              <pre tabindex="0" aria-labelledby="install-any"><code>npx skills add itsmylife44/shopify-theme-builder</code></pre>
+              <button class="copy" type="button" data-copy="npx skills add itsmylife44/shopify-theme-builder" aria-label="Copy the skills CLI install command">Copy</button>
+            </div>
+          </div>
+
+          <div class="hero__actions">
+            <a class="button" href="#prompt">See an example prompt</a>
+            <a class="button button--secondary" href="https://github.com/itsmylife44/shopify-theme-builder">Star on GitHub</a>
+          </div>
+        </div>
+
+        <figure class="hero__media frame">
+          <video autoplay muted loop playsinline preload="metadata" poster="assets/demo-poster.jpg" width="960" height="540" aria-describedby="demo-caption">
+            <source src="assets/demo.mp4" type="video/mp4">
+          </video>
+          <figcaption id="demo-caption">The Studio: select the hero, rewrite its heading, switch its color scheme. Shopify re-renders the real theme beside it.</figcaption>
+          <button class="frame__pause" type="button" aria-pressed="false" data-pause>Pause</button>
+        </figure>
+      </div>
+
+      <div class="container">
+        <ul class="facts" aria-label="At a glance">
+          <li><strong>Skeleton</strong> Shopify's own base theme</li>
+          <li><strong>40+</strong> catalog sections with named layouts</li>
+          <li><strong>0</strong> Theme Check errors at hand-off</li>
+          <li><strong>WCAG 2.2</strong> AA audit with keyboard tests</li>
+          <li><strong>MIT</strong> free and open source</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="band" id="prompt" aria-labelledby="prompt-title">
+      <div class="container split">
+        <div>
+          <p class="eyebrow">One message in</p>
+          <h2 id="prompt-title">The more your first message says, the fewer questions it asks.</h2>
+          <p>Copy this and change each line to your shop. Leave out what you don't know yet: the agent asks one question at a time, proposes a default, and reads the brief back to you before it designs anything.</p>
+          <dl class="annotations">
+            <div><dt>Reference</dt><dd>Reads your colors, fonts and logo, and tells you what it took.</dd></div>
+            <div><dt>Keep</dt><dd>Pins those values; the three designs vary everything else.</dd></div>
+            <div><dt>Photos</dt><dd>Uploads them and places each where its content fits.</dd></div>
+            <div><dt>Feel and "not"</dt><dd>Rules out the look every shop in your category already has.</dd></div>
+            <div><dt>Buying facts</dt><dd>Written on the product page and cart. It never invents one.</dd></div>
+          </dl>
+        </div>
+        <div class="command command--prompt">
+          <pre tabindex="0" aria-label="Example prompt"><code>Use the shopify-theme-builder skill to build a
+Shopify theme for my shop.
+
+Shop: Olmo Ceramica, handmade stoneware tableware
+from a two-person studio in Florence.
+Reference: https://olmoceramica.example — take our
+colors, fonts and logo from there.
+Keep: our terracotta #B5552D and our logo.
+Photos: ~/Desktop/olmo-photos
+Customers: people setting up a first home who'd
+rather buy fewer, better things.
+It should feel: calm, warm, handmade.
+Not glossy luxury, not rustic kitsch.
+Inspiration outside ceramics: Japanese cookbook
+layouts, Kinfolk magazine.
+Store: none yet, create a development store in Italy.
+Selling: Italy and the EU, in Italian and English,
+prices in EUR including VAT.
+Buying facts: shipping €6.90, free over €80,
+2–4 days in Italy, returns within 14 days.</code></pre>
+          <button class="copy" type="button" data-copy-from="prev" aria-label="Copy the example prompt">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="how" aria-labelledby="how-title">
+      <div class="container">
+        <p class="eyebrow">How it works</p>
+        <h2 id="how-title">From one prompt to a delivered theme, in one agent session.</h2>
+        <ol class="steps">
+          <li>
+            <h3>Setup</h3>
+            <p>Checks Node, Git and the Shopify CLI, connects your store or creates a free development store in your country, and asks every store decision in one message: languages, currency, markets, menus, shipping and returns.</p>
+          </li>
+          <li>
+            <h3>Brief</h3>
+            <p>Reads your reference, asks only what's missing (your brand's world, your shopper, three emotions, what the brand rejects) and reads the brief back for you to confirm.</p>
+          </li>
+          <li>
+            <h3>Three Directions</h3>
+            <p>Creates the theme from Shopify's Skeleton with its own Git history, uploads your photos, and writes three complete designs, each with its own home page and your text.</p>
+          </li>
+          <li>
+            <h3>You choose</h3>
+            <p>Switch the live preview between the three in the Studio and press Choose. The agent carries on by itself the moment you do.</p>
+          </li>
+          <li>
+            <h3>Build and review</h3>
+            <p>Composes the product, collection, cart, search, blog and other pages, writes every text in your language, then screenshots, audits and fixes before giving a PASS or HOLD verdict.</p>
+          </li>
+          <li>
+            <h3>Delivery</h3>
+            <p>Runs Lighthouse and Theme Check, then uploads the theme unpublished, packages a zip, or connects Shopify's GitHub integration. Publishing stays your call.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="band band--accent" id="directions" aria-labelledby="directions-title">
+      <div class="container split">
+        <div>
+          <p class="eyebrow">Three Directions, not one guess</p>
+          <h2 id="directions-title">A single AI design is a coin toss. You get three, live on your own store.</h2>
+          <p>Each Direction decides type, color strategy, shape, spacing, product cards, media, motion, the home page's composition and one signature section. The three must differ in kind on at least three of those, checked against a list of generic-design tells before you see them. The chosen one's rules go into <code>DIRECTION.md</code>, so whoever edits the theme later knows why it looks the way it does.</p>
+        </div>
+        <fieldset class="directions">
+          <legend>Try it on this page</legend>
+          <p class="directions__hint">Each option restyles this whole page, the way a Direction restyles a theme.</p>
+          <label class="direction">
+            <input type="radio" name="direction" value="atelier" checked>
+            <span class="direction__name">Atelier</span>
+            <span class="direction__desc">Warm paper, a serif display, soft corners, one terracotta accent.</span>
+          </label>
+          <label class="direction">
+            <input type="radio" name="direction" value="signal">
+            <span class="direction__name">Signal</span>
+            <span class="direction__desc">White, uppercase grotesk, square edges, an electric blue that commits.</span>
+          </label>
+          <label class="direction">
+            <input type="radio" name="direction" value="night">
+            <span class="direction__name">Night</span>
+            <span class="direction__desc">Dark ground, round shapes, a lime accent used rarely.</span>
+          </label>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="section" id="studio" aria-labelledby="studio-title">
+      <div class="container">
+        <p class="eyebrow">The Studio</p>
+        <h2 id="studio-title">Your real theme, rendered by Shopify, editable with a click.</h2>
+        <div class="split split--media">
+          <figure class="frame">
+            <img src="assets/studio.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected testimonials section's text on the right.">
+          </figure>
+          <ul class="checklist">
+            <li><strong>Click to edit.</strong> Any section, header and footer included: color scheme, text, layout, collections, menus and links. Every edit applies live.</li>
+            <li><strong>Add sections</strong> from the catalog, picking a layout from wireframe thumbnails, or the Custom Sections your agent wrote.</li>
+            <li><strong>Directions, Brand and Style.</strong> Compare and choose; tune fonts, color schemes, type scale, shape, spacing, cards and motion.</li>
+            <li><strong>Every page</strong>, on desktop and mobile: home, product, collection, cart, search, blog, article, contact, 404.</li>
+            <li><strong>Safe to experiment.</strong> Undo and redo, Save as a Git checkpoint, a live Theme Check status, and Download zip.</li>
+          </ul>
+        </div>
+        <div class="pair">
+          <figure class="frame">
+            <img src="assets/studio-add-section.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The section picker: each catalog section with its description and its layouts as wireframe thumbnails.">
+          </figure>
+          <figure class="frame">
+            <img src="assets/studio-brand.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Brand tab with the color schemes and fonts, next to the mobile preview.">
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="quality" aria-labelledby="quality-title">
+      <div class="container">
+        <p class="eyebrow">Quality checks</p>
+        <h2 id="quality-title">Nothing reaches you unchecked. Nothing goes live without you.</h2>
+        <div class="table-wrap" tabindex="0" role="region" aria-labelledby="quality-title">
+          <table class="checks">
+            <thead>
+              <tr><th scope="col">Check</th><th scope="col">When</th><th scope="col">The bar</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Theme Check</th><td>After every change</td><td>Zero errors before anything is handed over</td></tr>
+              <tr><th scope="row">Contrast</th><td>Every color scheme</td><td>Text 4.5:1, borders and buttons 3:1</td></tr>
+              <tr><th scope="row">Design checker</th><td>Each Direction and the review</td><td>No placeholders or leftover example text, a real type hierarchy, one h1 per page</td></tr>
+              <tr><th scope="row">Accessibility</th><td>Review and delivery</td><td>axe-core WCAG 2.2 A and AA, zero findings at desktop and phone widths, plus a keyboard pass through menu, cart drawer and quick add</td></tr>
+              <tr><th scope="row">Lighthouse</th><td>Delivery</td><td>The Theme Store's bars: performance 60, accessibility 90</td></tr>
+              <tr><th scope="row">Publishing</th><td>Never</td><td>Uploaded unpublished. Publishing is the merchant's decision</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="catalog" aria-labelledby="catalog-title">
+      <div class="container">
+        <p class="eyebrow">The Section Catalog</p>
+        <h2 id="catalog-title">Over 40 sections, each styled by your brand through theme settings.</h2>
+        <p class="measure">Every section has its own color scheme, named layouts, right-to-left support and Shopify's placeholders on an empty store. Anything missing? Ask, and the agent writes a Custom Section with the same conventions.</p>
+        <ul class="chips" aria-label="Home and page sections">
+          <li>Hero</li><li>Slideshow</li><li>Type banner</li><li>Featured collection</li><li>Featured product</li><li>Collection list</li><li>Multicolumn</li><li>Image with text</li><li>Editorial split</li><li>Lookbook</li><li>Image gallery</li><li>Video</li><li>Rich text</li><li>Call to action</li><li>Testimonials</li><li>Press quotes</li><li>Logo list</li><li>Marquee</li><li>Spec tiles</li><li>Process steps</li><li>Timeline</li><li>Team</li><li>Comparison table</li><li>FAQ</li><li>Newsletter</li><li>Blog posts</li><li>Custom Liquid</li>
+        </ul>
+        <p class="measure small">Plus a product page with zoom, a sticky add-to-cart bar on phones and a size guide; filters that update without reloading; a cart drawer with a free-shipping bar; an announcement bar, three header layouts and eight footer layouts.</p>
+      </div>
+    </section>
+
+    <section class="band" id="faq" aria-labelledby="faq-title">
+      <div class="container container--narrow">
+        <p class="eyebrow">FAQ</p>
+        <h2 id="faq-title">Questions</h2>
+        <details>
+          <summary>Do I need to know Liquid or how to code?</summary>
+          <p>No. You talk to your agent and click in the Studio. The theme is still plain Liquid in a Git folder, so a developer can take over any time.</p>
+        </details>
+        <details>
+          <summary>What does it cost?</summary>
+          <p>The plugin is free and MIT licensed. You pay only for the agent you already use, and a Shopify development store is free.</p>
+        </details>
+        <details>
+          <summary>Will it change my live store?</summary>
+          <p>No. The preview runs on a development theme and delivery uploads the theme unpublished. Publishing is always your decision, in Shopify admin.</p>
+        </details>
+        <details>
+          <summary>Can my shop be in another language, or several?</summary>
+          <p>Yes. The agent writes the page text in your default language, adds the theme's translation files for every language you sell in and enables them on the store. Layouts mirror for right-to-left languages.</p>
+        </details>
+        <details>
+          <summary>I'm building for a client. How does the hand-over work?</summary>
+          <p>Build on a development store, then deliver to the client's store with a collaborator account, or send them the zip from the Studio's Download zip button.</p>
+        </details>
+        <details>
+          <summary>What do I need installed?</summary>
+          <p>Node.js 22.12 or newer, Git, the Shopify CLI 4.8 or newer and Google Chrome. The agent checks all of them first and tells you how to fix what's missing.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="section cta" aria-labelledby="cta-title">
+      <div class="container container--narrow">
+        <h2 id="cta-title" class="display">Your shop, your theme, <em>tonight.</em></h2>
+        <div class="command">
+          <pre tabindex="0" aria-label="Claude Code install commands"><code>/plugin marketplace add itsmylife44/shopify-theme-builder
+/plugin install shopify-theme-builder@shopify-theme-builder</code></pre>
+          <button class="copy" type="button" data-copy="/plugin marketplace add itsmylife44/shopify-theme-builder&#10;/plugin install shopify-theme-builder@shopify-theme-builder" aria-label="Copy the Claude Code install commands">Copy</button>
+        </div>
+        <div class="hero__actions">
+          <a class="button" href="https://github.com/itsmylife44/shopify-theme-builder#readme">Read the docs</a>
+          <a class="button button--secondary" href="https://github.com/itsmylife44/shopify-theme-builder/issues">Report an issue</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p>Shopify Theme Builder is MIT licensed. Themes built with it contain Shopify's Skeleton theme files, which stay under Shopify's license.</p>
+      <p>Not affiliated with, endorsed by, or sponsored by Shopify Inc. "Shopify" is a trademark of Shopify Inc., used here only to say what the plugin works with.</p>
+      <ul class="footer-links">
+        <li><a href="https://github.com/itsmylife44/shopify-theme-builder">GitHub</a></li>
+        <li><a href="https://github.com/itsmylife44/shopify-theme-builder/blob/main/CHANGELOG.md">Changelog</a></li>
+        <li><a href="https://github.com/itsmylife44/shopify-theme-builder/blob/main/CONTRIBUTING.md">Contributing</a></li>
+        <li><a href="https://github.com/itsmylife44/shopify-theme-builder/blob/main/SECURITY.md">Security</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <p class="visually-hidden" role="status" id="copy-status"></p>
+  <script src="main.js" defer></script>
+</body>
+</html>

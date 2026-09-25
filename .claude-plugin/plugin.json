@@ -7,8 +7,16 @@
     "name": "itsmylife44",
     "url": "https://github.com/itsmylife44"
   },
-  "homepage": "https://github.com/itsmylife44/shopify-theme-builder#readme",
+  "homepage": "https://itsmylife44.github.io/shopify-theme-builder/",
   "repository": "https://github.com/itsmylife44/shopify-theme-builder",
   "license": "MIT",
-  "keywords": ["shopify", "shopify-theme", "liquid", "ecommerce", "theme-builder", "online-store-2.0", "design"]
+  "keywords": [
+    "shopify",
+    "shopify-theme",
+    "liquid",
+    "ecommerce",
+    "theme-builder",
+    "online-store-2.0",
+    "design"
+  ]
 }
