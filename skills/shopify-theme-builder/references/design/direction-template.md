@@ -9,6 +9,7 @@
 - Rejects: <what the brand refuses to look or sound like>
 - Photos: <cut-outs or lifestyle, how many, what quality>; <each file and what it shows, or none yet>
 - Pinned: <the Brand values the Creator fixed: colors, fonts, logo; or none>
+- Languages: <the default language's code first, then the others the shop sells in, like de, en>
 
 ## <Direction name>
 

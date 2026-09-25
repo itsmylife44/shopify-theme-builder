@@ -1311,6 +1311,8 @@ describe('Footer', () => {
       expect.objectContaining({ type: 'text', id: 'heading' }),
       expect.objectContaining({ type: 'richtext', id: 'text' }),
     ])
+    // The shop's own text, written by the agent: a guidance sentence as its default would show on the storefront.
+    expect(block('text').settings[1]).not.toHaveProperty('default')
     expect(source).toMatch(/<div class="rte">{{ block\.settings\.text }}<\/div>/)
   })
 
