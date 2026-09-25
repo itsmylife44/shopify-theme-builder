@@ -642,6 +642,30 @@ describe('Product page shipping note and collapsible content', () => {
     // Hidden from customers when it has nothing to show, like a product without a description.
     expect(source).toMatch(/{% if content != blank or request\.design_mode %}/)
   })
+
+  it('ships its text blocks empty and says their text shows on every product, so per-product facts come from a metafield', () => {
+    const text = parse(read('base-theme/blocks/collapsible-content.liquid')).settings.find((setting: { id: string }) => setting.id === 'text')
+    expect(text).not.toHaveProperty('default')
+    expect(text.info).toBe('t:info.collapsible_content_text')
+    expect(JSON.parse(read('base-theme/locales/en.default.schema.json')).info.collapsible_content_text).toMatch(/every product[\s\S]*metafield/)
+    for (const preset of parse(mainProduct).presets) {
+      for (const block of preset.blocks.filter((block: { type: string }) => block.type === 'collapsible-content')) {
+        expect(block.settings ?? {}).not.toHaveProperty('text')
+      }
+    }
+  })
+
+  it('tells the agent to write only shop-wide facts on the product template, and the Creator how to connect per-product facts', () => {
+    const skill = read('SKILL.md')
+    const write = skill.match(/^6\. Write the text of every section[^\n]*/m)?.[0] ?? ''
+    const handOff = skill.match(/^## 5\. Hand-off\n([\s\S]*?)^## /m)?.[1] ?? ''
+    expect(write).toMatch(/shop-wide facts/)
+    expect(write).toMatch(/product metafields/)
+    expect(handOff).toMatch(/Settings › Custom data › Products/)
+    expect(handOff).toMatch(/dynamic source/)
+    expect(read('references/design/brief.md')).toMatch(/per product[^\n]*metafield/)
+    expect(read('references/design/quality-floor.md')).toMatch(/every product[^\n]*metafield/)
+  })
 })
 
 describe('Product page size guide', () => {
