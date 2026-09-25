@@ -1,43 +1,213 @@
-{% comment %}The 404 page: a heading and text, a search form and a link back to the shop.{% endcomment %}
-<div class="basic-page basic-page--center full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
-  {% if section.settings.heading != blank %}
-    <h1>{{ section.settings.heading }}</h1>
-  {% endif %}
+{% comment %}The 404 page: a heading and text, a search form and a link back to the shop, centered, beside an image, above suggested products or beside a big 404.{% endcomment %}
+{% liquid
+  assign layout = section.settings.layout
+  assign loading = 'lazy'
+  assign fetchpriority = 'auto'
+  if section.index == 1
+    assign loading = 'eager'
+    assign fetchpriority = 'high'
+  endif
+%}
 
-  {% if section.settings.text != blank %}
-    <div class="basic-page__text rte">{{ section.settings.text }}</div>
-  {% endif %}
+<div
+  class="main-404 main-404--{{ section.settings.layout }} basic-page full-width color-{{ section.settings.color_scheme }}"
+  data-spacing="{{ section.settings.spacing }}"
+  style="--image-ratio: {% render 'image-ratio', ratio: section.settings.image_ratio %};"
+>
+  <div class="main-404__inner">
+    {% if layout == 'big_number' %}
+      <p class="main-404__number text-display" aria-hidden="true">404</p>
+    {% endif %}
 
-  <form action="{{ routes.search_url }}" method="get" role="search" class="main-404__search">
-    <label for="Search-{{ section.id }}" class="visually-hidden">{{ 'search.title' | t }}</label>
-    <input
-      id="Search-{{ section.id }}"
-      type="search"
-      name="q"
-      placeholder="{{ 'search.placeholder' | t }}"
-    >
-    <button type="submit" class="button">{{ 'search.submit' | t }}</button>
-  </form>
+    <div class="main-404__message">
+      {% if section.settings.heading != blank %}
+        <h1>{{ section.settings.heading }}</h1>
+      {% endif %}
 
-  {% if section.settings.button_label != blank %}
-    <a class="button" href="{{ routes.all_products_collection_url }}">
-      {{- section.settings.button_label | escape -}}
-    </a>
+      {% if section.settings.text != blank %}
+        <div class="basic-page__text rte">{{ section.settings.text }}</div>
+      {% endif %}
+
+      <form action="{{ routes.search_url }}" method="get" role="search" class="main-404__search">
+        <label for="Search-{{ section.id }}" class="visually-hidden">{{ 'search.title' | t }}</label>
+        <input
+          id="Search-{{ section.id }}"
+          type="search"
+          name="q"
+          placeholder="{{ 'search.placeholder' | t }}"
+        >
+        <button type="submit" class="button">{{ 'search.submit' | t }}</button>
+      </form>
+
+      {% if section.settings.button_label != blank %}
+        <a class="button" href="{{ routes.all_products_collection_url }}">
+          {{- section.settings.button_label | escape -}}
+        </a>
+      {% endif %}
+    </div>
+
+    {% if layout == 'split' %}
+      <div class="main-404__media">
+        {% if section.settings.image != blank %}
+          {{
+            section.settings.image
+            | image_url: width: 1500
+            | image_tag:
+              widths: '375, 550, 750, 1100, 1500',
+              sizes: '(min-width: 750px) 50vw, 100vw',
+              loading: loading,
+              fetchpriority: fetchpriority
+          }}
+        {% else %}
+          {{ 'image' | placeholder_svg_tag: 'placeholder main-404__placeholder' }}
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  {% if layout == 'suggestions' %}
+    {% assign suggestion = section.settings.collection %}
+    {% capture suggestions %}
+      {% if suggestion != blank and suggestion.products_count > 0 %}
+        <ul class="main-404__grid" role="list">
+          {% for product in suggestion.products limit: 4 %}
+            <li>
+              {% render 'product-card', product: product, collection: suggestion %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% elsif collections.size > 0 %}
+        <ul class="main-404__collections" role="list">
+          {% for collection in collections limit: 12 %}
+            <li>
+              <a href="{{ collection.url }}">{{ collection.title | escape }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endcapture %}
+
+    {% if suggestions != blank %}
+      <div class="main-404__suggestions">
+        {% if section.settings.suggestions_heading != blank %}
+          <h2 class="main-404__suggestions-title text-h4">{{ section.settings.suggestions_heading | escape }}</h2>
+        {% endif %}
+        {{ suggestions }}
+      </div>
+    {% endif %}
   {% endif %}
 </div>
 
 {% stylesheet %}
+  .main-404__inner {
+    display: grid;
+    align-items: center;
+    gap: var(--space-xl);
+  }
+
+  .main-404__message {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-lg);
+  }
+
+  .main-404--centered .main-404__message,
+  .main-404--suggestions .main-404__message {
+    align-items: center;
+    text-align: center;
+  }
+
   .main-404__search {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     gap: var(--space-xs);
     width: 100%;
     max-width: var(--width-narrow);
   }
 
+  .main-404--centered .main-404__search,
+  .main-404--suggestions .main-404__search {
+    justify-content: center;
+  }
+
   .main-404__search input {
     flex: 1 1 12rem;
+  }
+
+  .main-404__media {
+    overflow: hidden;
+    aspect-ratio: var(--image-ratio);
+    border-radius: var(--style-border-radius-media);
+  }
+
+  .main-404__media img,
+  .main-404__placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .main-404__number {
+    font-family: var(--font-heading--family);
+    font-style: var(--font-heading--style);
+    font-weight: var(--font-heading--weight);
+    letter-spacing: var(--font-heading--tracking);
+  }
+
+  .main-404__suggestions {
+    display: grid;
+    gap: var(--space-lg);
+    margin-block-start: var(--space-xl);
+  }
+
+  .main-404__suggestions-title {
+    text-align: center;
+  }
+
+  .main-404__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--grid-row-gap) var(--grid-gap);
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-404__collections {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: 0;
+    list-style: none;
+  }
+
+  .main-404__collections a {
+    display: flex;
+    align-items: center;
+    min-block-size: var(--target-size-min);
+    padding: var(--space-2xs) var(--space-sm);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--style-border-radius-badges);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  @media (min-width: 750px) {
+    .main-404--split .main-404__inner {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2xl);
+    }
+
+    .main-404--big_number .main-404__inner {
+      grid-template-columns: auto 1fr;
+      gap: var(--space-2xl);
+    }
+
+    .main-404__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
   }
 {% endstylesheet %}
 
@@ -55,6 +225,37 @@
       "id": "color_scheme",
       "label": "t:labels.color_scheme",
       "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "t:labels.layout",
+      "options": [
+        { "value": "centered", "label": "t:options.layout.centered" },
+        { "value": "split", "label": "t:options.layout.split" },
+        { "value": "suggestions", "label": "t:options.layout.suggestions" },
+        { "value": "big_number", "label": "t:options.layout.big_number" }
+      ],
+      "default": "centered"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "t:labels.image",
+      "visible_if": "{{ section.settings.layout == 'split' }}"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "t:labels.image_ratio",
+      "options": [
+        { "value": "card", "label": "t:options.image_ratio.card" },
+        { "value": "portrait", "label": "t:options.image_ratio.portrait" },
+        { "value": "square", "label": "t:options.image_ratio.square" },
+        { "value": "landscape", "label": "t:options.image_ratio.landscape" },
+        { "value": "natural", "label": "t:options.image_ratio.natural" }
+      ],
+      "default": "card"
     },
     {
       "type": "inline_richtext",
@@ -75,6 +276,19 @@
       "default": "Continue shopping"
     },
     {
+      "type": "collection",
+      "id": "collection",
+      "label": "t:labels.collection",
+      "info": "t:info.main_404_collection"
+    },
+    {
+      "type": "text",
+      "id": "suggestions_heading",
+      "label": "t:labels.suggestions_heading",
+      "default": "You might like",
+      "visible_if": "{{ section.settings.layout == 'suggestions' }}"
+    },
+    {
       "type": "select",
       "id": "spacing",
       "label": "t:labels.section_spacing",
@@ -90,6 +304,24 @@
   "presets": [
     {
       "name": "t:general.main_404"
+    },
+    {
+      "name": "t:general.main_404_split",
+      "settings": {
+        "layout": "split"
+      }
+    },
+    {
+      "name": "t:general.main_404_suggestions",
+      "settings": {
+        "layout": "suggestions"
+      }
+    },
+    {
+      "name": "t:general.main_404_big_number",
+      "settings": {
+        "layout": "big_number"
+      }
     }
   ]
 }

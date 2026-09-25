@@ -377,7 +377,18 @@ export const wireframes = {
     },
   },
   lookbook: { 't:general.lookbook': { wireframe: 'image@mr icon _ icon' } },
-  'main-404': { 't:general.main_404': { wireframe: 'center heading text input button' } },
+  'main-404': {
+    't:general.main_404': { wireframe: 'center heading text input button', description: 'Message, search and link centered in one column' },
+    't:general.main_404_split': {
+      wireframe: 'heading text input button | image',
+      description: 'Message and search on one side, an image on the other',
+    },
+    't:general.main_404_suggestions': {
+      wireframe: 'center heading text input / 1.5* image title x4',
+      description: 'Message and search, then a row of products',
+    },
+    't:general.main_404_big_number': { wireframe: 'display | heading text input button', description: 'A big 404 beside the message and search' },
+  },
   'main-article': { 't:general.main_article': { wireframe: '3* image / center heading line / 2* text text' } },
   'main-blog': { 't:general.main_blog': { wireframe: 'heading line / 3* image title line x3' } },
   'main-cart': { 't:general.main_cart': { wireframe: 'heading / 2* image | title line | line / 2* image | title line | line / button' } },
