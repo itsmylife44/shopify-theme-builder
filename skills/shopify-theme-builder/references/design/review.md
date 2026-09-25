@@ -26,12 +26,18 @@ It reads the Theme's files, prints one line per finding (`<file> <check>: <messa
 | `copy` | Filler words ("elevate", "curated", "seamless" …), vague headlines, "Welcome to", em dashes, in text written or left at its default | Rewrite the text for the shop (`PATCH` the section) |
 | `default-text` | A product-page block showing the catalog's default running text, like an example shipping or returns policy, as if it were the shop's | Write the shop's buying facts the Creator confirmed (`brief.md`, Buying facts), or clear the text |
 | `todo` | A to-do in text shoppers see: bracketed text ("[Da completare: …]"), TODO, TBD, lorem ipsum, "to be completed" | Write the fact the Creator confirmed, or remove the block, and list what's missing in the hand-off |
+| `hierarchy` | A Direction (a preset) whose display size is under 3× its body size: the timid hierarchy of `tells.md` | Raise `type_display_size` to at least 3× `type_body_size` (`PUT /api/directions/<name>`, or `PUT /api/style` for the chosen one); a deliberately flat scale stays only with its reason in `DIRECTION.md` |
+| `distinct` | Two Directions that differ in kind on fewer than 3 axes: type, color, shape, spacing, cards, media and motion from their style settings (a number counts when one is a quarter or more above the other, so 56px against 60px doesn't), composition when their homes open on different sections; or every Direction on `subtle` motion | Rewrite one of the two on the axes it shares with the other, in kind (`directions.md`), or give one Direction `expressive` motion when its thesis allows |
+| `strategy` | A Direction whose `Color:` line in `DIRECTION.md` is committed or full, with no section of its home on an accent scheme (one beyond `scheme-1` and `scheme-2`): the color owns no region, so the accents scatter | Put the sections the color owns on `scheme-3` (`PATCH` their `color_scheme`), or make the card's strategy match the Theme |
+| `centered-hero` | A hero with its `content_position` at `middle_center`, the hero preset's: the centered hero of `tells.md` | Set the position the home sketch gives it, like `bottom_left` (`PATCH`) |
+| `merchandise` | A home, the Theme's or a Direction's, with no featured collection, collection list or featured product among its first three sections: shoppers tell what a shop sells from the top of its home | Move one up, or add one pointing at a collection with products |
+| `h1` | A page, a Direction's home included, without exactly one h1 (WCAG 1.3.1), counting the h1 of each section and theme block (the main sections, the product title block) and the heading of a hero, slideshow or type banner when it opens the page | With none, open the page with a hero, slideshow or type banner; with more, remove the section that adds the second, or move it down |
 
 Fix each finding. A finding stays only when `DIRECTION.md` gives it a reason (the Creator pinned it, or a Rule asks for it): note it with that reason for the verdict.
 
 ## 2. Take the screenshots
 
-Screenshot three pages of the preview (`url` in `GET /api/preview`), each at 1440 and at 390 pixels wide, full page, six in all: the home page `<url>/`, a product `<url>/products/<handle>` and a collection `<url>/collections/<handle>`, with a product and a collection from `GET /api/store`. Save them outside the Theme folder.
+Screenshot three pages of the preview (`url` in `GET /api/preview`), each at 1440 and at 390 pixels wide, full page, six in all: the home page `<url>/`, a product `<url>/products/<handle>` and a collection `<url>/collections/<handle>`, with a product and a collection from `GET /api/store`. Then two hover captures of the home page at 1440: a product card and a button, since a full page shows neither state. Save them outside the Theme folder.
 
 Take them with the screenshot script, one per page and width:
 
@@ -40,7 +46,16 @@ node <skill-dir>/scripts/screenshot.mjs <page> <file>-1440.png --parts
 node <skill-dir>/scripts/screenshot.mjs <page> <file>-390.png --mobile --parts
 ```
 
-It drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. With `--parts` it also writes the page top to bottom in parts twice the viewport tall, `<file>-1440-1.png`, `<file>-1440-2.png`, …, and prints their paths (`--part-height <px>` sets another height). Don't crop or split the captures yourself. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
+And the two hover captures:
+
+```sh
+node <skill-dir>/scripts/screenshot.mjs <url>/ card-hover.png --hover .product-card
+node <skill-dir>/scripts/screenshot.mjs <url>/ button-hover.png --hover .button
+```
+
+`--hover <selector>` moves the mouse over the first visible element the selector matches, and captures the viewport around it instead of the full page; under reduced motion the state shows at once, without its transition.
+
+The script drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. With `--parts` it also writes the page top to bottom in parts twice the viewport tall, `<file>-1440-1.png`, `<file>-1440-2.png`, …, and prints their paths (`--part-height <px>` sets another height). Don't crop or split the captures yourself. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
 
 ## 3. Review them
 
@@ -48,7 +63,7 @@ Look at each screenshot: the full capture for the page's overall rhythm (the ord
 
 1. **The Direction.** Read `DIRECTION.md` again: does the page carry its thesis, and each line of the chosen card (type, color strategy, shape, spacing, cards, media, motion, the signature section)? Does it break a Rule?
 2. **The swap test.** Put another shop of the same category on it. Where the page would still work, name the part that is generic and what of this shop's world replaces it.
-3. **The tells.** Read `tells.md` against the screenshots: the Shopify formula, a centered hero, three identical cards, scattered accents, eyebrows everywhere.
+3. **The tells.** Read `tells.md` against the screenshots: the Shopify formula, a centered hero, three identical cards, scattered accents, eyebrows everywhere. In the hover captures, the card and the button each show a state that fits the Direction's motion (Motion in `tells.md`: no state at all, or the same lift on everything, is a finding).
 4. **The floor.** Read `quality-floor.md` line by line against the screenshots at both widths.
 
 ## 4. The verdict

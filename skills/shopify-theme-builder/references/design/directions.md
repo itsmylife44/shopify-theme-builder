@@ -29,7 +29,7 @@ A Direction decides each axis below. Three Directions must **differ on at least 
 - **Full**: three or four named colors, each with its own job.
 - **Drenched**: the page is the color.
 
-Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 in all, and map them onto schemes: `scheme-1` the main one, `scheme-2` its inverse, `scheme-3` the accent's section. Contrast stays at 4.5:1 for text and 3:1 for borders in every Direction. Choose light or dark from the shopper's scene, never from the category.
+Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 in all, and map them onto schemes: `scheme-1` the main one, `scheme-2` its inverse, `scheme-3` the accent's section. A Committed or Full Direction puts at least one section of its home on `scheme-3`: that's the region the color owns. Contrast stays at 4.5:1 for text and 3:1 for borders in every Direction. Choose light or dark from the shopper's scene, never from the category.
 
 **Type.** Pick the typefaces first; they carry the most character. Each font needs a reason from the brief that no other face in `<skill-dir>/studio/server/shopify-fonts.json` meets: "books earn a serif" or "tech earns a mono" is not a reason. The file's `families` is a list of `{ "family": "Archivo", "handles": ["archivo_n4", …] }`; `node -e "console.log(require('<skill-dir>/studio/server/shopify-fonts.json').families.map(f => f.family).join(', '))"` prints the family names. Build a real scale: premium themes pair a small body (14px) with a display 4 to 10 times larger; a flat scale (about 2×) reads as a catalog. Tracking follows weight and case: wide for light uppercase, tight for bold or large.
 
@@ -43,6 +43,8 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 
 `card_hover` (the second image or a zoom on hover) doesn't count: phones can't hover. `subtle` motion doesn't count either.
 
+**Selling from the top.** Shoppers tell what a shop sells from the top of its home, so a featured collection, a collection list or a featured product is among its first three sections. The hero's content sits where the sketch puts it, never `middle_center` (the hero preset's, the centered hero of `tells.md`), and the section that opens a page carries its one h1: a hero, slideshow or type banner does so only as the first section.
+
 **Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy (each section's `spacing`: `none` for a zero-gap gallery, `tight`, `theme` or `loose`, around the Theme's density), image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
 
 **Buying stays conventional.** Navigation, the product form, cart and checkout keep what shoppers expect in every Direction. The Direction speaks through type, color fields, imagery, composition and rhythm.
@@ -55,7 +57,7 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
    - **The swap test.** Put another shop's name on it, a shop in the same category. If it still works, it isn't this shop's Direction yet: find the part that is generic and derive it again.
    - **The default test.** Work through a similar brief in your head. Where you land on the same choice, it is the default: keep it only with a reason from this brief.
    - **The tells.** Read `tells.md` against every line.
-   - **Three axes.** Compare the three cards axis by axis; at least three axes differ in kind.
+   - **Three axes.** Compare the three cards axis by axis; at least three axes differ in kind. The checker's `distinct` finding (`review.md`) compares the written presets the same way.
    - **Movement and rhythm.** Each home sketch has a moving section (or `motion: expressive`), no two type-only sections next to each other and no three bands alike in a row; not all three Directions use `subtle` motion.
 4. **Write them** through the Studio (step 4 of SKILL.md), one at a time: `PUT /api/brand` with the Direction's colors and fonts, then `PUT /api/directions/<name>` with its style settings and home template. Write the brief and the three cards to `<theme>/DIRECTION.md`, in the order the Studio lists the Directions. Then `PUT /api/directions/current` to show the first.
 5. **Hand the choice to the Creator** in the Studio's Directions tab. Explain each in one line (its thesis), and let them switch and choose. Don't choose for them. When they want a mix ("the type of one, the colors of another"), rewrite a Direction with the mix and check it again.

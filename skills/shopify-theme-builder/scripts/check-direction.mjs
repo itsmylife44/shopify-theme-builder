@@ -58,16 +58,25 @@ export function checkDirection(theme) {
   const groups = readPages(theme, 'sections', (name) => name.endsWith('-group.json'))
   const pages = readPages(theme, 'templates', (name) => name.endsWith('.json'))
   const home = pages.filter((page) => page.file === 'templates/index.json')
-  // The home page, and each Direction's home, with the settings of the Direction's preset.
-  const homes = [
-    ...home.map((page) => ({ page, values: settings.values })),
-    ...listFiles(theme, 'listings', () => true).flatMap((dir) =>
-      readPages(theme, `${dir}/templates`, (name) => name === 'index.json').map((page) => ({ page, values: settings.listings[path.basename(dir)] ?? settings.values })),
-    ),
-  ]
+  const direction = existsSync(path.join(theme, directionFile)) ? readFileSync(path.join(theme, directionFile), 'utf8') : ''
+  // The home page, and each Direction's home, with the settings of the Direction's preset and its name.
+  const listed = listFiles(theme, 'listings', () => true).flatMap((dir) =>
+    readPages(theme, `${dir}/templates`, (name) => name === 'index.json').map((page) => {
+      const preset = Object.keys(settings.presets).find((name) => listingName(name) === path.basename(dir))
+      return { page, values: preset ? settings.presets[preset] : settings.values, name: preset ?? path.basename(dir) }
+    }),
+  )
+  const homes = [...home.map((page) => ({ page, values: settings.values, name: chosen(direction, settings.preset) })), ...listed]
+  // Every page the Theme shows: its templates, and each Direction's home.
+  const shown = [...pages, ...listed.map(({ page }) => page)]
+  // Each look the Theme ships: its presets (the Directions), or its current settings when it has none.
+  /** @type {[string, Record<string, any>][]} */
+  const looks = Object.keys(settings.presets).length > 0 ? Object.entries(settings.presets) : [['The Theme', settings.values]]
   return [
     ...checkContrast(settings),
     ...checkFonts(theme, settings),
+    ...looks.flatMap(([name, values]) => checkHierarchy(name, values)),
+    ...checkDistinct(settings.presets, listed),
     ...checkRadii(theme),
     ...pages.flatMap(checkRepeats),
     ...pages.flatMap(checkCallsToAction),
@@ -75,8 +84,11 @@ export function checkDirection(theme) {
     ...pages.flatMap((page) => checkRatios(theme, settings, page)),
     ...home.flatMap(checkPlaceholders),
     ...homes.flatMap(({ page, values }) => checkHome(values, page)),
+    ...homes.flatMap(({ page, name }) => checkStrategy(directionPart(direction, name), page)),
     ...[...groups, ...pages].flatMap(checkCopy),
     ...pages.filter((page) => /^templates\/product(\.|$)/.test(page.file)).flatMap(checkDefaultText),
+    ...shown.flatMap(checkCenteredHero),
+    ...shown.flatMap((page) => checkH1(theme, page)),
   ]
 }
 
@@ -318,14 +330,18 @@ const movingSections = {
 }
 // The sections that show only type when no image setting is set.
 const typeOnlySections = ['rich-text', 'type-banner', 'newsletter', 'spec-tiles']
+// The sections that show the catalog: what a shopper infers the shop sells from.
+const merchandiseSections = ['featured-collection', 'collection-list', 'featured-product']
 
 /**
- * A home page where nothing moves, of fewer than 6 sections, or with type-only sections next to each other.
+ * A home page where nothing moves, of fewer than 6 sections, with type-only sections next to each other, or with no
+ * products or collections in its first three sections.
  * @param {Record<string, any>} values the global settings the home shows with
  * @param {Page} page
  * @returns {Finding[]}
  */
 function checkHome(values, { file, sections }) {
+  const first = sections.slice(0, 3)
   const moves = values.motion === 'expressive' || sections.some((section) => movingSections[section.type]?.(section.settings))
   // The runs of type-only sections next to each other.
   /** @type {Section[][]} */
@@ -350,6 +366,89 @@ function checkHome(values, { file, sections }) {
       .map((run) =>
         finding('type-only', file, `${run.map((section) => section.id).join(', ')}: type-only sections in a row. Put an image-led section between them, or set an image.`),
       ),
+    ...(first.length > 0 && !first.some((section) => merchandiseSections.includes(section.type))
+      ? [
+          finding(
+            'merchandise',
+            file,
+            `${first.map((section) => section.id).join(', ')}: no featured collection, collection list or featured product in the first three sections, so shoppers see nothing to buy. Move one up, or add one.`,
+          ),
+        ]
+      : []),
+  ]
+}
+
+/**
+ * A hero with its content in the middle center: the centered hero of tells.md.
+ * @param {Page} page
+ * @returns {Finding[]}
+ */
+function checkCenteredHero({ file, sections }) {
+  return sections
+    .filter((section) => section.type === 'hero' && section.settings.content_position === 'middle_center')
+    .map((section) =>
+      finding(
+        'centered-hero',
+        file,
+        `${section.id}: content_position is middle_center, the centered hero of every template. Place the content where the Direction's home sketch puts it, like bottom_left.`,
+      ),
+    )
+}
+
+// The main color scheme and its inverse; a section on any other is on an accent's.
+const mainSchemes = ['scheme-1', 'scheme-2']
+
+/**
+ * A home of a Committed or Full Direction with no section on an accent scheme: the color doesn't own a region, so the
+ * accents scatter (tells.md).
+ * @param {string | undefined} part the Direction's part of DIRECTION.md
+ * @param {Page} page its home
+ * @returns {Finding[]}
+ */
+function checkStrategy(part, { file, sections }) {
+  const strategy = part?.match(/^- Color: *(committed|full)\b/im)?.[1].toLowerCase()
+  if (!part || !strategy || sections.some((section) => section.settings.color_scheme && !mainSchemes.includes(section.settings.color_scheme))) return []
+  const name = part.split('\n')[0].trim()
+  return [
+    finding('strategy', file, `${name}'s color strategy is ${strategy}, but no section of its home is on an accent scheme: put the sections the color owns on scheme-3.`),
+  ]
+}
+
+// An h1 tag in a section's or block's Liquid, and the heading tag a hero, slideshow or type banner makes an h1 when
+// it's the page's first section.
+const h1 = /<h1[\s>]/g
+const firstH1 = /assign heading_tag = 'h1'/
+
+/**
+ * A page without exactly one h1 (WCAG 1.3.1): each section counts the h1 tags in its Liquid and in its theme blocks'
+ * (like the product title), and the first section the one it makes of its heading.
+ * @param {string} theme
+ * @param {Page} page
+ * @returns {Finding[]}
+ */
+function checkH1(theme, { file, sections }) {
+  /** @param {'sections' | 'blocks'} dir @param {string} type */
+  const source = (dir, type) => {
+    const liquid = path.join(theme, dir, `${type}.liquid`)
+    return existsSync(liquid) ? readFileSync(liquid, 'utf8') : ''
+  }
+  // ponytail: counts tags in the source, not the rendered page; an h1 in a snippet or behind a setting isn't seen.
+  const counts = sections.map((section, index) => {
+    const text = source('sections', section.type)
+    const count =
+      (text.match(h1)?.length ?? 0) +
+      (index === 0 && firstH1.test(text) ? 1 : 0) +
+      section.blocks.reduce((sum, block) => sum + (source('blocks', block.type).match(h1)?.length ?? 0), 0)
+    return { id: section.id, count }
+  })
+  const total = counts.reduce((sum, { count }) => sum + count, 0)
+  if (total === 1) return []
+  if (total === 0) {
+    return [finding('h1', file, 'No h1: a page has exactly one, its main heading. Open the page with a hero, slideshow or type banner, whose heading is then the h1.')]
+  }
+  const ids = counts.flatMap(({ id, count }) => (count > 0 ? [id] : [])).join(', ')
+  return [
+    finding('h1', file, `${total} h1 headings (${ids}): a page has exactly one, its main heading. Keep one: a hero, slideshow or type banner has one only as the first section.`),
   ]
 }
 
@@ -382,11 +481,87 @@ function owners(section) {
 }
 
 /**
+ * A display under three times the body: the timid hierarchy of tells.md.
+ * @param {string} name the preset's name
+ * @param {Record<string, any>} values
+ * @returns {Finding[]}
+ */
+function checkHierarchy(name, { type_display_size: display, type_body_size: body }) {
+  if (!display || !body || display >= 3 * body) return []
+  // Rounded down, so a failing ratio never shows as 3×.
+  const shown = Math.floor((display / body) * 10) / 10
+  return [
+    finding(
+      'hierarchy',
+      settingsData,
+      `${name}: the display (${display}px) is ${shown}× the body (${body}px). Set type_display_size to ${3 * body} or more (the best themes run 4× to 13×), or give the flat scale a reason in DIRECTION.md.`,
+    ),
+  ]
+}
+
+// The axes of directions.md the checker can read, by the style settings that decide them; composition is the home's
+// opening section, and the signature isn't a setting.
+/** @type {Record<string, RegExp>} */
+const axes = {
+  type: /^type_/,
+  color: /^color_schemes$/,
+  shape: /^(shape_family|border_width|button_)/,
+  spacing: /^(density|page_width)$/,
+  cards: /^card_/,
+  media: /^media_/,
+  motion: /^motion$/,
+}
+
+/**
+ * Two Directions (presets) that differ in kind on fewer than three axes, and Directions that all use subtle motion. A
+ * number differs in kind by a quarter or more (56px against 60px is one step); a choice, by any change.
+ * @param {Record<string, Record<string, any>>} presets
+ * @param {{ page: Page, name: string }[]} listed each Direction's home
+ * @returns {Finding[]}
+ */
+function checkDistinct(presets, listed) {
+  const names = Object.keys(presets)
+  /** @param {any} a @param {any} b */
+  const differ = (a, b) => (typeof a === 'number' && typeof b === 'number' ? Math.max(a, b) >= 1.25 * Math.min(a, b) : JSON.stringify(a) !== JSON.stringify(b))
+  /** @param {string} name */
+  const opening = (name) => listed.find((home) => home.name === name)?.page.sections[0]?.type
+  const pairs = names.flatMap((a, index) =>
+    names.slice(index + 1).flatMap((b) => {
+      const ids = [...new Set([...Object.keys(presets[a]), ...Object.keys(presets[b])])]
+      const differing = Object.keys(axes).filter((axis) => ids.some((id) => axes[axis].test(id) && differ(presets[a][id], presets[b][id])))
+      if (opening(a) && opening(b) && opening(a) !== opening(b)) differing.push('composition')
+      if (differing.length >= 3) return []
+      const count = `${differing.length} ${differing.length === 1 ? 'axis' : 'axes'}${differing.length ? ` (${differing.join(', ')})` : ''}`
+      return [
+        finding(
+          'distinct',
+          settingsData,
+          `${a} and ${b} differ on ${count}: make them differ in kind on at least 3 of type, color, shape, spacing, cards, media, motion and composition.`,
+        ),
+      ]
+    }),
+  )
+  const subtle = names.length > 1 && names.every((name) => presets[name].motion === 'subtle')
+  return [
+    ...pairs,
+    ...(subtle ? [finding('distinct', settingsData, 'Every Direction uses subtle motion: give at least one expressive motion, when its thesis allows.')] : []),
+  ]
+}
+
+/**
+ * The folder a preset's home lives in, `listings/<name>/`, as the Studio names it.
+ * @param {string} preset
+ */
+function listingName(preset) {
+  return preset.toLowerCase().replace(' ', '-')
+}
+
+/**
  * The global settings that apply, resolving a preset name the way Shopify does, over their schema defaults; the
  * color schemes' default colors; the name of the preset the Theme shows, when it shows one; and each preset's
- * settings by its listings/ folder, as the Studio names it.
+ * settings over the schema defaults, by its name.
  * @param {string} theme
- * @returns {{ values: Record<string, any>, schemeDefaults: Record<string, string>, preset: string | undefined, listings: Record<string, Record<string, any>> }}
+ * @returns {{ values: Record<string, any>, schemeDefaults: Record<string, string>, preset: string | undefined, presets: Record<string, Record<string, any>> }}
  */
 function readSettings(theme) {
   const data = readJSON(theme, settingsData)
@@ -401,10 +576,26 @@ function readSettings(theme) {
       if (setting.id === 'color_schemes') schemeDefaults = defaults(setting.definition)
     }
   }
-  const listings = Object.fromEntries(
-    Object.entries(data.presets ?? {}).map(([name, presetValues]) => [name.toLowerCase().replace(' ', '-'), { ...values, ...presetValues }]),
-  )
-  return { values: { ...values, ...(preset ? data.presets?.[preset] : data.current) }, schemeDefaults, preset, listings }
+  const presets = Object.fromEntries(Object.entries(data.presets ?? {}).map(([name, presetValues]) => [name, { ...values, ...presetValues }]))
+  return { values: { ...values, ...(preset ? data.presets?.[preset] : data.current) }, schemeDefaults, preset, presets }
+}
+
+/**
+ * The Direction DIRECTION.md's `Chosen:` line names, or else the preset the Theme shows.
+ * @param {string} text DIRECTION.md
+ * @param {string | undefined} preset
+ */
+function chosen(text, preset) {
+  return text.match(/^Chosen: *(.*?) *$/m)?.[1] ?? preset
+}
+
+/**
+ * The `## <name>` part of DIRECTION.md, its heading line first, for a Direction's name or its listings/ folder.
+ * @param {string} text DIRECTION.md
+ * @param {string | undefined} name
+ */
+function directionPart(text, name) {
+  return text.split(/^## /m).find((other) => name && listingName(other.split('\n')[0].trim()) === listingName(name))
 }
 
 const fontRoles = /** @type {const} */ ([
@@ -426,8 +617,7 @@ function checkFonts(theme, { values, preset }) {
     return [finding('fonts', directionFile, 'The Theme has no DIRECTION.md, so no font has a reason: write it as references/design/directions.md says.')]
   }
   const text = readFileSync(file, 'utf8')
-  const name = text.match(/^Chosen: *(.*?) *$/m)?.[1] ?? preset
-  const part = text.split(/^## /m).find((other) => name && other.split('\n')[0].trim().toLowerCase() === name.toLowerCase())
+  const part = directionPart(text, chosen(text, preset))
   const clauses = (part ?? text).split(/[;\n]/).filter((clause) => /\bbecause\b/i.test(clause))
   const where = part ? `under ## ${part.split('\n')[0].trim()}` : 'in DIRECTION.md'
   const fonts = groupBy(

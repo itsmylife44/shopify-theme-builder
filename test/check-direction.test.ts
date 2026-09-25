@@ -73,7 +73,10 @@ function sampleTheme() {
     order: ['hero', 'rows', 'story', 'note', 'ticker', 'specs'],
   })
   writeJSON(theme, 'templates/product.json', {
-    sections: { main: { type: 'main-product', settings: {} }, related: { type: 'related-products', settings: { heading: 'From the same grove' } } },
+    sections: {
+      main: { type: 'main-product', settings: {}, blocks: { title: { type: '_product-title', settings: {} } } },
+      related: { type: 'related-products', settings: { heading: 'From the same grove' } },
+    },
     order: ['main', 'related'],
   })
   writeJSON(theme, 'templates/collection.json', { sections: { main: { type: 'main-collection', settings: {} } }, order: ['main'] })
@@ -188,6 +191,7 @@ describe('check-direction', () => {
     const theme = sampleTheme()
     setTemplate(theme, 'templates/product.json', (template) => {
       template.sections.main.blocks = {
+        ...template.sections.main.blocks,
         shipping: { type: 'collapsible-content', settings: { heading: 'Spedizione e resi', source: 'text', text: '<p>[Da completare: tempi di spedizione e condizioni di reso.]</p>' } },
       }
     })
@@ -223,6 +227,7 @@ describe('check-direction', () => {
     writeFileSync(note, readFileSync(note, 'utf8').replace(/("id": "text",[\s\S]*?"info": "[^"]*")/, '$1,\n      "default": "<p>Returns accepted within 30 days.</p>"'))
     setTemplate(theme, 'templates/product.json', (template) => {
       template.sections.main.blocks = {
+        ...template.sections.main.blocks,
         note: { type: 'shipping-note', settings: {} },
         copied: { type: 'shipping-note', settings: { text: '<p>Returns accepted within 30 days.</p>' } },
         written: { type: 'shipping-note', settings: { text: '<p>Ships from Andria in 2 days.</p>' } },
@@ -467,6 +472,152 @@ describe('check-direction', () => {
     expect(typeOnly().map((finding) => finding.message)).toEqual([
       'note, specs: type-only sections in a row. Put an image-led section between them, or set an image.',
     ])
+  })
+
+  it('reports a Direction whose display size is under three times the body', () => {
+    const theme = sampleTheme()
+    setSettings(theme, (settings) => {
+      settings.type_body_size = 18
+      settings.type_display_size = 52
+    })
+    expect(checkDirection(theme)).toEqual([
+      {
+        check: 'hierarchy',
+        file: 'config/settings_data.json',
+        message: 'Press Cloth: the display (52px) is 2.8× the body (18px). Set type_display_size to 54 or more (the best themes run 4× to 13×), or give the flat scale a reason in DIRECTION.md.',
+      },
+    ])
+
+    setSettings(theme, (settings) => {
+      settings.type_display_size = 54
+    })
+    expect(checkDirection(theme)).toEqual([])
+  })
+
+  it("reports a hero with its content centered, the template's default hero", () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.hero.settings.content_position = 'middle_center'
+    })
+    expect(checkDirection(theme)).toEqual([
+      {
+        check: 'centered-hero',
+        file: 'templates/index.json',
+        message: "hero: content_position is middle_center, the centered hero of every template. Place the content where the Direction's home sketch puts it, like bottom_left.",
+      },
+    ])
+
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.hero.settings.content_position = 'bottom_left'
+    })
+    expect(checkDirection(theme)).toEqual([])
+  })
+
+  it('reports a home with no featured collection, collection list or featured product in its first three sections', () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.order = ['hero', 'story', 'note', 'rows', 'ticker', 'specs']
+    })
+    expect(checkDirection(theme)).toEqual([
+      {
+        check: 'merchandise',
+        file: 'templates/index.json',
+        message:
+          'hero, story, note: no featured collection, collection list or featured product in the first three sections, so shoppers see nothing to buy. Move one up, or add one.',
+      },
+    ])
+
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.rows = { type: 'collection-list', settings: { heading: 'By harvest' } }
+      template.order = ['hero', 'story', 'rows', 'note', 'ticker', 'specs']
+    })
+    expect(checkDirection(theme)).toEqual([])
+  })
+
+  it('reports a page without exactly one h1: a first hero, slideshow or type banner, a main section or a title block has one', () => {
+    const theme = sampleTheme()
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.order = ['rows', 'hero', 'story', 'note', 'ticker', 'specs']
+    })
+    setTemplate(theme, 'templates/product.json', (template) => {
+      template.sections.banner = { type: 'type-banner', settings: { heading: 'Pressed the day it was picked' } }
+      template.order.unshift('banner')
+    })
+    expect(checkDirection(theme)).toEqual([
+      {
+        check: 'h1',
+        file: 'templates/index.json',
+        message: 'No h1: a page has exactly one, its main heading. Open the page with a hero, slideshow or type banner, whose heading is then the h1.',
+      },
+      {
+        check: 'h1',
+        file: 'templates/product.json',
+        message: '2 h1 headings (banner, main): a page has exactly one, its main heading. Keep one: a hero, slideshow or type banner has one only as the first section.',
+      },
+    ])
+  })
+
+  it('reports a Committed or Full Direction whose home puts no section on the accent scheme', () => {
+    const theme = sampleTheme()
+    writeFileSync(
+      path.join(theme, 'DIRECTION.md'),
+      direction.replace('- Color: restrained', '- Color: committed; olive green owns whole sections').replace('## Harvest Date\n', '## Harvest Date\n\n- Color: Full; four harvest colors\n'),
+    )
+    mkdirSync(path.join(theme, 'listings/harvest-date/templates'), { recursive: true })
+    writeJSON(theme, 'listings/harvest-date/templates/index.json', readJSON(theme, 'templates/index.json'))
+    const strategy = () => checkDirection(theme).filter((finding) => finding.check === 'strategy')
+    const message = (name: string, color: string) =>
+      `${name}'s color strategy is ${color}, but no section of its home is on an accent scheme: put the sections the color owns on scheme-3.`
+    expect(strategy()).toEqual([
+      { check: 'strategy', file: 'templates/index.json', message: message('Press Cloth', 'committed') },
+      { check: 'strategy', file: 'listings/harvest-date/templates/index.json', message: message('Harvest Date', 'full') },
+    ])
+
+    setTemplate(theme, 'templates/index.json', (template) => {
+      template.sections.note.settings.color_scheme = 'scheme-3'
+    })
+    expect(strategy().map((finding) => finding.file)).toEqual(['listings/harvest-date/templates/index.json'])
+  })
+
+  it('reports two Directions that differ in kind on fewer than three axes, and Directions that all use subtle motion', () => {
+    const theme = sampleTheme()
+    const setPresets = (change: (presets: Record<string, any>) => void) => {
+      const data = readJSON(theme, 'config/settings_data.json')
+      change(data.presets)
+      writeJSON(theme, 'config/settings_data.json', data)
+    }
+    // A display of 60px against 56px is a step, not a difference in kind.
+    setPresets((presets) => {
+      presets['Harvest Date'] = { ...presets['Press Cloth'], shape_family: 'square', type_display_size: 60 }
+    })
+    const distinct = () => checkDirection(theme).filter((finding) => finding.check === 'distinct')
+    expect(distinct()).toEqual([
+      {
+        check: 'distinct',
+        file: 'config/settings_data.json',
+        message: 'Press Cloth and Harvest Date differ on 1 axis (shape): make them differ in kind on at least 3 of type, color, shape, spacing, cards, media, motion and composition.',
+      },
+      {
+        check: 'distinct',
+        file: 'config/settings_data.json',
+        message: 'Every Direction uses subtle motion: give at least one expressive motion, when its thesis allows.',
+      },
+    ])
+
+    setPresets((presets) => {
+      Object.assign(presets['Harvest Date'], { motion: 'expressive', density: 'airy' })
+    })
+    expect(distinct()).toEqual([])
+
+    // Homes that open on different sections differ in composition.
+    setPresets((presets) => {
+      delete presets['Harvest Date'].density
+    })
+    const home = readJSON(theme, 'templates/index.json')
+    for (const name of ['press-cloth', 'harvest-date']) mkdirSync(path.join(theme, `listings/${name}/templates`), { recursive: true })
+    writeJSON(theme, 'listings/press-cloth/templates/index.json', home)
+    writeJSON(theme, 'listings/harvest-date/templates/index.json', { ...home, order: ['rows', 'hero', 'story', 'note', 'ticker', 'specs'] })
+    expect(distinct()).toEqual([])
   })
 
   it('prints one line per finding and exits 1 when there is any, 0 when there is none', () => {
