@@ -23,6 +23,7 @@
 - Media: <full-bleed or framed>; <tint, or none>; <what the photos show>
 - Motion: <none, subtle or expressive>, because <reason>; <what moves on the home, on a phone too>
 - Signature: <the one memorable element, and the catalog section that carries it>
+- Footer: <the footer layout>, because <reason from the thesis>
 - Rejects: <what this Direction refuses, in its own terms>
 
 ### Home

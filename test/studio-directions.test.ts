@@ -322,7 +322,7 @@ describe('Studio API: Directions', () => {
     expect(quiet).toMatchObject({ name: 'Quiet', chosen: true })
     expect(quiet.thesis).toMatch(/^<Thesis/)
     // One line per axis of the card, in its order.
-    expect(quiet.choices.map((choice: string) => choice.split(':')[0])).toEqual(['Type', 'Color', 'Shape', 'Spacing', 'Cards', 'Media', 'Motion', 'Signature', 'Rejects'])
+    expect(quiet.choices.map((choice: string) => choice.split(':')[0])).toEqual(['Type', 'Color', 'Shape', 'Spacing', 'Cards', 'Media', 'Motion', 'Signature', 'Footer', 'Rejects'])
     expect(readFileSync(path.join(theme, 'DIRECTION.md'), 'utf8')).toMatch(/^# .+\n\nChosen: Quiet\n\n/)
   })
 
