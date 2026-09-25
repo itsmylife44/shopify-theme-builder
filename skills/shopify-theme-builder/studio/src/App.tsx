@@ -935,8 +935,6 @@ function Inspector({
     )
   }
 
-  const schemes = Object.keys(state.brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
-
   function move(offset: number) {
     const order = sections.map((section) => section.id)
     ;[order[index], order[index + offset]] = [order[index + offset], order[index]]
@@ -979,6 +977,7 @@ function Inspector({
         setting={setting}
         value={live.value(field, setting.value)}
         store={store}
+        brand={state.brand}
         error={live.error(field)}
         onChange={(next, delay) => live.change(field, next, (value) => [url, patch(value)], delay)}
         onFlush={() => live.flush(field)}
@@ -992,27 +991,13 @@ function Inspector({
         {details.colorScheme !== undefined ? (
           <Field>
             <FieldLabel htmlFor="section-color-scheme">Color scheme</FieldLabel>
-            <Select
-              items={schemes}
+            <SchemePicker
+              id="section-color-scheme"
+              brand={state.brand}
               value={details.colorScheme}
               disabled={saving}
-              onValueChange={(colorScheme) => colorScheme && write(url, jsonRequest('PATCH', { colorScheme }))}
-            >
-              <SelectTrigger id="section-color-scheme" className="w-full">
-                <SchemeSwatch brand={state.brand} scheme={details.colorScheme ?? ''} />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {schemes.map((scheme) => (
-                    <SelectItem key={scheme.value} value={scheme.value}>
-                      <SchemeSwatch brand={state.brand} scheme={scheme.value} />
-                      {scheme.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              onChange={(colorScheme) => write(url, jsonRequest('PATCH', { colorScheme }))}
+            />
           </Field>
         ) : null}
         <MediaSettings media={details.media} editor={editor} />
@@ -1144,6 +1129,7 @@ function SettingField({
   setting,
   value,
   store,
+  brand,
   error,
   onChange,
   onFlush,
@@ -1153,6 +1139,8 @@ function SettingField({
   value: Value
   /** The store's resources, for a setting that picks one. */
   store?: StoreResources | { error: string } | null
+  /** The Brand, for a setting that picks one of its color schemes. */
+  brand?: Brand
   /** Why the Studio refused the latest edit. */
   error?: string
   onChange: (value: Value, delay?: number) => void
@@ -1191,6 +1179,8 @@ function SettingField({
         </span>
       </div>
     )
+  } else if (setting.type === 'color_scheme' && brand) {
+    control = <SchemePicker id={id} brand={brand} value={value as string} onChange={change} />
   } else if (setting.options) {
     control = (
       <Select items={setting.options} value={value as string} onValueChange={(next) => next !== null && change(next)}>
@@ -1440,6 +1430,41 @@ function InspectorFrame({ title, onClose, children }: { title: string; onClose: 
       </div>
       {children}
     </section>
+  )
+}
+
+/** Picks one of the Brand's color schemes, each shown with its swatch. */
+function SchemePicker({
+  id,
+  brand,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string
+  brand: Brand
+  value: string | null
+  disabled?: boolean
+  onChange: (scheme: string) => void
+}) {
+  const schemes = Object.keys(brand.colorSchemes).map((scheme) => ({ value: scheme, label: scheme }))
+  return (
+    <Select items={schemes} value={value} disabled={disabled} onValueChange={(scheme) => scheme && onChange(scheme)}>
+      <SelectTrigger id={id} className="w-full">
+        <SchemeSwatch brand={brand} scheme={value ?? ''} />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {schemes.map((scheme) => (
+            <SelectItem key={scheme.value} value={scheme.value}>
+              <SchemeSwatch brand={brand} scheme={scheme.value} />
+              {scheme.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   )
 }
 
