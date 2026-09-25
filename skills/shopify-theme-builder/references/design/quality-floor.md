@@ -36,6 +36,7 @@ The floor is what every Theme meets, whatever its Direction: the rules shoppers 
 - The menu opens with the keyboard, and the focus ring shows on every control.
 - Every input, select and textarea has an `id` and a `<label for>` it, visually hidden (`visually-hidden`) where the design shows none, never only a placeholder or an `aria-label`; an email field takes `autocomplete="email"` (the newsletter forms).
 - No select submits or navigates on change, which an arrow key would trigger (WCAG F37): the country and language selectors open a list whose every choice is a button.
+- Content a script swaps is announced (WCAG 4.1.3): a visually hidden `role="status"` region says the new price and availability after a variant change, and "Cart updated, subtotal X" after a cart change.
 - Anything that moves or changes on its own (the announcement bar's rotation, a slideshow on autoplay, a marquee) has a pause button, not only a pause on hover.
 
 ## Content

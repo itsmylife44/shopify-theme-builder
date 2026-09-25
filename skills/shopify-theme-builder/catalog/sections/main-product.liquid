@@ -12,6 +12,21 @@
     assign zoom = true
   endif
   assign image_index = 0
+  assign price = current_variant.price
+  assign allocation = current_variant.selected_selling_plan_allocation
+  if product.requires_selling_plan and allocation == nil
+    assign allocation = current_variant.selling_plan_allocations.first
+  endif
+  if allocation
+    assign price = allocation.price
+  endif
+  assign variant_price = price | money | strip_html
+  if current_variant.available
+    assign availability = 'product.in_stock' | t
+  else
+    assign availability = 'product.sold_out' | t
+  endif
+  assign variant_status = 'product.variant_status' | t: price: variant_price, availability: availability
 %}
 
 {% if models != empty %}
@@ -24,6 +39,7 @@
     class="main-product__inner"
     data-url="{{ product.url }}"
     data-section="{{ section.id }}"
+    data-status="{{ variant_status }}"
   >
     <media-gallery class="main-product__gallery">
       <ul class="main-product__media" role="list" tabindex="0" aria-label="{{ 'product.media' | t }}">
@@ -159,19 +175,9 @@
     </div>
 
     {% if section.settings.sticky_buy_bar %}
-      {% liquid
-        assign bar_price = current_variant.price
-        assign bar_allocation = current_variant.selected_selling_plan_allocation
-        if product.requires_selling_plan and bar_allocation == nil
-          assign bar_allocation = current_variant.selling_plan_allocations.first
-        endif
-        if bar_allocation
-          assign bar_price = bar_allocation.price
-        endif
-      %}
       <sticky-buy-bar class="main-product__buy-bar" data-form="product-form-{{ section.id }}">
         <p class="main-product__buy-bar-title">{{ product.title | escape }}</p>
-        <span class="main-product__buy-bar-price price">{{ bar_price | money }}</span>
+        <span class="main-product__buy-bar-price price">{{ price | money }}</span>
         <button
           type="submit"
           form="product-form-{{ section.id }}"
@@ -189,6 +195,7 @@
       </sticky-buy-bar>
     {% endif %}
   </product-info>
+  <p class="main-product__status visually-hidden" role="status"></p>
 </div>
 
 {% javascript %}
@@ -239,6 +246,8 @@
       const focused = event.target.id;
       const recipient = this.querySelector('.buy-buttons__recipient');
       this.replaceChildren(...fresh.childNodes);
+      const status = this.parentElement.querySelector('.main-product__status');
+      status.textContent = fresh.dataset.status;
       if (recipient) this.querySelector('.buy-buttons__recipient')?.replaceWith(recipient);
       const quantityInput = this.querySelector('input[name="quantity"]');
       if (quantityInput && quantity) quantityInput.value = quantity;

@@ -1,5 +1,6 @@
 {% comment %}The cart page's items, discounts, free-shipping progress, order note, checkout and accelerated checkout buttons.{% endcomment %}
-<div class="main-cart basic-page full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}">
+{% assign subtotal = cart.total_price | money_with_currency | strip_html %}
+<div class="main-cart basic-page full-width color-{{ section.settings.color_scheme }}" data-spacing="{{ section.settings.spacing }}" data-status="{{ 'cart.updated' | t: subtotal: subtotal }}">
   <h1>{{ 'cart.title' | t }}</h1>
 
   {% if cart.item_count > 0 %}
