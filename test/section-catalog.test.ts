@@ -2242,6 +2242,86 @@ describe('Logo list', () => {
   })
 })
 
+describe('Call to action', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/call-to-action.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('is a catalog section for the home and other pages, with a heading, a text and a color scheme', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="call-to-action call-to-action--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(settings.text.type).toBe('richtext')
+    expect(source).toContain('<h2 class="call-to-action__heading">{{ section.settings.heading }}</h2>')
+    expect(source).toContain('<div class="call-to-action__text rte">{{ section.settings.text }}</div>')
+    expect(schema.enabled_on).toEqual({ templates: ['index', 'page'] })
+  })
+
+  it('lays it out as a centered band by default, split with an image, over an image, or in one row', () => {
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'centered' })
+    expect(settings.layout.options).toEqual([
+      { value: 'centered', label: 't:options.layout.centered' },
+      { value: 'split', label: 't:options.layout.split' },
+      { value: 'over_image', label: 't:options.layout.over_image' },
+      { value: 'inline', label: 't:options.layout.inline' },
+    ])
+    expect(css).toMatch(/\.call-to-action--centered \.call-to-action__content,[^{]*{[^}]*align-items: center;[^}]*text-align: center;/)
+    expect(desktop).toMatch(/\.call-to-action--split \.call-to-action__inner {[^}]*grid-template-columns: 1fr 1fr;/)
+    // The inline row keeps the heading on the start side and the buttons on the end side, stacked on mobile.
+    expect(css).toMatch(/\.call-to-action__content {[^}]*flex-direction: column;/)
+    expect(desktop).toMatch(/\.call-to-action--inline \.call-to-action__content {[^}]*flex-direction: row;[^}]*justify-content: space-between;/)
+  })
+
+  it('shows a primary button and, when filled, a secondary one beside it', () => {
+    expect(settings.button_label).toMatchObject({ type: 'text', label: 't:labels.button_label' })
+    expect(settings.button_label_2).toEqual({ type: 'text', id: 'button_label_2', label: 't:labels.button_label_2' })
+    expect(settings.button_link_2).toEqual({ type: 'url', id: 'button_link_2', label: 't:labels.button_link_2' })
+    expect(source).toMatch(/class="button"\s+href="{{ section\.settings\.button_link/)
+    expect(source).toContain('{% if section.settings.button_label_2 != blank %}')
+    expect(source).toMatch(/class="button--secondary"\s+href="{{ section\.settings\.button_link_2/)
+  })
+
+  it('shows an image only beside or behind the text, a placeholder until one is picked', () => {
+    expect(settings.image).toEqual({
+      type: 'image_picker',
+      id: 'image',
+      label: 't:labels.image',
+      visible_if: "{{ section.settings.layout == 'split' or section.settings.layout == 'over_image' }}",
+    })
+    expect(source).toMatch(/{% if layout == 'split' or layout == 'over_image' %}\s*<div class="call-to-action__media">/)
+    expect(source).toContain("{{ 'image' | placeholder_svg_tag: 'placeholder call-to-action__placeholder' }}")
+    expect(css).toMatch(/\.call-to-action__media {[^}]*border-radius: var\(--style-border-radius-media\);/)
+    // The split image takes the image ratio; over an image, it covers a banner as tall as the text needs.
+    expect(css).toMatch(/\.call-to-action--split \.call-to-action__media {\s*aspect-ratio: var\(--image-ratio\);/)
+    expect(css).toMatch(/\.call-to-action--over_image \.call-to-action__media img,\s*\.call-to-action--over_image \.call-to-action__placeholder {\s*position: absolute;\s*inset: 0;/)
+  })
+
+  it('lays the text over the image under an overlay of the background color, like the hero', () => {
+    expect(settings.overlay_opacity).toMatchObject({
+      type: 'range',
+      label: 't:labels.overlay_opacity',
+      info: 't:info.hero_overlay_opacity',
+      visible_if: "{{ section.settings.layout == 'over_image' }}",
+      default: 30,
+    })
+    expect(source).toContain('--overlay-opacity: {{ overlay_opacity }};')
+    expect(css).toMatch(/\.call-to-action--over_image \.call-to-action__media,\s*\.call-to-action--over_image \.call-to-action__content {\s*grid-area: 1 \/ 1;/)
+    expect(css).toMatch(/\.call-to-action--over_image \.call-to-action__media::after {[^}]*background-color: var\(--color-background\);[^}]*opacity: var\(--overlay-opacity\);/)
+  })
+
+  it('offers each layout as a named preset, the centered band on the inverse scheme', () => {
+    expect(schema.presets).toEqual([
+      { name: 't:general.call_to_action', settings: { color_scheme: 'scheme-2' } },
+      { name: 't:general.call_to_action_split', settings: { layout: 'split' } },
+      { name: 't:general.call_to_action_over_image', settings: { layout: 'over_image', overlay_opacity: 40 } },
+      { name: 't:general.call_to_action_inline', settings: { layout: 'inline', spacing: 'tight' } },
+    ])
+  })
+})
+
 describe('Editorial split', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
@@ -3641,6 +3721,7 @@ describe('Card and media settings', () => {
     'base-theme/sections/blog.liquid',
     ...[
       'blog-posts',
+      'call-to-action',
       'contact-form',
       'editorial-split',
       'image-gallery',
@@ -3749,7 +3830,7 @@ describe('Motion', () => {
 
   // Image-led sections reveal by default; type-led ones, and a marquee that already moves, only when the Merchant asks.
   const imageLed = ['blog-posts', 'collection-list', 'editorial-split', 'featured-collection', 'featured-product', 'hero', 'image-gallery', 'image-with-text', 'lookbook', 'multicolumn', 'process-steps', 'related-products', 'slideshow', 'video']
-  const typeLed = ['comparison-table', 'faq', 'logo-list', 'marquee', 'newsletter', 'press-quotes', 'rich-text', 'spec-tiles', 'testimonials', 'timeline', 'type-banner']
+  const typeLed = ['call-to-action', 'comparison-table', 'faq', 'logo-list', 'marquee', 'newsletter', 'press-quotes', 'rich-text', 'spec-tiles', 'testimonials', 'timeline', 'type-banner']
   const schemaOf = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
 
   it.each([...imageLed.map((name) => [name, true]), ...typeLed.map((name) => [name, false])])('lets the Merchant reveal the %s section on scroll, on by default: %s', (name, on) => {
@@ -4165,6 +4246,7 @@ describe('Image ratio', () => {
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
   const sections = [
     'blog-posts',
+    'call-to-action',
     'collection-list',
     'contact-form',
     'editorial-split',

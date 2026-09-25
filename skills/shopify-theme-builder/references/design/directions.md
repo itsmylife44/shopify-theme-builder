@@ -48,6 +48,8 @@ Give each color a name and a job ("press-cloth linen: page background"), 4 to 6 
 
 **Size and rhythm.** A home has 6 to 8 sections, and alternates dense and airy (each section's `spacing`: `none` for a zero-gap gallery, `tight`, `theme` or `loose`, around the Theme's density), image-led and type-led, so it never reads as a stack of equal bands. Never put two type-only sections next to each other, or three bands of the same height and density in a row. Without the brief's photos, the product and collection images (a featured collection, a collection list with images) are the image-led sections.
 
+**Asking for the next step.** When the home or a page ends on one ask (shop the new season, book a fitting, read the story), close it with a `call-to-action` rather than bending rich text or a small hero into one: a heading, a text and one or two buttons (`button_label_2`, the secondary one). Its `layout` picks the shape: `centered` (the default; its preset puts it on `scheme-2`, and a Committed or Full Direction on `scheme-3`, the accent's band), `split` (an image beside the text, image-led), `over_image` (the text over an image with an `overlay_opacity`, image-led, a banner, not a second hero), or `inline` (the heading on one side, the buttons on the other, a slim band with `spacing: tight`). One per page, after the sections that earn the ask; centered and inline are type-only sections.
+
 **Buying stays conventional.** Navigation, the product form, cart and checkout keep what shoppers expect in every Direction. The Direction speaks through type, color fields, imagery, composition and rhythm.
 
 ## The method
