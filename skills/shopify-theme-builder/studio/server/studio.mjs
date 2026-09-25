@@ -1840,10 +1840,10 @@ function listCustomSections(theme, catalog, template) {
 
 // The Studio needs read_products for collections and products, read_online_store_navigation for menus,
 // read_online_store_pages for pages and write_files for images. The rest are the agent's up-front store setup
-// (SKILL.md step 1): the menus, the languages. One command grants them all, so authenticating again for the Studio
+// (SKILL.md step 1): the menus, the languages, the sample products and their publishing. One command grants them all, so authenticating again for the Studio
 // never drops the agent's scopes.
 const storeScopes =
-  'read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales'
+  'read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales,write_products,write_publications'
 const storeQuery = `{
   collections(first: 250, sortKey: TITLE) { nodes { handle title productsCount { count } } }
   products(first: 250, sortKey: TITLE) { nodes { handle title } }

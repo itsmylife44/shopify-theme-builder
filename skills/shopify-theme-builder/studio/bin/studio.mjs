@@ -18,7 +18,7 @@ try {
     throw new Error(
       'Usage: studio --theme <dir> --store <shop>.myshopify.com [--store-password <password>] [--port <n>]\n' +
         '--store is required, and each Theme needs its own store (the Shopify CLI keeps one development theme per store per machine).\n' +
-        'Create a free development store with `shopify store create dev --demo-data`.',
+        'Create a free development store with `shopify store create dev`.',
     )
   }
   const server = await startStudio({

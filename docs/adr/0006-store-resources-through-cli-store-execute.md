@@ -5,7 +5,7 @@ The Studio's inspector picks a section's `collection`, `product`, `collection_li
 The costs:
 - The Creator runs `shopify store auth` once per store, a second login next to the one `theme dev` asks for. Until then `GET /api/store` answers 409 with that command, and the inspector takes handles typed by hand. The agent can always `PATCH` a handle without the list.
 - A shop with more than 250 collections or products shows only the first 250, sorted by title.
-- The agent uses the same channel, with `--allow-mutations`, to write the store's menus (`menuUpdate`) and enable and publish its languages (`shopLocaleEnable`, `shopLocaleUpdate`) at the start (SKILL.md step 1). So one store auth grants every scope, the Studio's and the agent's: `read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales`, and the Studio's 409 names that same command, so authenticating again never drops a scope.
+- The agent uses the same channel, with `--allow-mutations`, to write the store's menus (`menuUpdate`) and enable and publish its languages (`shopLocaleEnable`, `shopLocaleUpdate`), and to create sample products in a collection published to the Online Store (`productSet`, `collectionCreate`, `publishablePublish`) at the start (SKILL.md step 1). So one store auth grants every scope, the Studio's and the agent's: `read_products,read_online_store_navigation,read_online_store_pages,write_files,write_online_store_navigation,write_locales,write_products,write_publications`, and the Studio's 409 names that same command, so authenticating again never drops a scope.
 
 ## Considered Options
 
