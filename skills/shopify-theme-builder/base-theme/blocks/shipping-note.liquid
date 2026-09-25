@@ -7,7 +7,7 @@
   {% content_for 'block', type: 'shipping-note', id: 'shipping-note' %}
 {% enddoc %}
 
-<div class="shipping-note text-small" {{ block.shopify_attributes }}>
+{% capture content %}
   {{ block.settings.text }}
   {% if settings.free_shipping_threshold > 0 and cart.currency.iso_code == shop.currency %}
     {% assign amount = settings.free_shipping_threshold | times: 100 | round | money %}
@@ -23,7 +23,16 @@
       {% endif %}
     </ul>
   {% endif %}
-</div>
+{% endcapture %}
+{% assign content = content | strip %}
+
+{% if content != blank %}
+  <div class="shipping-note text-small" {{ block.shopify_attributes }}>
+    {{ content }}
+  </div>
+{% elsif request.design_mode %}
+  <p class="block-hint text-small" {{ block.shopify_attributes }}>{{ 'blank_block.shipping_note' | t }}</p>
+{% endif %}
 
 {% stylesheet %}
   .shipping-note {

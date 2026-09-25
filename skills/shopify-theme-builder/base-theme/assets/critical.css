@@ -158,6 +158,12 @@ h6,
   font-size: var(--font-size-label);
 }
 
+/* A block with nothing to show renders nothing, and this hint only in the Theme Editor, so the Merchant can find it. */
+.block-hint {
+  margin: 0;
+  color: var(--color-foreground-muted);
+}
+
 /* The accent font: labels and prices. */
 .text-label,
 .price {

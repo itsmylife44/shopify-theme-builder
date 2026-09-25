@@ -736,6 +736,11 @@
     gap: var(--space-lg);
   }
 
+  /* Shopify wraps each block in a .shopify-block div: one that renders nothing would still take a gap. */
+  .main-product__details > .shopify-block:not(:has(*)) {
+    display: none;
+  }
+
   @media (min-width: 750px) {
     .main-product__details {
       position: sticky;

@@ -689,7 +689,7 @@ describe('Product page shipping note and collapsible content', () => {
     expect(source).toContain('product.description')
     expect(source).toContain('block.settings.text')
     // Hidden from customers when it has nothing to show, like a product without a description.
-    expect(source).toMatch(/{% if content != blank or request\.design_mode %}/)
+    expect(source).toMatch(/{% if content != blank %}/)
   })
 
   it('ships its text blocks empty and says their text shows on every product, so per-product facts come from a metafield', () => {
@@ -717,6 +717,34 @@ describe('Product page shipping note and collapsible content', () => {
   })
 })
 
+describe('Blank product page blocks', () => {
+  const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
+  const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
+  const locale = JSON.parse(read('base-theme/locales/en.default.json'))
+
+  it('leave no gap in the details column: a block wrapper with nothing in it takes no space', () => {
+    // Shopify wraps each theme block in a .shopify-block div, which a flex gap would space even when empty.
+    expect(read('catalog/sections/main-product.liquid')).toMatch(/\.main-product__details > \.shopify-block:not\(:has\(\*\)\) {\s*display: none;/)
+  })
+
+  it.each(['collapsible-content', 'shipping-note', 'custom-liquid', 'size-guide'])(
+    '%s outputs nothing when blank, and a muted hint in the Theme Editor',
+    (type) => {
+      const source = read(`base-theme/blocks/${type}.liquid`)
+      const key = type.replace('-', '_')
+      expect(source).not.toContain('or request.design_mode')
+      expect(source).toMatch(
+        new RegExp(`{% elsif request\\.design_mode %}\\s*<p class="block-hint text-small" {{ block\\.shopify_attributes }}>{{ 'blank_block\\.${key}' \\| t[^}]*}}</p>\\s*{% endif %}`),
+      )
+      expect(locale.blank_block[key]).toBeTruthy()
+    },
+  )
+
+  it('styles the hint as muted text', () => {
+    expect(read('base-theme/assets/critical.css')).toMatch(/\.block-hint {[^}]*color: var\(--color-foreground-muted\);/)
+  })
+})
+
 describe('Product page size guide', () => {
   const skillDir = path.join(projectDir, 'skills/shopify-theme-builder')
   const read = (file: string) => readFileSync(path.join(skillDir, file), 'utf8')
@@ -737,7 +765,7 @@ describe('Product page size guide', () => {
   it("shows the shop page picked in its settings, and nothing until one is picked", () => {
     expect(schema.settings).toContainEqual({ type: 'page', id: 'page', label: 't:labels.page', info: 't:info.size_guide_page' })
     expect(schema.settings).toContainEqual({ type: 'text', id: 'label', label: 't:labels.label', default: 'Size guide' })
-    expect(source).toMatch(/{% if guide != blank or request\.design_mode %}/)
+    expect(source).toMatch(/{% if guide != blank %}/)
     expect(dialog).toContain('{{ guide.title | escape }}')
     expect(dialog).toMatch(/<div class="size-guide__content rte">\s*{{ guide\.content }}/)
   })
