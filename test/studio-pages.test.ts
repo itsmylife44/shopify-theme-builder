@@ -103,7 +103,7 @@ describe('Studio API: home page', () => {
   })
 
   const realCatalog = path.join(projectDir, 'skills/shopify-theme-builder/catalog')
-  const homeTypes = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'press-quotes', 'logo-list', 'testimonials', 'faq', 'newsletter', 'call-to-action', 'custom-liquid']
+  const homeTypes = ['hero', 'featured-collection', 'featured-product', 'collection-list', 'slideshow', 'multicolumn', 'video', 'blog-posts', 'image-gallery', 'image-with-text', 'editorial-split', 'rich-text', 'type-banner', 'marquee', 'spec-tiles', 'lookbook', 'timeline', 'process-steps', 'comparison-table', 'press-quotes', 'logo-list', 'testimonials', 'faq', 'newsletter', 'call-to-action', 'team', 'custom-liquid']
 
   it('offers every real catalog home section', async () => {
     const studio = await openStudio(fixtureTheme(), { catalog: realCatalog })
@@ -279,9 +279,9 @@ describe('Studio API: the other pages', () => {
     expect(catalog.page).toContain('hero')
   })
 
-  it('offers the call to action on the home and the page templates only', async () => {
+  it.each(['call-to-action', 'team'])('offers the %s section on the home and the page templates only', async (type) => {
     const catalog = catalogTypes(await (await openStudio(fixtureTheme(), { catalog: realCatalog })).readTheme())
-    expect(pageNames.filter((page) => catalog[page].includes('call-to-action'))).toEqual(['home', 'page', 'contact'])
+    expect(pageNames.filter((page) => catalog[page].includes(type))).toEqual(['home', 'page', 'contact'])
   })
 
   it.each(Object.entries(mains))('composes the %s page from its catalog main section %s with a clean Theme Check', async (page, type) => {
