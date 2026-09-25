@@ -166,6 +166,7 @@ describe('Studio API: style settings', () => {
       'type_body_size',
       'type_scale_ratio',
       'type_display_size',
+      'type_display_size_mobile',
       'type_heading_weight',
       'type_heading_case',
       'type_heading_tracking',

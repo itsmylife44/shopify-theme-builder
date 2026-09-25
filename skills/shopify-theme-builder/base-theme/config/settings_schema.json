@@ -86,6 +86,17 @@
         "default": 56
       },
       {
+        "type": "range",
+        "id": "type_display_size_mobile",
+        "min": 24,
+        "max": 72,
+        "step": 2,
+        "unit": "px",
+        "label": "t:labels.display_size_mobile",
+        "info": "t:info.type_display_size_mobile",
+        "default": 36
+      },
+      {
         "type": "header",
         "content": "t:general.headings"
       },

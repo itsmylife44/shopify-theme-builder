@@ -39,6 +39,7 @@
           assign content_block = position.first | replace: 'top', 'start' | replace: 'middle', 'center' | replace: 'bottom', 'end'
           assign content_inline = position.last | replace: 'left', 'start' | replace: 'right', 'end'
           assign overlay_opacity = block.settings.overlay_opacity | divided_by: 100.0
+          assign image = block.settings.image | default: block.settings.image_mobile
         %}
         <div
           class="slideshow__slide slideshow__slide--{{ block.settings.content_style }}"
@@ -52,17 +53,28 @@
           {{ block.shopify_attributes }}
         >
           <div class="slideshow__media">
-            {% if block.settings.image != blank %}
-              {{
-                block.settings.image
-                | image_url: width: 3840
-                | image_tag:
-                  class: 'slideshow__image',
-                  widths: '750, 1100, 1500, 2200, 3000, 3840',
-                  sizes: sizes,
-                  loading: loading,
-                  fetchpriority: fetchpriority
-              }}
+            {% if image != blank %}
+              <picture>
+                {% if block.settings.image_mobile != blank %}
+                  <source
+                    media="(max-width: 749px)"
+                    srcset="{{ block.settings.image_mobile | image_url: width: 550 }} 550w, {{ block.settings.image_mobile | image_url: width: 750 }} 750w, {{ block.settings.image_mobile | image_url: width: 1100 }} 1100w, {{ block.settings.image_mobile | image_url: width: 1500 }} 1500w"
+                    sizes="100vw"
+                    width="{{ block.settings.image_mobile.width }}"
+                    height="{{ block.settings.image_mobile.height }}"
+                  >
+                {% endif %}
+                {{
+                  image
+                  | image_url: width: 3840
+                  | image_tag:
+                    class: 'slideshow__image',
+                    widths: '750, 1100, 1500, 2200, 3000, 3840',
+                    sizes: sizes,
+                    loading: loading,
+                    fetchpriority: fetchpriority
+                }}
+              </picture>
             {% else %}
               {% assign placeholder = forloop.index0 | modulo: 2 | plus: 1 | prepend: 'lifestyle-' %}
               {{ placeholder | placeholder_svg_tag: 'placeholder slideshow__image slideshow__placeholder' }}
@@ -446,6 +458,12 @@
           "type": "image_picker",
           "id": "image",
           "label": "t:labels.image"
+        },
+        {
+          "type": "image_picker",
+          "id": "image_mobile",
+          "label": "t:labels.image_mobile",
+          "info": "t:info.hero_image_mobile"
         },
         {
           "type": "select",

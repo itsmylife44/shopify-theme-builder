@@ -23,6 +23,7 @@
   assign content_block = position.first | replace: 'top', 'start' | replace: 'middle', 'center' | replace: 'bottom', 'end'
   assign content_inline = position.last | replace: 'left', 'start' | replace: 'right', 'end'
   assign overlay_opacity = section.settings.overlay_opacity | divided_by: 100.0
+  assign image = section.settings.image | default: section.settings.image_mobile
 %}
 
 <div
@@ -36,17 +37,28 @@
         section.settings.video
         | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: true, class: 'hero__media-item'
       }}
-    {% elsif section.settings.image != blank %}
-      {{
-        section.settings.image
-        | image_url: width: 3840
-        | image_tag:
-          class: 'hero__media-item',
-          widths: '750, 1100, 1500, 2200, 3000, 3840',
-          sizes: sizes,
-          loading: loading,
-          fetchpriority: fetchpriority
-      }}
+    {% elsif image != blank %}
+      <picture>
+        {% if section.settings.image_mobile != blank %}
+          <source
+            media="(max-width: 749px)"
+            srcset="{{ section.settings.image_mobile | image_url: width: 550 }} 550w, {{ section.settings.image_mobile | image_url: width: 750 }} 750w, {{ section.settings.image_mobile | image_url: width: 1100 }} 1100w, {{ section.settings.image_mobile | image_url: width: 1500 }} 1500w"
+            sizes="100vw"
+            width="{{ section.settings.image_mobile.width }}"
+            height="{{ section.settings.image_mobile.height }}"
+          >
+        {% endif %}
+        {{
+          image
+          | image_url: width: 3840
+          | image_tag:
+            class: 'hero__media-item',
+            widths: '750, 1100, 1500, 2200, 3000, 3840',
+            sizes: sizes,
+            loading: loading,
+            fetchpriority: fetchpriority
+        }}
+      </picture>
     {% else %}
       {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder hero__media-item hero__placeholder' }}
     {% endif %}
@@ -248,6 +260,12 @@
       "type": "image_picker",
       "id": "image",
       "label": "t:labels.image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "t:labels.image_mobile",
+      "info": "t:info.hero_image_mobile"
     },
     {
       "type": "video",

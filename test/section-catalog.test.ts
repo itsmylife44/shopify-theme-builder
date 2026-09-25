@@ -2773,6 +2773,23 @@ describe('Type settings', () => {
     expect(setting('type_display_size')).toMatchObject({ type: 'range', unit: 'px', default: 56 })
   })
 
+  it('sizes display type on phones from its own setting, growing linearly from 390px to the display size at 1200px', () => {
+    const mobile = setting('type_display_size_mobile')
+    expect(mobile).toMatchObject({ type: 'range', min: 24, unit: 'px', label: 't:labels.display_size_mobile', default: 36 })
+    expect(mobile.max).toBeLessThanOrEqual(setting('type_display_size').max)
+    // Never above the desktop size, and never below h1 (the max()).
+    expect(variables).toMatch(/assign display_mobile = settings\.type_display_size_mobile \| at_most: settings\.type_display_size/)
+    expect(variables).toMatch(/--font-size-display: max\(var\(--font-size-h1\), clamp\(\{\{ display_mobile \| divided_by: 16\.0 \}\}rem, /)
+    expect(variables).not.toContain('times: 0.64')
+  })
+
+  it('wraps headings and display type whole words at a time, in balanced lines', () => {
+    const rule = (selector: RegExp) => critical.match(selector)?.[1] ?? ''
+    expect(rule(/\nh1,\nh2,\nh3,\n\.text-display {([^}]*)}/)).toMatch(/overflow-wrap: normal;[^}]*text-wrap: balance;/)
+    // Running text still breaks a long word rather than overflow.
+    expect(rule(/\np,\nh4,\nh5,\nh6 {([^}]*)}/)).toContain('overflow-wrap: break-word;')
+  })
+
   it('styles headings with a weight, a case and a tracking, the heading font as it is by default', () => {
     expect(setting('type_heading_weight')).toMatchObject({ type: 'select', default: 'font' })
     expect(setting('type_heading_case').options.map((o: { value: string }) => o.value)).toEqual(['none', 'uppercase'])
@@ -3706,6 +3723,30 @@ describe('Image loading', () => {
     expect(call).toContain('loading: loading')
     expect(call).toContain('fetchpriority: fetchpriority')
     expect(stylesheet(source)).not.toMatch(/animation|@keyframes/)
+  })
+
+  it.each([
+    ['hero', 'section'],
+    ['slideshow', 'block'],
+  ])('lets %s take a separate mobile image, the phone source of a <picture> with its own sizes and dimensions', (name, owner) => {
+    const source = read(`catalog/sections/${name}.liquid`)
+    const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+    const settings = (owner === 'section' ? schema.settings : schema.blocks[0].settings).map((setting: { id?: string }) => setting.id)
+    // Right after the image, labelled from the schema locale.
+    expect(settings[settings.indexOf('image') + 1]).toBe('image_mobile')
+    expect(source).toMatch(/"type": "image_picker",\s*"id": "image_mobile",\s*"label": "t:labels\.image_mobile",\s*"info": "t:info\.hero_image_mobile"/)
+
+    const picture = source.match(/<picture>[\s\S]*?<\/picture>/)?.[0] ?? ''
+    const phone = picture.match(/<source[^>]*>/)?.[0] ?? ''
+    expect(picture).toContain(`{% if ${owner}.settings.image_mobile != blank %}`)
+    expect(phone).toContain('media="(max-width: 749px)"')
+    expect(phone).toMatch(/srcset="[^"]*image_mobile \| image_url: width: \d+ }} \d+w/)
+    expect(phone).toContain('sizes="100vw"')
+    expect(phone).toContain(`width="{{ ${owner}.settings.image_mobile.width }}"`)
+    expect(phone).toContain(`height="{{ ${owner}.settings.image_mobile.height }}"`)
+    // The desktop image stays the <img>, with its priority and its own sizes; a mobile image alone stands in for it.
+    expect(picture).toMatch(/\| image_tag:[^}]*sizes: sizes,[^}]*fetchpriority: fetchpriority/)
+    expect(source).toContain(`assign image = ${owner}.settings.image | default: ${owner}.settings.image_mobile`)
   })
 
   // The catalog's sections and the Base Theme snippets they render.

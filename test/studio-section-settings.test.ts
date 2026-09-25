@@ -164,6 +164,7 @@ describe('Studio API: section settings', () => {
     const read = (await studio.send('GET', `api/home/sections/${hero}`)).body
     expect(read.media).toEqual([
       { id: 'image', type: 'image_picker', label: 'Image', set: true, value: 'shopify://shop_images/cover.jpg' },
+      { id: 'image_mobile', type: 'image_picker', label: 'Mobile image', set: false, value: null },
       { id: 'video', type: 'video', label: 'Video', set: false, value: null },
     ])
     expect(read.settings.map((setting: { id: string }) => setting.id)).not.toContain('image')
