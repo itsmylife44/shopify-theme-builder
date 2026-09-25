@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it, vi } from 'vitest'
-import { dismissConsent, findChrome, parseArguments, partClips } from '../skills/shopify-theme-builder/scripts/screenshot.mjs'
+import { dismissConsent, findChrome, headerClips, parseArguments, partClips } from '../skills/shopify-theme-builder/scripts/screenshot.mjs'
 
 // The capture itself needs a browser, so it stays out of CI: only the arguments, the parts' geometry and the Chrome lookup are tested.
 const command = fileURLToPath(new URL('../skills/shopify-theme-builder/scripts/screenshot.mjs', import.meta.url))
@@ -104,6 +104,26 @@ describe('screenshot script (review.md step 2)', () => {
     it('does nothing on a store without the banner', () => {
       expect(() => runInNewContext(dismissConsent, { window: {}, document: { querySelectorAll: () => [] } })).not.toThrow()
       expect(() => runInNewContext(dismissConsent, { window: { Shopify: {} }, document: { querySelectorAll: () => [] } })).not.toThrow()
+    })
+  })
+
+  describe('header clips', () => {
+    // A fake element: its tag and classes, its box and content widths, and its overflow.
+    const element = (tagName: string, className: string, clientWidth: number, scrollWidth: number, overflowX = 'visible') => ({ tagName, className, clientWidth, scrollWidth, overflowX })
+    const run = (elements: ReturnType<typeof element>[]) =>
+      runInNewContext(headerClips, {
+        document: { querySelectorAll: (selector: string) => (selector === 'header, header *' ? elements : []) },
+        getComputedStyle: (target: ReturnType<typeof element>) => ({ overflowX: target.overflowX }),
+      })
+
+    it('names each element of the header that cuts off content wider than itself, like a shop name too big for a phone', () => {
+      expect(run([element('HEADER', 'header', 390, 390), element('A', 'header__logo', 160, 241, 'hidden'), element('DIV', 'header__icons', 132, 132)])).toEqual([
+        'a.header__logo shows 160 of its 241px',
+      ])
+    })
+
+    it("leaves out what overflows visibly, which the page's scrollWidth reports, and visually hidden labels", () => {
+      expect(run([element('NAV', 'header__menu', 300, 420), element('SPAN', 'visually-hidden', 1, 60, 'hidden'), element('A', 'header__logo', 160, 161, 'hidden')])).toEqual([])
     })
   })
 
