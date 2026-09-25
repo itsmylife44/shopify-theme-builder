@@ -553,6 +553,24 @@ export const wireframes = {
       description: 'Big figures in bordered boxes',
     },
   },
+  team: {
+    't:general.team': {
+      wireframe: 'heading / 3* image title line x3',
+      description: 'Portrait photos in three columns, name and role below',
+    },
+    't:general.team_round_portraits': {
+      wireframe: 'center heading / 2* center icon title line x4',
+      description: 'Small round portraits in four columns, centered',
+    },
+    't:general.team_inline_list': {
+      wireframe: 'heading / icon | title line | icon | title line | icon | title line / icon | title line | icon | title line | icon | title line',
+      description: 'A small portrait beside each name, in three columns',
+    },
+    't:general.team_cards': {
+      wireframe: 'center heading / 3* center panel icon title line x3',
+      description: 'Each person on a card with a round portrait',
+    },
+  },
   testimonials: {
     't:general.testimonials': {
       wireframe: 'center heading / 3* panel text line x3',

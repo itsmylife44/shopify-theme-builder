@@ -2322,6 +2322,69 @@ describe('Call to action', () => {
   })
 })
 
+describe('Team', () => {
+  const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/team.liquid'), 'utf8')
+  const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
+  const settings = Object.fromEntries(schema.settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const person = Object.fromEntries(schema.blocks[0].settings.map((setting: { id?: string }) => [setting.id, setting]))
+  const css = source.match(/{% stylesheet %}([\s\S]*){% endstylesheet %}/)![1]
+  const desktop = css.match(/@media \(min-width: 750px\) {([\s\S]*?)\n  }/)![1]
+
+  it('is a catalog section for the home and other pages, with a heading, a text and a color scheme', () => {
+    expect(source).toMatch(/^{% comment %}.+{% endcomment %}\n/)
+    expect(source).toContain('class="team team--{{ section.settings.layout }} full-width color-{{ section.settings.color_scheme }}"')
+    expect(settings.color_scheme).toEqual({ type: 'color_scheme', id: 'color_scheme', label: 't:labels.color_scheme', default: 'scheme-1' })
+    expect(settings.heading.type).toBe('inline_richtext')
+    expect(settings.text.type).toBe('richtext')
+    expect(source).toContain('<h2 class="team__heading">{{ section.settings.heading }}</h2>')
+    expect(source).toContain('<div class="team__text rte">{{ section.settings.text }}</div>')
+    expect(schema.enabled_on).toEqual({ templates: ['index', 'page'] })
+  })
+
+  it('lists a person per block: a portrait, a name, a role, and an optional short line and link on the name', () => {
+    expect(schema.blocks[0]).toMatchObject({ type: 'person', name: 't:general.person' })
+    expect(person.image).toEqual({ type: 'image_picker', id: 'image', label: 't:labels.portrait' })
+    expect(person.name).toMatchObject({ type: 'text', label: 't:labels.name' })
+    expect(person.role).toMatchObject({ type: 'text', label: 't:labels.role' })
+    expect(person.bio).toEqual({ type: 'text', id: 'bio', label: 't:labels.short_line' })
+    expect(person.link).toEqual({ type: 'url', id: 'link', label: 't:labels.link', info: 't:info.team_link' })
+    expect(source).toMatch(/<ul class="team__grid" data-reveal-stagger role="list">\s*{% for block in section\.blocks %}\s*<li class="team__person" {{ block\.shopify_attributes }}>/)
+    expect(source).toMatch(/<a href="{{ block\.settings\.link }}">{{ block\.settings\.name \| escape }}<\/a>/)
+    expect(source).toContain("{{ 'image' | placeholder_svg_tag: 'placeholder team__placeholder' }}")
+    expect(css).toMatch(/\.team__role {[^}]*color: var\(--color-foreground-muted\);/)
+  })
+
+  it('lays people out as photo cards by default, round portraits, an inline list or cards, stacked on mobile', () => {
+    expect(settings.layout).toMatchObject({ type: 'select', label: 't:labels.layout', default: 'photo_cards' })
+    expect(settings.layout.options).toEqual([
+      { value: 'photo_cards', label: 't:options.layout.photo_cards' },
+      { value: 'round_portraits', label: 't:options.layout.round_portraits' },
+      { value: 'inline_list', label: 't:options.layout.inline_list' },
+      { value: 'cards', label: 't:options.layout.cards' },
+    ])
+    expect(css).toMatch(/\.team__grid {[^}]*grid-template-columns: 1fr;/)
+    expect(desktop).toMatch(/\.team__grid {\s*grid-template-columns: repeat\(3, 1fr\);/)
+    expect(desktop).toMatch(/\.team--round_portraits \.team__grid {\s*grid-template-columns: repeat\(4, 1fr\);/)
+    expect(css).toMatch(/\.team--inline_list \.team__person {[^}]*flex-direction: row;/)
+    expect(css).toMatch(/\.team--cards \.team__person {[^}]*padding: var\(--card-padding\);[^}]*border: var\(--card-border-width\) solid var\(--color-border\);[^}]*border-radius: var\(--style-border-radius-cards\);[^}]*background-color: var\(--card-background\);/)
+  })
+
+  it('gives photo cards the image ratio, and the other layouts small portraits in the badge shape', () => {
+    expect(css).toMatch(/\.team--photo_cards \.team__portrait img,\s*\.team--photo_cards \.team__placeholder {[^}]*aspect-ratio: var\(--image-ratio\);/)
+    expect(css).toMatch(/\.team--round_portraits \.team__portrait,\s*\.team--inline_list \.team__portrait,\s*\.team--cards \.team__portrait {[^}]*border-radius: var\(--style-border-radius-badges\);/)
+  })
+
+  it('offers each layout as a named preset', () => {
+    const people = (count: number) => Array.from({ length: count }, () => ({ type: 'person' }))
+    expect(schema.presets).toEqual([
+      { name: 't:general.team', blocks: people(3) },
+      { name: 't:general.team_round_portraits', settings: { layout: 'round_portraits' }, blocks: people(4) },
+      { name: 't:general.team_inline_list', settings: { layout: 'inline_list' }, blocks: people(6) },
+      { name: 't:general.team_cards', settings: { layout: 'cards' }, blocks: people(3) },
+    ])
+  })
+})
+
 describe('Editorial split', () => {
   const source = readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/catalog/sections/editorial-split.liquid'), 'utf8')
   const schema = JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
@@ -3731,6 +3794,7 @@ describe('Card and media settings', () => {
       'multicolumn',
       'newsletter',
       'process-steps',
+      'team',
       'timeline',
       'video',
     ].map((name) => `catalog/sections/${name}.liquid`),
@@ -3829,7 +3893,7 @@ describe('Motion', () => {
   })
 
   // Image-led sections reveal by default; type-led ones, and a marquee that already moves, only when the Merchant asks.
-  const imageLed = ['blog-posts', 'collection-list', 'editorial-split', 'featured-collection', 'featured-product', 'hero', 'image-gallery', 'image-with-text', 'lookbook', 'multicolumn', 'process-steps', 'related-products', 'slideshow', 'video']
+  const imageLed = ['blog-posts', 'collection-list', 'editorial-split', 'featured-collection', 'featured-product', 'hero', 'image-gallery', 'image-with-text', 'lookbook', 'multicolumn', 'process-steps', 'related-products', 'slideshow', 'team', 'video']
   const typeLed = ['call-to-action', 'comparison-table', 'faq', 'logo-list', 'marquee', 'newsletter', 'press-quotes', 'rich-text', 'spec-tiles', 'testimonials', 'timeline', 'type-banner']
   const schemaOf = (source: string) => JSON.parse(source.match(/{% schema %}([\s\S]*){% endschema %}/)![1])
 
@@ -3853,7 +3917,7 @@ describe('Motion', () => {
     expect(JSON.parse(read('base-theme/locales/en.default.schema.json')).labels.reveal).toBeTruthy()
   })
 
-  it.each(['blog-posts', 'collection-list', 'featured-collection', 'image-gallery', 'multicolumn', 'related-products'])('staggers the items of the %s grid', (name) => {
+  it.each(['blog-posts', 'collection-list', 'featured-collection', 'image-gallery', 'multicolumn', 'related-products', 'team'])('staggers the items of the %s grid', (name) => {
     expect(read(`catalog/sections/${name}.liquid`)).toMatch(/class="[a-z-]+__grid[^"]*"\s+data-reveal-stagger/)
   })
 
@@ -4260,6 +4324,7 @@ describe('Image ratio', () => {
     'multicolumn',
     'newsletter',
     'process-steps',
+    'team',
     'timeline',
   ]
 

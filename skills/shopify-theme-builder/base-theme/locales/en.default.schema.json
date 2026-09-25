@@ -169,7 +169,12 @@
     "call_to_action": "Call to action",
     "call_to_action_split": "Call to action: split with an image",
     "call_to_action_over_image": "Call to action: over an image",
-    "call_to_action_inline": "Call to action: inline row"
+    "call_to_action_inline": "Call to action: inline row",
+    "team": "Team",
+    "team_round_portraits": "Team: round portraits",
+    "team_inline_list": "Team: inline list",
+    "team_cards": "Team: cards",
+    "person": "Person"
   },
   "labels": {
     "accent": "Accent",
@@ -312,7 +317,11 @@
     "image_zoom": "Image zoom",
     "sticky_buy_bar": "Sticky add to cart bar on mobile",
     "free_shipping_threshold": "Free-shipping threshold",
-    "page": "Page"
+    "page": "Page",
+    "portrait": "Portrait",
+    "name": "Name",
+    "role": "Role",
+    "short_line": "Short line"
   },
   "info": {
     "color_schemes_accent": "Links, sale prices and badges. Keep it at 4.5:1 contrast or more against the background.",
@@ -370,7 +379,8 @@
     "contact_form_heading": "Leave blank to show the page's title.",
     "contact_form_details": "Email, phone number, address and opening hours.",
     "free_shipping_threshold": "The order total, in the store currency, from which shipping is free, as your shipping rates in Settings › Shipping and delivery set it. The cart shows how far the shopper is from it, and the shipping note shows it. Leave blank to show neither.",
-    "size_guide_page": "The shop page with the size chart, shown in a dialog next to the variant picker. Create it in the Shopify admin, under Online Store › Pages. Nothing shows until a page is picked."
+    "size_guide_page": "The shop page with the size chart, shown in a dialog next to the variant picker. Create it in the Shopify admin, under Online Store › Pages. Nothing shows until a page is picked.",
+    "team_link": "Links the name, for example to their profile or workshop page."
   },
   "options": {
     "alignment": {
@@ -449,7 +459,10 @@
       "strip": "Strip",
       "featured": "Featured and list",
       "thumbnails": "List with thumbnails",
-      "over_image": "Over an image"
+      "over_image": "Over an image",
+      "photo_cards": "Photo cards",
+      "round_portraits": "Round portraits",
+      "inline_list": "Inline list"
     },
     "cart_type": {
       "drawer": "Drawer",
