@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // Takes a full-page screenshot of a page of the preview, for the review (references/design/review.md). Usage:
-//   node <skill-dir>/scripts/screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--parts | --part-height <px> | --hover <selector>]
-//   node <skill-dir>/scripts/screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> … [--width 1440] [--mobile] [--parts]
+//   node <skill-dir>/scripts/screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--keep-consent] [--parts | --part-height <px> | --hover <selector>]
+//   node <skill-dir>/scripts/screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> … [--width 1440] [--mobile] [--keep-consent] [--parts]
 // It drives the system's Google Chrome (or Chromium, or Microsoft Edge; CHROME_PATH names another) headless over the
 // DevTools Protocol, with reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the
-// network (theme dev's hot reload never goes idle), prints the page's scrollWidth, and stops within 60 seconds (20 more for each other page with --pages).
+// network (theme dev's hot reload never goes idle), dismisses Shopify's cookie consent banner (an EU store shows it to
+// every fresh browser, over the page; --keep-consent keeps it), prints the page's scrollWidth, and stops within 60
+// seconds (20 more for each other page with --pages).
 // With --parts it also writes the page in parts, <out>-1.png, <out>-2.png, …, each small enough for a model to read.
 // With --hover it moves the mouse over the first visible element the selector matches, and captures the viewport
 // around it instead, to show its hover state. With --pages it captures several pages of <base-url> in one Chrome session,
@@ -16,15 +18,16 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-/** @typedef {{ pages: { url: string, out: string }[], width: number, height: number, mobile: boolean, partHeight: number | undefined, hover: string | undefined }} Options */
+/** @typedef {{ pages: { url: string, out: string }[], width: number, height: number, mobile: boolean, partHeight: number | undefined, hover: string | undefined, keepConsent: boolean }} Options */
 
-const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--parts | --part-height <px> | --hover <selector>]
-       node screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> … [--width 1440] [--mobile] [--parts | --part-height <px>]
+const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--keep-consent] [--parts | --part-height <px> | --hover <selector>]
+       node screenshot.mjs <base-url> <out-dir> --pages / /products/<handle> … [--width 1440] [--mobile] [--keep-consent] [--parts | --part-height <px>]
   <url>          a page of the preview, like http://127.0.0.1:9292/products/<handle>
   --pages        capture each of these paths of <base-url> in one run, to <out-dir>/<page-slug>-<width>.png, like
                  home-1440.png for / and products-<handle>-1440.png
   --width        the viewport's width in pixels (default 1440, 390 with --mobile)
   --mobile       emulate a 390 by 844 phone with touch
+  --keep-consent keep Shopify's cookie consent banner, which an EU store shows over the page, to review the banner itself
   --parts        also write the page top to bottom in parts, <out>-1.png, <out>-2.png, …, twice the viewport tall
   --part-height  the same, with parts this many pixels tall
   --hover        hover the first visible element this CSS selector matches, like .product-card or .button, and
@@ -38,7 +41,7 @@ const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobi
 export function parseArguments(args) {
   let parsed
   try {
-    parsed = parseArgs({ args, allowPositionals: true, options: { width: { type: 'string' }, mobile: { type: 'boolean', default: false }, parts: { type: 'boolean', default: false }, 'part-height': { type: 'string' }, hover: { type: 'string' }, pages: { type: 'boolean', default: false } } })
+    parsed = parseArgs({ args, allowPositionals: true, options: { width: { type: 'string' }, mobile: { type: 'boolean', default: false }, parts: { type: 'boolean', default: false }, 'part-height': { type: 'string' }, hover: { type: 'string' }, pages: { type: 'boolean', default: false }, 'keep-consent': { type: 'boolean', default: false } } })
   } catch (error) {
     throw new Error(`${/** @type {Error} */ (error).message}\n${usage}`)
   }
@@ -56,8 +59,16 @@ export function parseArguments(args) {
   const pages = values.pages
     ? paths.map((page) => ({ url: new URL(page, url).href, out: path.join(out, `${page.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home'}-${width}.png`) }))
     : [{ url, out }]
-  return { pages, width, height, mobile, partHeight, hover }
+  return { pages, width, height, mobile, partHeight, hover, keepConsent: values['keep-consent'] ?? false }
 }
+
+/**
+ * Run in a page, dismisses Shopify's cookie consent banner, which a store whose market is in the EU shows over the
+ * middle of every page to a fresh browser: accepts every kind of tracking, so the next page shows it no more, and
+ * removes the banner. It does nothing on a store without it.
+ */
+export const dismissConsent = `window.Shopify?.customerPrivacy?.setTrackingConsent?.({ analytics: true, marketing: true, preferences: true, sale_of_data: true }, () => {})
+document.querySelectorAll('[id^="shopify-pc"]').forEach((element) => element.remove())`
 
 /**
  * The parts that cover a page `pageHeight` pixels tall, top to bottom, each `partHeight` tall but the last, and the
@@ -121,16 +132,17 @@ function candidates(platform, env) {
 /**
  * Opens `url` in the browser at `chrome`, headless, in a viewport `width` by `height` (a touch phone when `mobile`), with
  * reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the network (theme dev's hot
- * reload never goes idle), loads lazy images, and hands the page's DevTools session to `run`, with `open`, which takes
- * the same tab to another URL the same way. Chrome is killed after `seconds` whatever hangs, and when `run` is done.
+ * reload never goes idle), loads lazy images, dismisses Shopify's cookie consent banner unless `keepConsent`, and hands
+ * the page's DevTools session to `run`, with `open`, which takes the same tab to another URL the same way. Chrome is
+ * killed after `seconds` whatever hangs, and when `run` is done.
  * @template T
  * @param {string} chrome
- * @param {{ url: string, width: number, height: number, mobile: boolean }} viewport
+ * @param {{ url: string, width: number, height: number, mobile: boolean, keepConsent?: boolean }} viewport
  * @param {(page: { send: (method: string, params?: object) => Promise<any> }, open: (url: string) => Promise<void>) => Promise<T>} run
  * @param {number} [seconds]
  * @returns {Promise<T>}
  */
-export async function withPage(chrome, { url, width, height, mobile }, run, seconds = 45) {
+export async function withPage(chrome, { url, width, height, mobile, keepConsent = false }, run, seconds = 45) {
   const profile = mkdtempSync(path.join(tmpdir(), 'screenshot-chrome-'))
   const browser = spawn(
     chrome,
@@ -165,6 +177,7 @@ export async function withPage(chrome, { url, width, height, mobile }, run, seco
         // A screenshot doesn't scroll, so images loading lazily below the fold would stay blank.
         await page.send('Runtime.evaluate', { expression: `document.querySelectorAll('img[loading="lazy"]').forEach((img) => { img.loading = 'eager' })` })
         await sleep(2000)
+        if (!keepConsent) await page.send('Runtime.evaluate', { expression: dismissConsent })
       }
       await open(url)
       return await run(page, open)

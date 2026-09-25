@@ -68,6 +68,24 @@ describe('accessibility check (review.md step 2)', () => {
       ).toEqual(['keyboard quick add: Tab moves focus out of the open dialog', "keyboard quick add: Escape doesn't close the dialog"])
     })
 
+    it("reports what axe finds only with Shopify's consent banner open, once", () => {
+      expect(
+        findings(
+          [{ id: 'color-contrast', impact: 'serious', help: 'Elements must have sufficient color contrast', targets: ['.hero h1'] }],
+          [],
+          [
+            { id: 'color-contrast', impact: 'serious', help: 'Elements must have sufficient color contrast', targets: ['.hero h1', '#shopify-pc__banner button'] },
+            { id: 'region', impact: 'moderate', help: 'All page content should be contained by landmarks', targets: ['#shopify-pc__banner'] },
+            { id: 'image-alt', impact: 'critical', help: 'Images must have alternative text', targets: [] },
+          ],
+        ),
+      ).toEqual([
+        'axe color-contrast (serious): Elements must have sufficient color contrast: .hero h1',
+        'axe color-contrast (serious) with the consent banner: Elements must have sufficient color contrast: #shopify-pc__banner button',
+        'axe region (moderate) with the consent banner: All page content should be contained by landmarks: #shopify-pc__banner',
+      ])
+    })
+
     it('finds nothing in a clean pass, or for a control the page does not have', () => {
       expect(
         findings(
