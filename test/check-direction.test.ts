@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -239,6 +239,34 @@ describe('check-direction', () => {
     expect(checkDirection(theme)).toEqual([
       { check: 'default-text', file: 'templates/product.json', message: `main, shipping-note block, text: ${fix}` },
       { check: 'default-text', file: 'templates/product.json', message: `main, shipping-note block, text: ${fix}` },
+    ])
+  })
+
+  it.each([
+    ['DIRECTION.md records it', (theme: string) => writeFileSync(path.join(theme, 'DIRECTION.md'), direction.replace('## Brief\n', '## Brief\n\n- Languages: de, en'))],
+    ['its default locale file is', (theme: string) => renameSync(path.join(theme, 'locales/en.default.json'), path.join(theme, 'locales/de.default.json'))],
+  ])("reports the section groups' English catalog labels when the shop's language isn't English, as %s", (_, setLanguage) => {
+    const theme = sampleTheme()
+    setLanguage(theme)
+    setTemplate(theme, 'sections/footer-group.json', (group) => {
+      group.sections.footer.settings.newsletter_heading = 'Neues aus der Werkstatt'
+      group.sections.footer.blocks.menu.settings.heading = 'Service'
+    })
+    const fix = "the catalog's English default, not the shop's language (de). Write it in the shop's language."
+    expect(checkDirection(theme)).toEqual([
+      { check: 'default-text', file: 'sections/footer-group.json', message: `footer, newsletter_button_label: ${fix}` },
+      { check: 'default-text', file: 'sections/footer-group.json', message: `footer, text block, heading: ${fix}` },
+      { check: 'default-text', file: 'sections/footer-group.json', message: `footer, social block, heading: ${fix}` },
+    ])
+  })
+
+  it("reports a section group's guidance text left as its default, in any language", () => {
+    const theme = sampleTheme()
+    // A Theme made from an older catalog, whose footer text block shipped a guidance sentence as its default.
+    const footer = path.join(theme, 'sections/footer.liquid')
+    writeFileSync(footer, readFileSync(footer, 'utf8').replace(/("id": "text",\s*"label": "t:labels.text")/, '$1,\n          "default": "<p>Share what the shop makes.</p>"'))
+    expect(checkDirection(theme)).toEqual([
+      { check: 'default-text', file: 'sections/footer-group.json', message: "footer, text block, text: the catalog's default text, not the shop's. Write the shop's own fact, or clear it." },
     ])
   })
 

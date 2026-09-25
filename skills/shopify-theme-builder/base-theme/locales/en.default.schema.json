@@ -295,6 +295,7 @@
     "color_schemes_border": "Input borders, dividers and bordered cards. Keep it at 3:1 contrast or more against the background.",
     "density": "The space above and below every section and between the items of a grid.",
     "logo_asset": "Set by the Studio. A logo picked above takes precedence.",
+    "footer_text": "The brand's one line, then what shoppers look for here: the address, opening hours and email.",
     "footer_show_follow_on_shop": "Lets customers follow the shop in the Shop app. Shows only when Shop Pay is on.",
     "footer_show_newsletter": "Subscribers are added to your customer list with email marketing consent. Hidden on pages that have a newsletter section.",
     "social_links_setting": "Social links come from the theme settings, under Social media.",

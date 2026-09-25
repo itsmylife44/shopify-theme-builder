@@ -59,6 +59,7 @@ export function checkDirection(theme) {
   const pages = readPages(theme, 'templates', (name) => name.endsWith('.json'))
   const home = pages.filter((page) => page.file === 'templates/index.json')
   const direction = existsSync(path.join(theme, directionFile)) ? readFileSync(path.join(theme, directionFile), 'utf8') : ''
+  const language = shopLanguage(theme, direction)
   // The home page, and each Direction's home, with the settings of the Direction's preset and its name.
   const listed = listFiles(theme, 'listings', () => true).flatMap((dir) =>
     readPages(theme, `${dir}/templates`, (name) => name === 'index.json').map((page) => {
@@ -87,13 +88,14 @@ export function checkDirection(theme) {
     ...homes.flatMap(({ page, values }) => checkHome(values, page)),
     ...homes.flatMap(({ page, name }) => checkStrategy(directionPart(direction, name), page)),
     ...[...groups, ...pages].flatMap(checkCopy),
-    ...pages.filter((page) => /^templates\/product(\.|$)/.test(page.file)).flatMap(checkDefaultText),
+    ...pages.filter((page) => /^templates\/product(\.|$)/.test(page.file)).flatMap((page) => checkDefaultText(page)),
+    ...groups.flatMap((page) => checkDefaultText(page, language)),
     ...shown.flatMap(checkCenteredHero),
     ...shown.flatMap((page) => checkH1(theme, page)),
   ]
 }
 
-/** @typedef {{ id: string, type: string, settings: Record<string, any>, blocks: { type: string, settings: Record<string, any>, schema: any[] }[] }} Section */
+/** @typedef {{ id: string, type: string, settings: Record<string, any>, schema: any[], blocks: { type: string, settings: Record<string, any>, schema: any[] }[] }} Section */
 /** @typedef {{ file: string, sections: Section[] }} Page */
 
 /**
@@ -119,7 +121,7 @@ function readPages(theme, dir, pick) {
         const blockSettings = (own ?? readSchema(theme, 'blocks', block.type)).settings ?? []
         return [{ type: block.type, settings: { ...defaults(blockSettings), ...block.settings }, schema: blockSettings }]
       })
-      return [{ id, type: section.type, settings: { ...defaults(schema.settings), ...section.settings }, blocks }]
+      return [{ id, type: section.type, settings: { ...defaults(schema.settings), ...section.settings }, schema: schema.settings ?? [], blocks }]
     })
     return { file, sections }
   })
@@ -182,21 +184,41 @@ function checkCopy({ file, sections }) {
 const runningText = new Set(['richtext', 'inline_richtext', 'textarea'])
 
 /**
- * A block of a product template showing its catalog default running text, like an example shipping policy: text
- * shoppers read as the shop's fact.
+ * A section or block showing its catalog default running text, like an example shipping policy or a guidance
+ * sentence: text shoppers read as the shop's fact. Given the shop's language, when it isn't English, its default
+ * labels too (headings, button labels): the catalog's English.
  * @param {Page} page
+ * @param {string} [language]
  * @returns {Finding[]}
  */
-function checkDefaultText({ file, sections }) {
-  return sections.flatMap((section) =>
-    section.blocks.flatMap((block) =>
-      block.schema
-        .filter((setting) => runningText.has(setting.type) && setting.default?.trim() && block.settings[setting.id] === setting.default)
-        .map((setting) =>
-          finding('default-text', file, `${section.id}, ${block.type} block, ${setting.id}: the catalog's default text, not the shop's. Write the shop's own fact, or clear it.`),
+function checkDefaultText({ file, sections }, language = 'en') {
+  const english = /^en\b/i.test(language)
+  return sections.flatMap(owners).flatMap(({ owner, settings, schema }) =>
+    schema
+      .filter((setting) => (runningText.has(setting.type) || (!english && setting.type === 'text')) && setting.default?.trim() && settings[setting.id] === setting.default)
+      .map((setting) =>
+        finding(
+          'default-text',
+          file,
+          `${owner}, ${setting.id}: ${
+            runningText.has(setting.type)
+              ? "the catalog's default text, not the shop's. Write the shop's own fact, or clear it."
+              : `the catalog's English default, not the shop's language (${language}). Write it in the shop's language.`
+          }`,
         ),
-    ),
+      ),
   )
+}
+
+/**
+ * The shop's default language: the first code on the `- Languages:` line of DIRECTION.md's brief, or else the
+ * Theme's default locale file's.
+ * @param {string} theme
+ * @param {string} direction DIRECTION.md
+ */
+function shopLanguage(theme, direction) {
+  const locale = listFiles(theme, 'locales', (name) => /^[^.]+\.default\.json$/.test(name))[0]
+  return direction.match(/^- Languages?: *([a-z]{2,3}(?:-[a-z]+)?)/im)?.[1] ?? locale?.slice('locales/'.length).split('.')[0] ?? 'en'
 }
 
 /**
@@ -476,8 +498,8 @@ function checkEyebrows({ file, sections }) {
  */
 function owners(section) {
   return [
-    { owner: section.id, settings: section.settings },
-    ...section.blocks.map((block) => ({ owner: `${section.id}, ${block.type} block`, settings: block.settings })),
+    { owner: section.id, settings: section.settings, schema: section.schema },
+    ...section.blocks.map((block) => ({ owner: `${section.id}, ${block.type} block`, settings: block.settings, schema: block.schema })),
   ]
 }
 
