@@ -59,6 +59,8 @@
     "collection_product_grid": "Collection product grid",
     "search_results": "Search results",
     "main_blog": "Main blog",
+    "main_blog_list": "Main blog: list",
+    "main_blog_featured_first": "Main blog: featured first",
     "main_article": "Main article",
     "main_404": "Main 404",
     "main_404_split": "Main 404: split with an image",
@@ -478,7 +480,9 @@
       "image_right": "Image right",
       "with_thumbnails": "With thumbnails",
       "stacked": "Stacked",
-      "summary_sidebar": "Summary sidebar"
+      "summary_sidebar": "Summary sidebar",
+      "list": "List",
+      "featured_first": "Featured first"
     },
     "cart_type": {
       "drawer": "Drawer",
