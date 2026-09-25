@@ -57,6 +57,15 @@ node <skill-dir>/scripts/screenshot.mjs <url>/ button-hover.png --hover .button
 
 The script drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. With `--parts` it also writes the page top to bottom in parts twice the viewport tall, `<file>-1440-1.png`, `<file>-1440-2.png`, …, and prints their paths (`--part-height <px>` sets another height). Don't crop or split the captures yourself. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
 
+Then check the same three pages for accessibility, at both widths (the menu drawer shows at 390):
+
+```sh
+node <skill-dir>/scripts/check-a11y.mjs <page>
+node <skill-dir>/scripts/check-a11y.mjs <page> --mobile
+```
+
+It runs axe-core's WCAG 2.2 A and AA rules on the page, then a keyboard pass through the menu drawer, the cart drawer and quick add, each where the page shows it: Tab reaches the control, Enter opens its dialog with focus inside, Tab keeps focus in the dialog, Escape closes it, and focus returns to the control ([the APG modal dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)). It prints one line per finding, `axe <rule> (<impact>): <what>: <elements>` or `keyboard <control>: <what failed>`, and which controls it pressed, and exits 1 when there is any. Each finding breaks the floor: fix it in the Theme (a Brand color that fails contrast with `PUT /api/brand`, after telling the Creator), and check that page again. It uses the same browser as the screenshots and ends within 90 seconds.
+
 ## 3. Review them
 
 Look at each screenshot: the full capture for the page's overall rhythm (the order of the sections, dense and airy, the color schemes alternating), the parts for everything you read (type, text, spacing, images, details), since a full page is shrunk too small to judge them. Then write down each finding as `[<page> <width>] what is wrong → the change that fixes it`, like `[home 390] the hero heading wraps "oil" onto its own line → shorten the heading to "Pressed the day it was picked"`. A finding without a concrete change isn't one yet. Check, in this order:
@@ -64,13 +73,13 @@ Look at each screenshot: the full capture for the page's overall rhythm (the ord
 1. **The Direction.** Read `DIRECTION.md` again: does the page carry its thesis, and each line of the chosen card (type, color strategy, shape, spacing, cards, media, motion, the signature section)? Does it break a Rule?
 2. **The swap test.** Put another shop of the same category on it. Where the page would still work, name the part that is generic and what of this shop's world replaces it.
 3. **The tells.** Read `tells.md` against the screenshots: the Shopify formula, a centered hero, three identical cards, scattered accents, eyebrows everywhere. In the hover captures, the card and the button each show a state that fits the Direction's motion (Motion in `tells.md`: no state at all, or the same lift on everything, is a finding).
-4. **The floor.** Read `quality-floor.md` line by line against the screenshots at both widths.
+4. **The floor.** Read `quality-floor.md` line by line against the screenshots at both widths. Every line `check-a11y.mjs` printed is a finding for the floor.
 
 ## 4. The verdict
 
-- **PASS**: no finding breaks the floor, a Rule of `DIRECTION.md` or the swap test, and the checker prints none (or only ones `DIRECTION.md` gives a reason for).
+- **PASS**: no finding breaks the floor, a Rule of `DIRECTION.md` or the swap test, the checker prints none (or only ones `DIRECTION.md` gives a reason for), and `check-a11y.mjs` prints none.
 - **HOLD**: any of those remains. List each with its change. Never soften a HOLD into a PASS with notes.
 
-On a HOLD, make every change in one fix round, through the Studio's API as in step 4, and check `validation` again. Then one confirming round: run the checker again and take new screenshots of the pages and widths the changes touched. That round's verdict is final: when it is still HOLD, stop, and tell the Creator what is left and why, so they decide; don't start a third round.
+On a HOLD, make every change in one fix round, through the Studio's API as in step 4, and check `validation` again. Then one confirming round: run the checker again, and take new screenshots and run `check-a11y.mjs` again on the pages and widths the changes touched. That round's verdict is final: when it is still HOLD, stop, and tell the Creator what is left and why, so they decide; don't start a third round.
 
 Tell the Creator the verdict in a few lines: PASS or HOLD, what the review changed, and each finding kept with its reason.

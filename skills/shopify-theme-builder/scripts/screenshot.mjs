@@ -79,6 +79,21 @@ export function findChrome({ platform = process.platform, env = process.env, exi
 }
 
 /**
+ * The browser from findChrome, or exits 1 with what to install.
+ * @returns {string}
+ */
+export function findChromeOrExit() {
+  const chrome = findChrome()
+  if (chrome) return chrome
+  console.error(
+    process.env.CHROME_PATH
+      ? `No Google Chrome, Chromium or Microsoft Edge found at CHROME_PATH (${process.env.CHROME_PATH}).`
+      : 'No Google Chrome, Chromium or Microsoft Edge found. Install Google Chrome, or set CHROME_PATH to its executable, and run this again.',
+  )
+  process.exit(1)
+}
+
+/**
  * @param {NodeJS.Platform} platform
  * @param {NodeJS.ProcessEnv} env
  */
@@ -95,12 +110,18 @@ function candidates(platform, env) {
 }
 
 /**
- * Captures the page with the browser at `chrome` and writes the PNG to `out`.
+ * Opens `url` in the browser at `chrome`, headless, in a viewport `width` by `height` (a touch phone when `mobile`), with
+ * reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the network (theme dev's hot
+ * reload never goes idle), loads lazy images, and hands the page's DevTools session to `run`. Chrome is killed after
+ * `seconds` whatever hangs, and when `run` is done.
+ * @template T
  * @param {string} chrome
- * @param {Options} options
- * @returns {Promise<{ scrollWidth: number, parts: string[] }>}
+ * @param {{ url: string, width: number, height: number, mobile: boolean }} viewport
+ * @param {(page: { send: (method: string, params?: object) => Promise<any> }) => Promise<T>} run
+ * @param {number} [seconds]
+ * @returns {Promise<T>}
  */
-async function capture(chrome, { url, out, width, height, mobile, partHeight, hover }) {
+export async function withPage(chrome, { url, width, height, mobile }, run, seconds = 45) {
   const profile = mkdtempSync(path.join(tmpdir(), 'screenshot-chrome-'))
   const browser = spawn(
     chrome,
@@ -113,7 +134,7 @@ async function capture(chrome, { url, out, width, height, mobile, partHeight, ho
   const deadline = setTimeout(() => {
     timedOut = true
     browser.kill('SIGKILL')
-  }, 45_000)
+  }, seconds * 1000)
   try {
     const page = await connect(await pageSocket(browser))
     try {
@@ -126,41 +147,12 @@ async function capture(chrome, { url, out, width, height, mobile, partHeight, ho
       // A screenshot doesn't scroll, so images loading lazily below the fold would stay blank.
       await page.send('Runtime.evaluate', { expression: `document.querySelectorAll('img[loading="lazy"]').forEach((img) => { img.loading = 'eager' })` })
       await sleep(2000)
-      const { result } = await page.send('Runtime.evaluate', { expression: 'document.documentElement.scrollWidth', returnByValue: true })
-      if (hover !== undefined) {
-        const { result: center } = await page.send('Runtime.evaluate', {
-          expression: `(() => {
-            const element = [...document.querySelectorAll(${JSON.stringify(hover)})].find((match) => match.checkVisibility())
-            if (!element) return null
-            element.scrollIntoView({ block: 'center' })
-            const box = element.getBoundingClientRect()
-            return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-          })()`,
-          returnByValue: true,
-        })
-        if (!center.value) throw new Error(`Nothing visible on ${url} matches ${hover}`)
-        await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...center.value })
-        await sleep(1000)
-        const { data } = await page.send('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(out, Buffer.from(data, 'base64'))
-        return { scrollWidth: result.value, parts: [] }
-      }
-      const { cssContentSize } = await page.send('Page.getLayoutMetrics')
-      const pageHeight = Math.ceil(cssContentSize.height)
-      /** @param {string} file @param {number} y @param {number} clipHeight */
-      const shoot = async (file, y, clipHeight) => {
-        const { data } = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y, width, height: clipHeight, scale: 1 } })
-        writeFileSync(file, Buffer.from(data, 'base64'))
-      }
-      await shoot(out, 0, pageHeight)
-      const parts = partHeight === undefined ? [] : partClips(pageHeight, partHeight, out)
-      for (const part of parts) await shoot(part.out, part.y, part.height)
-      return { scrollWidth: result.value, parts: parts.map((part) => part.out) }
+      return await run(page)
     } finally {
       page.close()
     }
   } catch (error) {
-    throw timedOut ? new Error(`No screenshot of ${url} within 45 seconds: is the preview running?`) : error
+    throw timedOut ? new Error(`Nothing from ${url} within ${seconds} seconds: is the preview running?`) : error
   } finally {
     clearTimeout(deadline)
     browser.kill()
@@ -168,6 +160,48 @@ async function capture(chrome, { url, out, width, height, mobile, partHeight, ho
     browser.kill('SIGKILL')
     rmSync(profile, { recursive: true, force: true })
   }
+}
+
+/**
+ * Captures the page with the browser at `chrome` and writes the PNG to `out`.
+ * @param {string} chrome
+ * @param {Options} options
+ * @returns {Promise<{ scrollWidth: number, parts: string[] }>}
+ */
+function capture(chrome, options) {
+  const { url, out, width, partHeight, hover } = options
+  return withPage(chrome, options, async (page) => {
+    const { result } = await page.send('Runtime.evaluate', { expression: 'document.documentElement.scrollWidth', returnByValue: true })
+    if (hover !== undefined) {
+      const { result: center } = await page.send('Runtime.evaluate', {
+        expression: `(() => {
+          const element = [...document.querySelectorAll(${JSON.stringify(hover)})].find((match) => match.checkVisibility())
+          if (!element) return null
+          element.scrollIntoView({ block: 'center' })
+          const box = element.getBoundingClientRect()
+          return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+        })()`,
+        returnByValue: true,
+      })
+      if (!center.value) throw new Error(`Nothing visible on ${url} matches ${hover}`)
+      await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...center.value })
+      await sleep(1000)
+      const { data } = await page.send('Page.captureScreenshot', { format: 'png' })
+      writeFileSync(out, Buffer.from(data, 'base64'))
+      return { scrollWidth: result.value, parts: [] }
+    }
+    const { cssContentSize } = await page.send('Page.getLayoutMetrics')
+    const pageHeight = Math.ceil(cssContentSize.height)
+    /** @param {string} file @param {number} y @param {number} clipHeight */
+    const shoot = async (file, y, clipHeight) => {
+      const { data } = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y, width, height: clipHeight, scale: 1 } })
+      writeFileSync(file, Buffer.from(data, 'base64'))
+    }
+    await shoot(out, 0, pageHeight)
+    const parts = partHeight === undefined ? [] : partClips(pageHeight, partHeight, out)
+    for (const part of parts) await shoot(part.out, part.y, part.height)
+    return { scrollWidth: result.value, parts: parts.map((part) => part.out) }
+  })
 }
 
 /**
@@ -231,7 +265,7 @@ function connect(url) {
 }
 
 /** @param {number} ms */
-function sleep(ms) {
+export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
@@ -245,15 +279,7 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     console.error(/** @type {Error} */ (error).message)
     process.exit(2)
   }
-  const chrome = findChrome()
-  if (!chrome) {
-    console.error(
-      process.env.CHROME_PATH
-        ? `No Google Chrome, Chromium or Microsoft Edge found at CHROME_PATH (${process.env.CHROME_PATH}).`
-        : 'No Google Chrome, Chromium or Microsoft Edge found. Install Google Chrome, or set CHROME_PATH to its executable, and run this again.',
-    )
-    process.exit(1)
-  }
+  const chrome = findChromeOrExit()
   // The last resort, should cleaning up after the capture's own 45-second deadline hang too: it takes about 6 seconds.
   setTimeout(() => {
     console.error(`No screenshot of ${options.url} within 60 seconds.`)
