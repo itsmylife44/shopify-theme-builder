@@ -6,6 +6,8 @@ All notable changes to the shopify-theme-builder skill are documented here. The 
 
 ### Added
 
+- Cart page layouts: stacked (the default, as before) or summary sidebar (the items on one side, the subtotal, free-shipping bar, tax note, order note and checkout buttons in a sticky summary beside them). The summary sidebar is also a named preset, "Main cart: summary sidebar", and stacks on mobile, the summary after the items.
+
 - Featured product layouts: image left (the default, as before), image right, full bleed (the image runs to the edge of the page, the details in a narrow column) or with thumbnails (every image of the product, switched from a thumbnail strip below the main one). Each layout is also a named preset, like "Featured product: with thumbnails", and stacks on mobile.
 
 - 404 page layouts: centered (the default, as before), split with an image in the image ratio box beside the message, with suggestions (four products of a collection under the search, or the shop's collections when none is set), or a big "404" in display type beside the message. Each layout is also a named preset, like "Main 404: big number", and stacks on mobile.
