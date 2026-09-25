@@ -19,7 +19,12 @@ describe('screenshot script (review.md step 2)', () => {
         height: 900,
         mobile: false,
         partHeight: undefined,
+        hover: undefined,
       })
+    })
+
+    it('hovers the first visible element a selector matches with --hover, for a capture of the viewport around it', () => {
+      expect(parseArguments(['http://127.0.0.1:9292/', 'card-hover.png', '--hover', '.product-card'])).toMatchObject({ hover: '.product-card', partHeight: undefined })
     })
 
     it('splits into parts twice the viewport tall with --parts, or --part-height tall', () => {
@@ -40,6 +45,8 @@ describe('screenshot script (review.md step 2)', () => {
       ['an unknown option', ['http://127.0.0.1:9292/', 'home.png', '--full']],
       ['a part height that is not a number', ['http://127.0.0.1:9292/', 'home.png', '--part-height', 'tall']],
       ['a part height of zero', ['http://127.0.0.1:9292/', 'home.png', '--part-height', '0']],
+      ['an empty hover selector', ['http://127.0.0.1:9292/', 'home.png', '--hover', '']],
+      ['a hover with parts, as a hover capture is one viewport', ['http://127.0.0.1:9292/', 'home.png', '--hover', '.button', '--parts']],
     ])('rejects %s with the usage', (_, args) => {
       expect(() => parseArguments(args)).toThrow(/Usage: node screenshot\.mjs <url> <out\.png>/)
     })
