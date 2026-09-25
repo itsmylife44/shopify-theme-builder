@@ -157,6 +157,37 @@
     <div class="main-product__details">
       {% content_for 'blocks' %}
     </div>
+
+    {% if section.settings.sticky_buy_bar %}
+      {% liquid
+        assign bar_price = current_variant.price
+        assign bar_allocation = current_variant.selected_selling_plan_allocation
+        if product.requires_selling_plan and bar_allocation == nil
+          assign bar_allocation = current_variant.selling_plan_allocations.first
+        endif
+        if bar_allocation
+          assign bar_price = bar_allocation.price
+        endif
+      %}
+      <sticky-buy-bar class="main-product__buy-bar" data-form="product-form-{{ section.id }}">
+        <p class="main-product__buy-bar-title">{{ product.title | escape }}</p>
+        <span class="main-product__buy-bar-price price">{{ bar_price | money }}</span>
+        <button
+          type="submit"
+          form="product-form-{{ section.id }}"
+          class="button main-product__buy-bar-button"
+          {% unless current_variant.available %}
+            disabled
+          {% endunless %}
+        >
+          {% if current_variant.available %}
+            {{ 'product.add_to_cart' | t }}
+          {% else %}
+            {{ 'product.sold_out' | t }}
+          {% endif %}
+        </button>
+      </sticky-buy-bar>
+    {% endif %}
   </product-info>
 </div>
 
@@ -370,6 +401,25 @@
   }
 
   if (!customElements.get('media-lightbox')) customElements.define('media-lightbox', MediaLightbox);
+
+  // Shows once the main add to cart has scrolled past the top of the screen; the page keeps its height free below.
+  class StickyBuyBar extends HTMLElement {
+    connectedCallback() {
+      const add = document.getElementById(this.dataset.form)?.querySelector('.buy-buttons__add');
+      if (!add) return;
+      this.observer = new IntersectionObserver(([entry]) => {
+        this.toggleAttribute('data-visible', !entry.isIntersecting && entry.boundingClientRect.bottom < 0);
+        document.documentElement.style.setProperty('--buy-bar-height', `${this.offsetHeight}px`);
+      });
+      this.observer.observe(add);
+    }
+
+    disconnectedCallback() {
+      this.observer?.disconnect();
+    }
+  }
+
+  if (!customElements.get('sticky-buy-bar')) customElements.define('sticky-buy-bar', StickyBuyBar);
 {% endjavascript %}
 
 {% stylesheet %}
@@ -683,6 +733,65 @@
       top: calc(var(--header-offset, 0px) + 2rem);
     }
   }
+
+  .main-product__buy-bar {
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-block: var(--space-sm);
+    padding-block-end: calc(var(--space-sm) + env(safe-area-inset-bottom));
+    padding-inline: max(var(--page-margin), env(safe-area-inset-left), env(safe-area-inset-right));
+    border-block-start: var(--border-width) solid var(--color-border-subtle);
+    background-color: var(--color-background);
+    translate: 0 100%;
+    visibility: hidden;
+  }
+
+  .main-product__buy-bar[data-visible] {
+    translate: none;
+    visibility: visible;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .main-product__buy-bar {
+      transition:
+        translate var(--motion-duration) var(--motion-easing),
+        visibility var(--motion-duration);
+    }
+  }
+
+  @media (min-width: 750px) {
+    .main-product__buy-bar {
+      display: none;
+    }
+  }
+
+  @media (max-width: 749px) {
+    body:has(.main-product__buy-bar) {
+      padding-block-end: var(--buy-bar-height);
+    }
+
+    html:has(.main-product__buy-bar) {
+      scroll-padding-block-end: var(--buy-bar-height);
+    }
+  }
+
+  .main-product__buy-bar-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .main-product__buy-bar-button {
+    flex-shrink: 0;
+  }
 {% endstylesheet %}
 
 {% schema %}
@@ -735,6 +844,13 @@
         { "value": "none", "label": "t:options.image_zoom.none" }
       ],
       "default": "lightbox"
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky_buy_bar",
+      "label": "t:labels.sticky_buy_bar",
+      "info": "t:info.main_product_sticky_buy_bar",
+      "default": true
     },
     {
       "type": "select",

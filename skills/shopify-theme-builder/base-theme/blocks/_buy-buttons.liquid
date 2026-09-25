@@ -13,10 +13,11 @@
   if product.requires_selling_plan and selling_plan_allocation == nil
     assign selling_plan_allocation = current_variant.selling_plan_allocations.first
   endif
+  assign form_id = 'product-form-' | append: section.id
 %}
 
 <div class="buy-buttons" {{ block.shopify_attributes }}>
-  {% form 'product', product, class: 'buy-buttons__form' %}
+  {% form 'product', product, id: form_id, class: 'buy-buttons__form' %}
     <input type="hidden" name="id" value="{{ current_variant.id }}">
     {% if product.selling_plan_groups != empty %}
       <fieldset class="buy-buttons__selling-plans">
