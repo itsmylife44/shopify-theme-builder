@@ -2,7 +2,10 @@
 // output (ADR-0003). The output formats below were checked against Shopify CLI 4.8.0.
 import { execFile, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { utimes } from 'node:fs/promises'
 import { createServer } from 'node:net'
+import path from 'node:path'
 import { promisify, stripVTControlCharacters } from 'node:util'
 
 // The oldest CLI whose output the Studio was checked against.
@@ -26,6 +29,8 @@ const block = /^[^\n╭]*╭[\s\S]*?╰[^\n]*\n|^(?![^\n]*╭)[^\n]*\n/
 const credentialsInvalid = /credentials are invalid/
 const uploadFailed = /Failed to upload file "([^"]+)" to remote theme\.(.*)/
 const synced = /Synced » update (\S+)/
+// Shopify refuses a template naming a section the store lacks, in the account's language (English, Italian).
+const missingSection = /(?:section type|tipo di sezione) "([^"/]+)"/i
 
 
 /**
@@ -41,6 +46,10 @@ const synced = /Synced » update (\S+)/
 export function startPreview({ cli, theme, store, storePassword, onChange }) {
   /** @type {Map<string, string>} The files whose latest upload failed, until theme dev syncs them. */
   const uploadErrors = new Map()
+  /** @type {Map<string, Set<string>>} Each section file touched because the store lacked it: the templates to touch once it syncs. */
+  const resyncing = new Map()
+  /** @type {Map<string, Set<string>>} Each template refused for want of a section: the sections touched for it, once each. */
+  const retried = new Map()
   /** @type {PreviewState} */
   let state = { status: 'starting', message: 'Starting `shopify theme dev`…', uploadErrors: [] }
   /** @type {import('node:child_process').ChildProcess | undefined} */
@@ -68,6 +77,8 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
   function restart(message) {
     // ponytail: the new run's first sync reports failed uploads only on theme dev's error page, not in its output.
     uploadErrors.clear()
+    resyncing.clear()
+    retried.clear()
     set({ status: 'reconnecting', message })
     const previous = child
     child = undefined
@@ -84,8 +95,16 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
     const flat = unbox(text)
     const [, failed, reason] = flat.match(uploadFailed) ?? []
     const [, updated] = flat.match(synced) ?? []
-    if (failed) uploadErrors.set(failed, reason.trim().slice(0, 500))
-    if (updated) uploadErrors.delete(updated)
+    if (failed) {
+      uploadErrors.set(failed, reason.trim().slice(0, 500))
+      resync(failed, reason)
+    }
+    if (updated) {
+      uploadErrors.delete(updated)
+      retried.delete(updated)
+      for (const template of resyncing.get(updated) ?? []) touch(template)
+      resyncing.delete(updated)
+    }
     if (credentialsInvalid.test(flat)) {
       if (Date.now() - reauthenticated < 60_000) {
         set({ status: 'login-required', message: loginStopped })
@@ -98,6 +117,32 @@ export function startPreview({ cli, theme, store, storePassword, onChange }) {
       return restart('Restarting `shopify theme dev`, whose Shopify CLI credentials expired…')
     }
     if (failed || updated) set(state)
+  }
+
+  /**
+   * theme dev's watcher can miss a file the Studio wrote, most often during its first sync (#222): when Shopify
+   * refuses a template for want of a section the Theme has, touches that section so theme dev uploads it, then
+   * the template once it synced. Once per template and section, so a refusal that isn't about the upload can't loop.
+   * @param {string} template
+   * @param {string} reason
+   */
+  function resync(template, reason) {
+    const [, type] = reason.match(missingSection) ?? []
+    const section = type && `sections/${type}.liquid`
+    const touched = retried.get(template) ?? new Set()
+    if (!section || touched.has(section) || !existsSync(path.join(theme, section))) return
+    retried.set(template, touched.add(section))
+    resyncing.set(section, (resyncing.get(section) ?? new Set()).add(template))
+    touch(section)
+  }
+
+  /**
+   * Marks a Theme file changed, so theme dev uploads it again.
+   * @param {string} file
+   */
+  function touch(file) {
+    const now = new Date()
+    utimes(path.join(theme, file), now, now).catch(() => {})
   }
 
   function run() {
