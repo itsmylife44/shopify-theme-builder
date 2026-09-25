@@ -184,7 +184,13 @@
     "suggestions": "Suggestions",
     "products": "Products",
     "pages": "Pages",
-    "search_for_html": "Search for “{{ terms }}”"
+    "search_for_html": "Search for “{{ terms }}”",
+    "tips_title": "Search tips",
+    "tips": {
+      "spelling": "Check the spelling.",
+      "fewer_words": "Use fewer or more general words.",
+      "other_words": "Try another word for the same thing."
+    }
   },
   "taxes": {
     "duties_and_taxes_included": "Duties and taxes included.",
