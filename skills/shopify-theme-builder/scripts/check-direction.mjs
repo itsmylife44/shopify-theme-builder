@@ -332,6 +332,7 @@ const shownImages = {
   'editorial-split': () => 'section',
   lookbook: () => 'section',
   newsletter: (settings) => (settings.layout === 'split' ? 'section' : undefined),
+  'call-to-action': (settings) => (['split', 'over_image'].includes(settings.layout) ? 'section' : undefined),
   slideshow: () => 'blocks',
   'process-steps': () => 'blocks',
   'image-gallery': () => 'blocks',
@@ -374,7 +375,7 @@ const movingSections = {
   'collection-list': (settings) => settings.layout === 'carousel',
 }
 // The sections that show only type when no image setting is set.
-const typeOnlySections = ['rich-text', 'type-banner', 'newsletter', 'spec-tiles']
+const typeOnlySections = ['rich-text', 'type-banner', 'newsletter', 'spec-tiles', 'call-to-action']
 // The sections that show the catalog: what a shopper infers the shop sells from.
 const merchandiseSections = ['featured-collection', 'collection-list', 'featured-product']
 
