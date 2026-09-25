@@ -200,7 +200,21 @@ function layoutStack(stack, x, y, width, height, center, padding) {
  * @type {Record<string, Record<string, PresetWireframe>>}
  */
 export const wireframes = {
-  'blog-posts': { 't:general.blog_posts': { wireframe: 'heading / 3* image title text x3' } },
+  'blog-posts': {
+    't:general.blog_posts': { wireframe: 'heading / 3* image title text x3', description: 'Article cards side by side, each with an image' },
+    't:general.blog_posts_featured': {
+      wireframe: 'heading / 4* image title text | title line rule title line rule title line',
+      description: 'The latest article large, the next ones listed beside it',
+    },
+    't:general.blog_posts_thumbnails': {
+      wireframe: 'heading / 2* image | line title text / 2* image | line title text / 2* image | line title text',
+      description: 'One article a row, with a small image beside its text',
+    },
+    't:general.blog_posts_text_list': {
+      wireframe: 'heading / title line / rule / title line / rule / title line / rule / title line',
+      description: 'Titles and dates only, divided by rules',
+    },
+  },
   'collection-list': {
     't:general.collection_list': {
       wireframe: 'heading / 3* image title x3',
