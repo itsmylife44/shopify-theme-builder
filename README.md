@@ -2,15 +2,16 @@
 
 # Shopify Theme Builder
 
-**Describe your brand. Your coding agent builds the Shopify theme.**
+**Describe your shop in one message. Your coding agent designs, builds, checks and delivers a real Shopify theme.**
 
-An agent skill for Claude Code, Codex, Cursor and other coding agents: it turns your website, a screenshot or a moodboard into a real Shopify theme, with a local Studio that shows the rendered store while you shape it.
+An open-source agent skill for Claude Code, Codex, Cursor and other coding agents. It turns your website, a screenshot or a moodboard into three complete theme designs, lets you pick one in a live Studio, writes every page in your shop's language, and hands you a theme that passes Theme Check and an accessibility audit, uploaded unpublished.
 
 [![CI](https://github.com/itsmylife44/shopify-theme-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/itsmylife44/shopify-theme-builder/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 [![Agent skill](https://img.shields.io/badge/agent%20skill-npx%20skills%20add-black.svg)](https://github.com/vercel-labs/skills)
+[![Online Store 2.0](https://img.shields.io/badge/Shopify-Online%20Store%202.0-95BF47.svg)](https://shopify.dev/docs/storefronts/themes)
 
-[Quickstart](#quickstart) · [How it works](#how-it-works) · [The Studio](#the-studio) · [Sections](#the-section-catalog) · [FAQ](#faq)
+[Quickstart](#quickstart) · [Example prompt](#an-example-prompt) · [How it works](#how-it-works) · [Directions](#three-directions-not-one-guess) · [Studio](#the-studio) · [Quality](#quality-checks) · [Sections](#the-section-catalog) · [FAQ](#faq)
 
 ![The Studio: selecting the hero, rewriting its heading and switching its color scheme, while the live Shopify preview updates](docs/images/demo.gif)
 
@@ -18,98 +19,185 @@ An agent skill for Claude Code, Codex, Cursor and other coding agents: it turns 
 
 ## Quickstart
 
+**1. Install the skill** in the folder where you run your agent:
+
 ```sh
 npx skills add itsmylife44/shopify-theme-builder
 ```
 
-Then ask your agent:
+**2. Send your agent a prompt** like the [example below](#an-example-prompt), or just:
 
 > *Build me a Shopify theme for my shop. Here's my website: https://…*
 
-That's it. The agent checks what your machine needs, asks only what it can't read from your brand, builds the theme and opens the Studio. You need Node.js 22.12+, Git and the Shopify CLI ([details](#prerequisites)); no store yet? The agent creates a free development store for you.
+**3. Answer its questions, then pick a design** in the Studio that opens in Chrome. The agent does the rest and tells you when the theme is ready.
 
-## Why
+You need Node.js 22.12+, Git and the Shopify CLI ([details](#requirements)). No store yet? The agent creates a free development store for you.
 
-A Shopify store that looks like *your* brand usually means one of three things: a paid theme that looks like every other store using it, weeks of learning Liquid, or an agency. AI page builders are faster, but they lock you into an app, a subscription and their own editor.
+## An example prompt
 
-Shopify Theme Builder takes a different path:
+The more your first message says, the fewer questions the agent asks. Copy this, then change every line to your shop:
 
-- **Your agent does the work.** No hosted service, no AI inside the Studio, no account to create. Generation runs in the coding agent you already use.
-- **Native from the first file.** The theme starts from [Skeleton](https://github.com/Shopify/skeleton-theme), Shopify's own minimal theme. Your colors, fonts and logo live in the theme's settings, so the shop's owner keeps editing everything in Shopify's Theme Editor, with no app installed.
-- **You own a plain folder.** The theme is a Git repository with no build step, ready for Shopify's GitHub integration. Change it by hand, with your agent, or in the Studio.
-- **Checked on every change.** Shopify's Theme Check runs after each edit; the agent fixes errors before it hands you anything.
-- **Nothing goes live by surprise.** Delivery uploads the theme *unpublished*. Publishing stays the owner's decision.
+```text
+Use the shopify-theme-builder skill to build a Shopify theme for my shop.
 
-| | Paid theme | Agency or freelancer | AI page-builder app | **Shopify Theme Builder** |
-| --- | --- | --- | --- | --- |
-| Looks like your brand | Partly | Yes | Partly | **Yes** |
-| Time to a first version | Hours | Weeks | Minutes | **Minutes** |
-| Edited in Shopify's Theme Editor | Yes | Depends | Often in the app's own editor | **Yes** |
-| No app or subscription on the store | Yes | Yes | No | **Yes** |
-| You own the code | License | Depends on the contract | No | **Yes** |
+Shop: Olmo Ceramica, handmade stoneware tableware from a two-person studio in Florence.
+Reference: https://olmoceramica.example — take our colors, fonts and logo from there.
+Keep: our terracotta #B5552D and our logo. Everything else is open.
+Photos: ~/Desktop/olmo-photos (the studio, the kiln, table settings, products on white).
+Customers: people setting up a first home who'd rather buy fewer, better things.
+It should feel: calm, warm, handmade. Not glossy luxury, not rustic kitsch.
+Inspiration outside ceramics: Japanese cookbook layouts, Kinfolk magazine.
+Store: we don't have one yet, create a development store in Italy.
+Selling: Italy and the rest of the EU, in Italian and English, prices in EUR including VAT.
+Buying facts: shipping €6.90, free over €80, 2–4 days in Italy, returns within 14 days.
+```
+
+What each line gives the agent:
+
+| Line | What the agent does with it |
+| --- | --- |
+| **Shop** | The shop's name (also the theme's name) and what it sells, for every heading and paragraph it writes |
+| **Reference** | Reads your colors, fonts and logo, and tells you what it took |
+| **Keep** | Pins those values: all three designs use them, and vary everything else |
+| **Photos** | Uploads them to your shop's Files and places each one where its content fits: the kiln in the process steps, a table scene in the hero |
+| **Customers** and **feel** | The brief the three designs are built from; the "not" line rules out the look every shop in your category already has |
+| **Inspiration** | References from outside your category, so the design doesn't copy your competitors |
+| **Store** | Uses your store, or creates a development store in your country, currency and language |
+| **Selling** | Adds the languages, the translation files and the menus, and gives you the admin links for currency, markets and VAT |
+| **Buying facts** | Written on the product page, the cart's free-shipping bar and the shipping note; the agent never invents one |
+
+Leave out whatever you don't know yet: the agent asks, one question at a time, and proposes a default you can just confirm. It always reads the brief back to you once before designing anything.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A["Your brand<br/>website · screenshot · moodboard"] --> B["Your coding agent<br/>+ this skill"]
-    B --> C["Theme folder<br/>Skeleton + catalog sections"]
-    C <--> D["Studio<br/>live preview in Chrome"]
-    C --> E["Your Shopify store<br/>uploaded unpublished"]
+    P["Your prompt<br/>website · photos · brief"] --> S["Store setup<br/>languages · menus · buying facts"]
+    S --> D["Three Directions<br/>complete home pages"]
+    D --> C{"You choose<br/>in the Studio"}
+    C --> T["Full theme<br/>every page, your text, your photos"]
+    T --> R["Review<br/>Theme Check · design · a11y"]
+    R --> X["Delivery<br/>Lighthouse · unpublished upload or zip"]
 ```
 
-1. **Brief.** The agent reads your colors, fonts and logo from the reference, and asks about your brand's world, your shoppers, the feeling the shop should give and what it rejects, then its name and the theme's author. Before that, together with the store's password and login, it asks the shop's languages, currency, markets and menus, writes the menus and adds the languages, and gives you the admin links for the rest.
-2. **Theme.** It creates the theme in a new folder with its own Git history and writes three Directions, each a different design with its own home page, for you to compare and choose in the Studio. It composes the product and collection pages from the Section Catalog, writes every heading and paragraph in your shop's default language, and records the chosen Direction's rules in `DIRECTION.md`.
-3. **Studio.** It opens the Studio, where you see the real store rendered by Shopify and change colors, text and section order.
-4. **Custom sections.** Need something the catalog doesn't have, like a size guide? Ask. The agent writes a section with the same conventions and validates it.
-5. **Delivery.** Ask to deliver: the agent checks speed and accessibility with Lighthouse, fixes the accessibility failures, then uploads the theme to your store unpublished, packages it as a zip, or explains the GitHub integration.
+| Step | What the agent does | What you do |
+| --- | --- | --- |
+| **1. Setup** | Checks Node, Git and the Shopify CLI. Connects to your store, or creates a free development store in your shop's country. Asks every store decision in one message: languages, currency and VAT, markets, the main and footer menus, shipping and returns. Writes the menus and enables the languages through the Admin API. | Log in once, confirm the defaults, and follow the admin links for what only you can change. |
+| **2. Brief** | Reads your reference for colors, fonts and logo. Asks only what's missing: your brand's world, your shopper, three emotions, references, what the brand rejects, your photos. Reads the brief back. | Answer, then confirm the brief. |
+| **3. Directions** | Creates the theme folder from Shopify's [Skeleton](https://github.com/Shopify/skeleton-theme) with its own Git history, uploads your photos, and writes three complete designs, each with its own home page of 6 to 8 sections and your text. | Open the Studio, switch between the three, press **Choose**. |
+| **4. Composition** | Carries on by itself as soon as you choose. Builds the product, collection, cart, search, blog, article, contact, 404 and collections pages; writes every text in your shop's language, in the chosen design's voice; places your photos; puts your buying facts on the product page. | Nothing, or watch the preview fill in. |
+| **5. Review** | Runs the design checker, screenshots every key page on desktop and phone, runs an accessibility audit with keyboard tests, fixes what it finds, and gives a PASS or HOLD verdict. Commits the theme. | Read the verdict and the hand-off notes. |
+| **6. Refine** | Writes Custom Sections for anything the catalog lacks, like a fit finder, with the same conventions and checks. | Edit in the Studio, or ask the agent. |
+| **7. Delivery** | Runs Lighthouse on the home, product and collection pages against the Theme Store's bars, fixes the accessibility failures, runs Theme Check, then uploads the theme unpublished, packages a zip, or sets up Shopify's GitHub integration. | Say "deliver it". Publish it yourself when you're ready. |
+
+## Three Directions, not one guess
+
+A single AI-generated design is a coin toss. Shopify Theme Builder writes three **Directions** from your brief, each a whole theme your shop could ship, and lets you compare them live on your own store.
+
+Each Direction decides every design axis, and the three must differ in kind on at least three of them:
+
+| Axis | For example |
+| --- | --- |
+| **Type** | Fonts from Shopify's library, display size, scale ratio, weight, case, tracking and line height |
+| **Color** | A strategy (restrained, committed or full) and the color schemes that carry it, every pair checked for contrast |
+| **Shape** | Square, soft or round, for buttons, inputs, cards, media and badges |
+| **Spacing** | Compact, normal or airy, and per-section spacing so dense and airy bands alternate |
+| **Cards** | Product card anatomy, image ratio, style and hover |
+| **Media** | Full-bleed or framed product images |
+| **Motion** | None, subtle or expressive, always off under reduced motion |
+| **Composition** | Which home sections, in what order, on which color schemes, with one **signature** section |
+| **Footer** | One of eight footer layouts, matched to the design |
+
+The agent checks each Direction against a list of generic-design tells before you see it. The chosen one's rules are written to `DIRECTION.md` in your theme, so anyone who edits it later, human or agent, knows why it looks the way it does.
 
 ## The Studio
 
-The Studio is a local app that opens next to your agent, in Google Chrome. It shows your real theme, rendered by Shopify through `shopify theme dev`, and saves every change straight into the theme's files, where your agent sees it too.
+The Studio is a local app that opens next to your agent, in Google Chrome. It shows your real theme rendered by Shopify through `shopify theme dev`, and saves every change straight into the theme's files, where your agent sees it too.
 
 ![The Studio: the home page's sections on the left, the live Shopify preview in the middle, the selected section's text on the right](docs/images/studio.png)
 
-- **Click to edit.** Click a section in the preview, or in the list on the left. On the right, pick its color scheme, rewrite its text (and its blocks' text, like each testimonial), move it or remove it.
-- **Add sections** from the Section Catalog, picking a layout from wireframe thumbnails (like a split or full-screen hero), or the Custom Sections your agent wrote.
-- **Brand.** Color schemes, fonts from Shopify's font library, and the logo, for the whole theme.
-- **Pages.** Home, product, collection, page, contact page, cart, search, blog, article, 404 and the collections list, in the top bar.
-- **Desktop and mobile** previews, and a Theme Check status that updates after every change.
+- **Click to edit.** Click a section in the preview or in the list, header and footer included. Change its color scheme, text, layout, collections, products, menus and links. Every edit applies live.
+- **Add sections** from the catalog, picking a layout from wireframe thumbnails, or add the Custom Sections your agent wrote.
+- **Directions, Brand and Style.** Switch between the three Directions and choose one; edit color schemes, fonts and logo; tune the type scale, shape, buttons, spacing, cards, media and motion.
+- **Every page.** Home, product, collection, page, contact, cart, search, blog, article, 404 and the collections list, on desktop and mobile.
+- **Safe to experiment.** Undo and redo, a Save button that commits a checkpoint to the theme's Git history, and a live Theme Check status.
+- **Download zip** gives the theme as the file Shopify's admin takes.
 
 <p>
   <img src="docs/images/studio-add-section.png" alt="Adding a section: each catalog section with its description and its layouts as wireframe thumbnails" width="49%">
   <img src="docs/images/studio-brand.png" alt="The Brand tab with the color schemes and fonts, next to the mobile preview" width="49%">
 </p>
 
-Images stay in Shopify's Theme Editor, and products, collections and menus in the Shopify admin (the agent writes the first menus you agree on).
+Videos and images beyond your brief's photos are picked in Shopify's Theme Editor (the Studio links to the right section), and products, collections and menus stay in the Shopify admin.
+
+## Quality checks
+
+Nothing reaches you unchecked, and nothing goes live without you.
+
+| Check | When it runs | The bar |
+| --- | --- | --- |
+| **Theme Check** (Shopify's linter) | After every change | Zero errors before anything is handed over |
+| **Contrast** | Every color scheme | Text 4.5:1, borders and buttons 3:1 |
+| **Design checker** | Each Direction, and the review | No placeholders, no leftover example text, a real type hierarchy, one h1 per page, products near the top of the home |
+| **Accessibility** (axe-core, WCAG 2.2 A and AA) | The review and delivery | Zero findings on home, product and collection, desktop and phone, plus a keyboard pass through the menu, cart drawer and quick add |
+| **Lighthouse** | Delivery | The Theme Store's bars: performance 60, accessibility 90 |
+| **Publishing** | Never | The theme is uploaded unpublished; publishing is the Merchant's decision |
 
 ## The Section Catalog
 
-Every section follows the Brand through theme settings, has its own color scheme, and shows Shopify's placeholders on an empty store, so a new development store already looks like a shop.
+Over 40 sections, each styled by the Brand through theme settings, with its own color scheme, named layouts, right-to-left support, and Shopify's placeholders on an empty store, so a new development store already looks like a shop.
 
-| Page | Sections |
+| Where | Sections |
 | --- | --- |
-| Home | Hero (image or video) · Slideshow · Featured collection · Featured product · Collection list · Multicolumn · Video · Blog posts · Image gallery · Image with text · Rich text · Testimonials · Logo list · FAQ · Newsletter |
-| Product | Main product (media, variants, add to cart, app and Custom Liquid blocks) · Related products |
-| Collection | Product grid with filters and sorting |
-| Cart | Main cart (discounts, order note, Shop Pay and other accelerated checkout buttons), also shown in the header's cart drawer |
-| Search | Search results (products, articles and pages) with filters and sorting |
-| Blog | Article cards (image, date, excerpt, author) with tag links and pagination |
-| Article | Article (image, date, author, content, tags) with paginated comments and a comment form |
-| 404 | Heading and text, a search form and a link back to the shop |
-| Collections list | Collection cards (image, title) sorted alphabetically or by date, with pagination |
-| Any page | Custom Liquid (your own Liquid or HTML, like an app snippet or an embed) |
-| Every page | Header (menus, search with suggestions) · Footer (menus, email signup, country and language selectors, payment icons) |
+| **Home and pages** | Hero (image or video) · Slideshow · Type banner · Featured collection · Featured product · Collection list · Multicolumn · Image with text · Editorial split · Lookbook (shoppable hotspots) · Image gallery · Video · Rich text · Call to action · Testimonials · Press quotes · Logo list · Marquee · Spec tiles · Process steps · Timeline · Team · Comparison table · FAQ · Newsletter · Blog posts · Custom Liquid |
+| **Product** | Media in a grid, stacked, with thumbnails or in a carousel · full-screen zoom with pinch on touch · variant picker naming the selected value · sticky add-to-cart bar on phones · size guide dialog · shipping note and collapsible details · app and Custom Liquid blocks · Related products |
+| **Collection and search** | Product grid with filters and sorting that update without reloading, and a filter drawer on phones |
+| **Cart** | Cart page and drawer: discounts, order note, free-shipping progress, Shop Pay and other accelerated checkouts, product suggestions when empty |
+| **Blog, article, contact, 404, collections list** | Each with its catalog main section, like a contact form beside the shop's details or a 404 with search |
+| **Every page** | Announcement bar · Header (three layouts, optionally sticky, with predictive search) · Footer (eight layouts, menus, newsletter, country and language selectors, payment icons) |
 
-Product cards (featured collection, product grid, search results, related products) have a quick add button: a product without variants goes straight into the cart drawer, one with variants opens a small dialog to pick one.
+Product cards have a quick add button: a product without variants goes straight to the cart drawer, one with variants opens a small picker.
 
-Every other page (password, content pages …) uses Skeleton's own layout, styled by the same Brand.
+## What you end up with
 
-## Prerequisites
+A plain theme folder you own, with no build step and no app on the store:
+
+```text
+olmo-ceramica-theme/
+├── DIRECTION.md     your brief, the three Directions and the chosen one's rules
+├── config/          the Brand and each Direction as theme settings presets
+├── sections/        only the catalog sections the theme uses, plus your Custom Sections
+├── templates/       every page, composed and written in your shop's language
+├── listings/        each Direction's home page
+├── locales/         the theme's text in every language the shop sells in
+└── .git/            its own history, ready for Shopify's GitHub integration
+```
+
+The shop's owner keeps editing it in Shopify's Theme Editor like any theme. A developer can take over the Liquid any time.
+
+## Why
+
+A store that looks like *your* brand usually means one of three things: a paid theme that looks like every other store using it, weeks of learning Liquid, or an agency. AI page builders are faster, but they lock you into an app, a subscription and their own editor.
+
+| | Paid theme | Agency or freelancer | AI page-builder app | **Shopify Theme Builder** |
+| --- | --- | --- | --- | --- |
+| Looks like your brand | Partly | Yes | Partly | **Yes** |
+| Time to a first version | Hours | Weeks | Minutes | **One agent session** |
+| Designs to compare | One, plus its presets | Depends on the budget | One | **Three, live on your store** |
+| Edited in Shopify's Theme Editor | Yes | Depends | Often in the app's own editor | **Yes** |
+| No app or subscription on the store | Yes | Yes | No | **Yes** |
+| You own the code | License | Depends on the contract | No | **Yes** |
+
+- **Your agent does the work.** No hosted service, no AI inside the Studio, no account to create. Generation runs in the coding agent you already use.
+- **Native from the first file.** Built on Skeleton, Shopify's own minimal theme. Colors, fonts and logo live in theme settings.
+- **Nothing goes live by surprise.** The skill never publishes a theme.
+
+## Requirements
 
 - **Node.js 22.12** or newer, and **Git 2.28** or newer.
 - **Shopify CLI 4.8.0** or newer: `npm install -g @shopify/cli@latest`. The first time, log in with `shopify auth login` in your own terminal.
-- **A store** where you are the owner, or have a staff or collaborator account with theme permissions. No store yet? The agent can create a free development store for you. Give each theme its own store: the Shopify CLI keeps one development theme per store per machine.
+- **Google Chrome**, for the Studio, the screenshots, the accessibility check and Lighthouse.
+- **A store** where you are the owner, or have a staff or collaborator account with theme permissions. No store yet? The agent creates a free development store. Give each theme its own store: the Shopify CLI keeps one development theme per store per machine.
 
 The agent checks all of these first, plus the Studio's dependencies, and tells you how to fix what's missing.
 
@@ -150,9 +238,21 @@ No. The preview runs on a development theme, and delivery uploads the theme unpu
 </details>
 
 <details>
+<summary><b>I'm building for a client. How does the hand-over work?</b></summary>
+
+Build on a development store, then deliver to the client's store with a collaborator account (the agent uploads it unpublished there), or send them the zip from the Studio's Download zip button. A development store itself can't be transferred.
+</details>
+
+<details>
 <summary><b>Can my shop be in a language other than English, or in several?</b></summary>
 
-Yes. The agent adds the theme's translation files for every language the shop sells in and writes the page text in its default language; Shopify's Translate & Adapt app translates that text into the others.
+Yes. The agent writes the page text in the shop's default language, adds the theme's translation files for every language it sells in, and enables those languages on the store. Shopify's free Translate & Adapt app then translates the page text into the others. Layouts mirror for right-to-left languages.
+</details>
+
+<details>
+<summary><b>What if I don't have photos yet?</b></summary>
+
+Say "none yet". The Directions then stand on type and color, with sections that need no image, and product cards from your store. Add photos later and ask the agent to place them.
 </details>
 
 <details>
