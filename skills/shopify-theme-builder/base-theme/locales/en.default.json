@@ -233,6 +233,7 @@
     "next": "Next testimonial"
   },
   "marquee": {
+    "label": "Highlights",
     "pause": "Pause scrolling text"
   },
   "comparison_table": {

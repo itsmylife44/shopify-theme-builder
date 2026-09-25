@@ -2081,6 +2081,19 @@ describe('Marquee', () => {
     expect(css).toMatch(/\.marquee__pause {[^}]*min-inline-size: var\(--target-size\);[^}]*min-block-size: var\(--target-size\);/)
   })
 
+  it('lets the keyboard scroll a still row that overflows, keeping a moving one out of the tab order', () => {
+    const script = source.match(/{% javascript %}([\s\S]*){% endjavascript %}/)?.[1] ?? ''
+    const locale = JSON.parse(readFileSync(path.join(projectDir, 'skills/shopify-theme-builder/base-theme/locales/en.default.json'), 'utf8'))
+    expect(source).toMatch(/<marquee-viewport class="marquee__viewport" role="region" aria-label="{{ 'marquee\.label' \| t }}">[\s\S]*<\/marquee-viewport>/)
+    expect(locale.marquee.label).toBe('Highlights')
+    // Still is what the stylesheet decides (reduced motion, or motion none): the row scrolls instead of hiding its overflow.
+    expect(script).toMatch(/getComputedStyle\(this\)\.overflowX !== 'hidden' && this\.scrollWidth > this\.clientWidth/)
+    expect(script).toMatch(/this\.tabIndex = 0;[\s\S]*this\.removeAttribute\('tabindex'\)/)
+    expect(script).toMatch(/new ResizeObserver\(/)
+    expect(script).toMatch(/matchMedia\('\(prefers-reduced-motion: reduce\)'\)\.addEventListener\('change'/)
+    expect(script).toContain("customElements.define('marquee-viewport'")
+  })
+
   it('scrolls toward the start of the line, mirrored in right-to-left shops', () => {
     expect(css).toMatch(/\.marquee__track:dir\(rtl\) {\s*--marquee-shift: 50%;/)
     expect(css).toMatch(/@keyframes marquee {\s*to {\s*translate: var\(--marquee-shift\);/)
