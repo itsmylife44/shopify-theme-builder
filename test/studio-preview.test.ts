@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { createServer as createHttpServer } from 'node:http'
 import { createServer } from 'node:net'
 import path from 'node:path'
@@ -202,6 +202,31 @@ describe('Studio: live preview', () => {
     process.kill((await fakeRun(cli)).pid, 'SIGUSR2')
     await expect.poll(async () => (await studio.readPreview()).uploadErrors).toEqual([])
     expect((await studio.readTheme()).validation).not.toContainEqual(expect.objectContaining({ file: 'templates/product.json' }))
+  })
+
+  // theme dev's watcher can miss a section the Studio copied in (#222); Shopify words the refusal in the account's language.
+  it.each([
+    ['English', 'Section type "hero" does not refer to an existing section file'],
+    ['Italian', 'Il tipo di sezione "hero" non fa riferimento a un file sezione esistente'],
+  ])('touches a section missing on the store, then the template that names it (%s)', async (_, reason) => {
+    const theme = fixtureTheme()
+    const [section, template] = ['sections/hero.liquid', 'templates/index.json'].map((file) => path.join(theme, file))
+    writeFileSync(section, '<div>Hero</div>')
+    const long = new Date('2026-01-01')
+    for (const file of [section, template]) utimesSync(file, long, long)
+    const modified = (file: string) => statSync(file).mtimeMs > long.getTime()
+    const cli = fakeShopify({
+      output: running,
+      later: `Failed to upload file "templates/index.json" to remote theme. ${reason}\n`,
+      onSignal: '• 10:02:11  Synced » update sections/hero.liquid\n',
+    })
+    await openStudio(theme, { cli })
+
+    await expect.poll(() => modified(section)).toBe(true)
+    // The template waits for the section to reach the store.
+    expect(modified(template)).toBe(false)
+    process.kill((await fakeRun(cli)).pid, 'SIGUSR2')
+    await expect.poll(() => modified(template)).toBe(true)
   })
 
   const loginPrompt =
