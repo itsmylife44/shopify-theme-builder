@@ -76,13 +76,16 @@
                 </div>
               </td>
               <td>
+                <label for="Quantity-{{ section.id }}-{{ forloop.index }}" class="visually-hidden">
+                  {{- 'cart.quantity_for' | t: product: item.product.title | escape -}}
+                </label>
                 <input
+                  id="Quantity-{{ section.id }}-{{ forloop.index }}"
                   type="number"
                   name="updates[]"
                   value="{{ item.quantity }}"
                   min="0"
                   data-line="{{ forloop.index }}"
-                  aria-label="{{ 'cart.quantity_for' | t: product: item.product.title | escape }}"
                 >
               </td>
               <td class="price">

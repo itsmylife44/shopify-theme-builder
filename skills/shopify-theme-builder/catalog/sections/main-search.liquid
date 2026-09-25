@@ -20,12 +20,13 @@
     <div class="main-search__header">
       <h1 class="main-search__title">{{ 'search.title' | t }}</h1>
       <form action="{{ routes.search_url }}" method="get" role="search" class="main-search__form">
+        <label for="Search-{{ section.id }}" class="visually-hidden">{{ 'search.title' | t }}</label>
         <input
+          id="Search-{{ section.id }}"
           type="search"
           name="q"
           value="{{ terms }}"
           placeholder="{{ 'search.placeholder' | t }}"
-          aria-label="{{ 'search.title' | t }}"
         >
         <input type="hidden" name="options[prefix]" value="last">
         <button type="submit" class="button main-search__apply">{{ 'search.submit' | t }}</button>
@@ -66,9 +67,10 @@
                       {% case filter.type %}
                         {% when 'price_range' %}
                           <div class="main-search__price-range">
-                            <label>
+                            <label for="{{ section.id }}-{{ filter.min_value.param_name | handleize }}">
                               {{ 'collection.price_from' | t }}
                               <input
+                                id="{{ section.id }}-{{ filter.min_value.param_name | handleize }}"
                                 type="number"
                                 name="{{ filter.min_value.param_name }}"
                                 min="0"
@@ -80,9 +82,10 @@
                                 {% endif %}
                               >
                             </label>
-                            <label>
+                            <label for="{{ section.id }}-{{ filter.max_value.param_name | handleize }}">
                               {{ 'collection.price_to' | t }}
                               <input
+                                id="{{ section.id }}-{{ filter.max_value.param_name | handleize }}"
                                 type="number"
                                 name="{{ filter.max_value.param_name }}"
                                 min="0"
@@ -97,8 +100,9 @@
                           </div>
                         {% else %}
                           {% for filter_value in filter.values %}
-                            <label class="main-search__filter-value">
+                            <label for="{{ section.id }}-{{ filter.param_name | handleize }}-{{ forloop.index }}" class="main-search__filter-value">
                               <input
+                                id="{{ section.id }}-{{ filter.param_name | handleize }}-{{ forloop.index }}"
                                 type="checkbox"
                                 name="{{ filter_value.param_name }}"
                                 value="{{ filter_value.value }}"
@@ -119,9 +123,9 @@
               {% endif %}
 
               {% if show_sorting %}
-                <label class="main-search__sort">
+                <label for="{{ section.id }}-sort-by" class="main-search__sort">
                   {{ 'collection.sort_by' | t }}
-                  <select name="sort_by">
+                  <select id="{{ section.id }}-sort-by" name="sort_by">
                     {% for option in search.sort_options %}
                       <option
                         value="{{ option.value | escape }}"
