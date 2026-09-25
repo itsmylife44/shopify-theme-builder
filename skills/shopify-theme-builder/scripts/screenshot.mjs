@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Takes a full-page screenshot of a page of the preview, for the review (references/design/review.md). Usage:
-//   node <skill-dir>/scripts/screenshot.mjs <url> <out.png> [--width 1440] [--mobile]
+//   node <skill-dir>/scripts/screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--parts | --part-height <px>]
 // It drives the system's Google Chrome (or Chromium, or Microsoft Edge; CHROME_PATH names another) headless over the
 // DevTools Protocol, with reduced motion so reveal.js hides no section, waits a fixed few seconds rather than for the
 // network (theme dev's hot reload never goes idle), prints the page's scrollWidth, and stops within 60 seconds.
+// With --parts it also writes the page in parts, <out>-1.png, <out>-2.png, …, each small enough for a model to read.
 import { spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -11,12 +12,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
-/** @typedef {{ url: string, out: string, width: number, height: number, mobile: boolean }} Options */
+/** @typedef {{ url: string, out: string, width: number, height: number, mobile: boolean, partHeight: number | undefined }} Options */
 
-const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobile]
-  <url>     a page of the preview, like http://127.0.0.1:9292/products/<handle>
-  --width   the viewport's width in pixels (default 1440, 390 with --mobile)
-  --mobile  emulate a 390 by 844 phone with touch`
+const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobile] [--parts | --part-height <px>]
+  <url>          a page of the preview, like http://127.0.0.1:9292/products/<handle>
+  --width        the viewport's width in pixels (default 1440, 390 with --mobile)
+  --mobile       emulate a 390 by 844 phone with touch
+  --parts        also write the page top to bottom in parts, <out>-1.png, <out>-2.png, …, twice the viewport tall
+  --part-height  the same, with parts this many pixels tall`
 
 /**
  * The capture the command line asks for.
@@ -26,7 +29,7 @@ const usage = `Usage: node screenshot.mjs <url> <out.png> [--width 1440] [--mobi
 export function parseArguments(args) {
   let parsed
   try {
-    parsed = parseArgs({ args, allowPositionals: true, options: { width: { type: 'string' }, mobile: { type: 'boolean', default: false } } })
+    parsed = parseArgs({ args, allowPositionals: true, options: { width: { type: 'string' }, mobile: { type: 'boolean', default: false }, parts: { type: 'boolean', default: false }, 'part-height': { type: 'string' } } })
   } catch (error) {
     throw new Error(`${/** @type {Error} */ (error).message}\n${usage}`)
   }
@@ -34,8 +37,28 @@ export function parseArguments(args) {
   const [url, out] = positionals
   const mobile = values.mobile ?? false
   const width = Number(values.width ?? (mobile ? 390 : 1440))
+  const height = mobile ? 844 : 900
+  const partHeight = values['part-height'] !== undefined ? Number(values['part-height']) : values.parts ? 2 * height : undefined
   if (positionals.length !== 2 || !/^https?:\/\//.test(url) || !Number.isInteger(width) || width <= 0) throw new Error(usage)
-  return { url, out, width, height: mobile ? 844 : 900, mobile }
+  if (partHeight !== undefined && (!Number.isInteger(partHeight) || partHeight <= 0)) throw new Error(usage)
+  return { url, out, width, height, mobile, partHeight }
+}
+
+/**
+ * The parts that cover a page `pageHeight` pixels tall, top to bottom, each `partHeight` tall but the last, and the
+ * file each goes to: `<out>-1.png`, `<out>-2.png`, ….
+ * @param {number} pageHeight
+ * @param {number} partHeight
+ * @param {string} out
+ * @returns {{ out: string, y: number, height: number }[]}
+ */
+export function partClips(pageHeight, partHeight, out) {
+  const extension = path.extname(out)
+  const stem = out.slice(0, out.length - extension.length)
+  return Array.from({ length: Math.ceil(pageHeight / partHeight) }, (_, index) => {
+    const y = index * partHeight
+    return { out: `${stem}-${index + 1}${extension}`, y, height: Math.min(partHeight, pageHeight - y) }
+  })
 }
 
 /**
@@ -69,9 +92,9 @@ function candidates(platform, env) {
  * Captures the page with the browser at `chrome` and writes the PNG to `out`.
  * @param {string} chrome
  * @param {Options} options
- * @returns {Promise<{ scrollWidth: number }>}
+ * @returns {Promise<{ scrollWidth: number, parts: string[] }>}
  */
-async function capture(chrome, { url, out, width, height, mobile }) {
+async function capture(chrome, { url, out, width, height, mobile, partHeight }) {
   const profile = mkdtempSync(path.join(tmpdir(), 'screenshot-chrome-'))
   const browser = spawn(
     chrome,
@@ -99,13 +122,16 @@ async function capture(chrome, { url, out, width, height, mobile }) {
       await sleep(2000)
       const { result } = await page.send('Runtime.evaluate', { expression: 'document.documentElement.scrollWidth', returnByValue: true })
       const { cssContentSize } = await page.send('Page.getLayoutMetrics')
-      const { data } = await page.send('Page.captureScreenshot', {
-        format: 'png',
-        captureBeyondViewport: true,
-        clip: { x: 0, y: 0, width, height: Math.ceil(cssContentSize.height), scale: 1 },
-      })
-      writeFileSync(out, Buffer.from(data, 'base64'))
-      return { scrollWidth: result.value }
+      const pageHeight = Math.ceil(cssContentSize.height)
+      /** @param {string} file @param {number} y @param {number} clipHeight */
+      const shoot = async (file, y, clipHeight) => {
+        const { data } = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y, width, height: clipHeight, scale: 1 } })
+        writeFileSync(file, Buffer.from(data, 'base64'))
+      }
+      await shoot(out, 0, pageHeight)
+      const parts = partHeight === undefined ? [] : partClips(pageHeight, partHeight, out)
+      for (const part of parts) await shoot(part.out, part.y, part.height)
+      return { scrollWidth: result.value, parts: parts.map((part) => part.out) }
     } finally {
       page.close()
     }
@@ -210,9 +236,10 @@ if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.me
     process.exit(1)
   }, 58_000).unref()
   try {
-    const { scrollWidth } = await capture(chrome, options)
+    const { scrollWidth, parts } = await capture(chrome, options)
     const overflow = scrollWidth > options.width ? `, wider than the ${options.width}px viewport: something overflows horizontally` : ''
     console.log(`${options.out}: ${options.width}px wide${options.mobile ? ', mobile' : ''}; scrollWidth ${scrollWidth}${overflow}`)
+    for (const part of parts) console.log(part)
     process.exit(0)
   } catch (error) {
     console.error(/** @type {Error} */ (error).message)

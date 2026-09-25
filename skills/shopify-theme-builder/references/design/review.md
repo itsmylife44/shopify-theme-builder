@@ -36,15 +36,15 @@ Screenshot three pages of the preview (`url` in `GET /api/preview`), each at 144
 Take them with the screenshot script, one per page and width:
 
 ```sh
-node <skill-dir>/scripts/screenshot.mjs <page> <file>-1440.png
-node <skill-dir>/scripts/screenshot.mjs <page> <file>-390.png --mobile
+node <skill-dir>/scripts/screenshot.mjs <page> <file>-1440.png --parts
+node <skill-dir>/scripts/screenshot.mjs <page> <file>-390.png --mobile --parts
 ```
 
-It drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
+It drives the system's Google Chrome (or Chromium, or Microsoft Edge) headless, captures the full page with reduced motion, so every section shows (the reveal on scroll would leave sections below the fold blank), and ends within a minute. With `--parts` it also writes the page top to bottom in parts twice the viewport tall, `<file>-1440-1.png`, `<file>-1440-2.png`, …, and prints their paths (`--part-height <px>` sets another height). Don't crop or split the captures yourself. Don't use Chrome's own `--screenshot` flag: it hangs on the preview, whose hot reload never goes idle, and can't lay out 390 pixels wide. Each capture prints the page's `scrollWidth`: when it's wider than the viewport, something overflows sideways, a finding for the floor. When it finds no browser, ask the Creator to install Google Chrome (or set `CHROME_PATH` to one), or use another browser tool you have. Wait until the preview has synced the last write (the Studio's log shows it) before taking them. When nothing can take a screenshot, say so in the verdict: the review then rests on the checker and the files alone.
 
 ## 3. Review them
 
-Look at each screenshot, then write down each finding as `[<page> <width>] what is wrong → the change that fixes it`, like `[home 390] the hero heading wraps "oil" onto its own line → shorten the heading to "Pressed the day it was picked"`. A finding without a concrete change isn't one yet. Check, in this order:
+Look at each screenshot: the full capture for the page's overall rhythm (the order of the sections, dense and airy, the color schemes alternating), the parts for everything you read (type, text, spacing, images, details), since a full page is shrunk too small to judge them. Then write down each finding as `[<page> <width>] what is wrong → the change that fixes it`, like `[home 390] the hero heading wraps "oil" onto its own line → shorten the heading to "Pressed the day it was picked"`. A finding without a concrete change isn't one yet. Check, in this order:
 
 1. **The Direction.** Read `DIRECTION.md` again: does the page carry its thesis, and each line of the chosen card (type, color strategy, shape, spacing, cards, media, motion, the signature section)? Does it break a Rule?
 2. **The swap test.** Put another shop of the same category on it. Where the page would still work, name the part that is generic and what of this shop's world replaces it.

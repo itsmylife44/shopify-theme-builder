@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { findChrome, parseArguments } from '../skills/shopify-theme-builder/scripts/screenshot.mjs'
+import { findChrome, parseArguments, partClips } from '../skills/shopify-theme-builder/scripts/screenshot.mjs'
 
-// The capture itself needs a browser, so it stays out of CI: only the arguments and the Chrome lookup are tested.
+// The capture itself needs a browser, so it stays out of CI: only the arguments, the parts' geometry and the Chrome lookup are tested.
 const command = fileURLToPath(new URL('../skills/shopify-theme-builder/scripts/screenshot.mjs', import.meta.url))
 
 describe('screenshot script (review.md step 2)', () => {
@@ -18,7 +18,14 @@ describe('screenshot script (review.md step 2)', () => {
         width: 1440,
         height: 900,
         mobile: false,
+        partHeight: undefined,
       })
+    })
+
+    it('splits into parts twice the viewport tall with --parts, or --part-height tall', () => {
+      expect(parseArguments(['http://127.0.0.1:9292/', 'home.png', '--parts'])).toMatchObject({ partHeight: 1800 })
+      expect(parseArguments(['http://127.0.0.1:9292/', 'home.png', '--parts', '--mobile'])).toMatchObject({ partHeight: 1688 })
+      expect(parseArguments(['http://127.0.0.1:9292/', 'home.png', '--part-height', '1200'])).toMatchObject({ partHeight: 1200 })
     })
 
     it('emulates a 390 by 844 phone with --mobile', () => {
@@ -31,8 +38,25 @@ describe('screenshot script (review.md step 2)', () => {
       ['a URL that is not http', ['127.0.0.1:9292', 'home.png']],
       ['a width that is not a number', ['http://127.0.0.1:9292/', 'home.png', '--width', 'wide']],
       ['an unknown option', ['http://127.0.0.1:9292/', 'home.png', '--full']],
+      ['a part height that is not a number', ['http://127.0.0.1:9292/', 'home.png', '--part-height', 'tall']],
+      ['a part height of zero', ['http://127.0.0.1:9292/', 'home.png', '--part-height', '0']],
     ])('rejects %s with the usage', (_, args) => {
       expect(() => parseArguments(args)).toThrow(/Usage: node screenshot\.mjs <url> <out\.png>/)
+    })
+  })
+
+  describe('parts', () => {
+    it('covers the page top to bottom in consecutive parts, the last one shorter', () => {
+      expect(partClips(4000, 1800, 'home-1440.png')).toEqual([
+        { out: 'home-1440-1.png', y: 0, height: 1800 },
+        { out: 'home-1440-2.png', y: 1800, height: 1800 },
+        { out: 'home-1440-3.png', y: 3600, height: 400 },
+      ])
+    })
+
+    it('makes one part of a page shorter than a part, and no empty last part', () => {
+      expect(partClips(900, 1800, 'shots/home.png')).toEqual([{ out: 'shots/home-1.png', y: 0, height: 900 }])
+      expect(partClips(3600, 1800, 'home.png').map(({ height }) => height)).toEqual([1800, 1800])
     })
   })
 
