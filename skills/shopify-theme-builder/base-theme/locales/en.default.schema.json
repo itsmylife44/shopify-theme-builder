@@ -240,6 +240,7 @@
     "heading_weight": "Heading weight",
     "heading_case": "Heading case",
     "heading_tracking": "Heading letter spacing",
+    "heading_line_height": "Heading line height",
     "shape_family": "Shape",
     "border_width": "Border width",
     "button_primary_style": "Primary button",
@@ -420,9 +421,16 @@
       "uppercase": "Uppercase"
     },
     "heading_tracking": {
+      "tighter": "Tighter",
       "tight": "Tight",
       "normal": "Normal",
-      "wide": "Wide"
+      "wide": "Wide",
+      "wider": "Wider"
+    },
+    "heading_line_height": {
+      "tight": "Tight",
+      "normal": "Normal",
+      "loose": "Loose"
     },
     "shape_family": {
       "square": "Square",

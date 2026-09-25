@@ -2777,8 +2777,24 @@ describe('Type settings', () => {
     expect(setting('type_heading_weight')).toMatchObject({ type: 'select', default: 'font' })
     expect(setting('type_heading_case').options.map((o: { value: string }) => o.value)).toEqual(['none', 'uppercase'])
     expect(setting('type_heading_case').default).toBe('none')
-    expect(setting('type_heading_tracking').options.map((o: { value: string }) => o.value)).toEqual(['tight', 'normal', 'wide'])
+    expect(setting('type_heading_tracking').options.map((o: { value: string }) => o.value)).toEqual(['tighter', 'tight', 'normal', 'wide', 'wider'])
     expect(setting('type_heading_tracking').default).toBe('normal')
+    expect(setting('type_heading_line_height').options.map((o: { value: string }) => o.value)).toEqual(['tight', 'normal', 'loose'])
+    expect(setting('type_heading_line_height').default).toBe('normal')
+  })
+
+  it("reaches the archetypes' tracking and line heights: -0.04em to 0.12em, display down to 1.0", () => {
+    const tracking = { tighter: '-0.04em', tight: '-0.02em', wide: '0.06em', wider: '0.12em' }
+    for (const [value, em] of Object.entries(tracking)) {
+      expect(variables).toMatch(new RegExp(`when '${value}'\\s+assign heading_tracking = '${em}'`))
+    }
+    const lineHeights = { tight: ['1', '1.1'], loose: ['1.2', '1.3'] }
+    for (const [value, [display, heading]] of Object.entries(lineHeights)) {
+      expect(variables).toMatch(new RegExp(`when '${value}'\\s+assign line_height_display = ${display}\\s+assign line_height_heading = ${heading}\\s`))
+    }
+    expect(variables).toMatch(/assign line_height_display = 1\.1\s+assign line_height_heading = 1\.2\s/)
+    expect(variables).toContain('--line-height-display: {{ line_height_display }};')
+    expect(variables).toContain('--line-height-heading: {{ line_height_heading }};')
   })
 
   it('labels every setting with a translation key the schema locale has', () => {
@@ -2898,6 +2914,9 @@ describe('Shape and button settings', () => {
     expect(setting('button_text_case').default).toBe('none')
     expect(setting('button_font_weight')).toMatchObject({ type: 'select', default: 'font' })
     expect(variables).toContain('--button-text-transform: {{ settings.button_text_case }};')
+    expect(variables).toContain("--button-letter-spacing: {% if settings.button_text_case == 'uppercase' %}0.06em{% else %}normal{% endif %};")
+    expect(critical).toMatch(/\.button,\s*\.button--secondary {[^}]*letter-spacing: var\(--button-letter-spacing\);/)
+    expect(critical).not.toMatch(/letter-spacing: inherit/)
     expect(variables).toContain('settings.button_font_weight')
     expect(variables).toMatch(/--color-primary-button: {% if outline_button %}transparent{% else %}{{ scheme\.settings\.button }}{% endif %}/)
     expect(variables).toMatch(/--color-primary-button-label: {% if outline_button %}{{ scheme\.settings\.button }}{% else %}{{ scheme\.settings\.button_label }}{% endif %}/)

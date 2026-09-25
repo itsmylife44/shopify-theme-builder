@@ -147,6 +147,10 @@
         "label": "t:labels.heading_tracking",
         "options": [
           {
+            "value": "tighter",
+            "label": "t:options.heading_tracking.tighter"
+          },
+          {
             "value": "tight",
             "label": "t:options.heading_tracking.tight"
           },
@@ -157,6 +161,30 @@
           {
             "value": "wide",
             "label": "t:options.heading_tracking.wide"
+          },
+          {
+            "value": "wider",
+            "label": "t:options.heading_tracking.wider"
+          }
+        ],
+        "default": "normal"
+      },
+      {
+        "type": "select",
+        "id": "type_heading_line_height",
+        "label": "t:labels.heading_line_height",
+        "options": [
+          {
+            "value": "tight",
+            "label": "t:options.heading_line_height.tight"
+          },
+          {
+            "value": "normal",
+            "label": "t:options.heading_line_height.normal"
+          },
+          {
+            "value": "loose",
+            "label": "t:options.heading_line_height.loose"
           }
         ],
         "default": "normal"

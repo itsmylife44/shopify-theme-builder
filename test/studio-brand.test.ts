@@ -169,6 +169,7 @@ describe('Studio API: style settings', () => {
       'type_heading_weight',
       'type_heading_case',
       'type_heading_tracking',
+      'type_heading_line_height',
       'shape_family',
       'border_width',
       'button_primary_style',
@@ -218,6 +219,8 @@ describe('Studio API: style settings', () => {
     const studio = await openStudio(theme)
     const { status, body } = await studio.setStyle({
       type_body_size: 17,
+      type_heading_tracking: 'wider',
+      type_heading_line_height: 'tight',
       shape_family: 'round',
       card_text_alignment: 'center',
       media_tint: '#F4EFE8',
@@ -225,7 +228,7 @@ describe('Studio API: style settings', () => {
     })
     expect(status).toBe(200)
     const current = readSettingsData(theme).current
-    expect(current).toMatchObject({ type_body_size: 17, shape_family: 'round', card_text_alignment: 'center', media_tint: '#F4EFE8', motion: 'expressive' })
+    expect(current).toMatchObject({ type_body_size: 17, type_heading_tracking: 'wider', type_heading_line_height: 'tight', shape_family: 'round', card_text_alignment: 'center', media_tint: '#F4EFE8', motion: 'expressive' })
     // The Brand's color schemes stay.
     expect(Object.keys(current.color_schemes)).toEqual(['scheme-1', 'scheme-2'])
     const read = (state: { style: { settings: { id: string; value: unknown }[] }[] }, id: string) =>

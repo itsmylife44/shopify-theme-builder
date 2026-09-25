@@ -574,7 +574,7 @@ function readGlobalSchema(theme) {
 // The global style settings the Studio edits, grouped as in the design direction proposal. An older Theme
 // may lack some; those are left out.
 const styleGroups = {
-  Type: ['type_body_size', 'type_scale_ratio', 'type_display_size', 'type_heading_weight', 'type_heading_case', 'type_heading_tracking'],
+  Type: ['type_body_size', 'type_scale_ratio', 'type_display_size', 'type_heading_weight', 'type_heading_case', 'type_heading_tracking', 'type_heading_line_height'],
   Shape: ['shape_family', 'border_width'],
   Buttons: ['button_primary_style', 'button_text_case', 'button_font_weight'],
   Spacing: ['density', 'page_width'],

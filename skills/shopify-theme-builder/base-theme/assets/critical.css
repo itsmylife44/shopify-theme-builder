@@ -227,6 +227,7 @@ h6,
   color: var(--color-primary-button-label);
   font: inherit;
   font-weight: var(--button-font-weight);
+  letter-spacing: var(--button-letter-spacing);
   text-align: center;
   text-decoration: none;
   text-transform: var(--button-text-transform);
@@ -255,7 +256,7 @@ h6,
   color: var(--color-primary-button-label);
   font: inherit;
   font-weight: var(--button-font-weight);
-  letter-spacing: inherit;
+  letter-spacing: var(--button-letter-spacing);
   text-transform: var(--button-text-transform);
 }
 
