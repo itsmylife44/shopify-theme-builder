@@ -1015,18 +1015,18 @@ function copySection(theme, catalog, type) {
 }
 
 // A Direction is a Shopify preset: one or two words under 30 characters (the Theme Store's rule), at most three per Theme (ADR-0007).
-const directionName = /^[a-z0-9]+( [a-z0-9]+)?$/i
+const directionName = /^[\p{L}\p{N}]+( [\p{L}\p{N}]+)?$/u
 const maxDirections = 3
 // The setting types a preset switch overwrites; the others, like a logo or a text, keep the Theme's value (Shopify's settings_data.json
 // docs). text_alignment isn't in Shopify's list, but the card text alignment is one of a Direction's style settings.
 const presentationalTypes = new Set(['checkbox', 'color', 'color_background', 'color_palette', 'color_scheme', 'color_scheme_group', 'font_picker', 'number', 'radio', 'range', 'select', 'text_alignment'])
 
 /**
- * The home template of a Direction, in its listing folder: the preset's name in kebab case.
+ * The home template of a Direction, in its listing folder: the preset's name in kebab case, without accents (Départ in listings/depart/).
  * @param {string} name
  */
 function listingHome(name) {
-  return `listings/${name.toLowerCase().replace(' ', '-')}/templates/index.json`
+  return `listings/${name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(' ', '-')}/templates/index.json`
 }
 
 /**

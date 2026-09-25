@@ -619,7 +619,7 @@ function checkDistinct(presets, listed) {
  * @param {string} preset
  */
 function listingName(preset) {
-  return preset.toLowerCase().replace(' ', '-')
+  return preset.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(' ', '-')
 }
 
 /**
